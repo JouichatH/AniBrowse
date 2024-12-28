@@ -110,17 +110,14 @@ class YtDLPDownloader:
                     }
                 elif hls_use_h264:
                     options = options | {
-                        "hls_use_mpegts": True,
-                        "postprocessors": [
-                            {"key": "FFmpegCopyStream"},
-                        ],
-                        "postprocessor_args": {
-                            "copystream": [
+                        "external_downloader_args": options["external_downloader_args"] | {
+                            "ffmpeg_o1": [
                                 "-c:v", "copy",
                                 "-c:a", "aac",
+                                "-bsf:a", "aac_adtstoasc",
                                 "-q:a", "1",
-                                "-f", "mp4",
                                 "-ac", "2",
+                                "-af", "loudnorm=I=-22:TP=-2.5:LRA=11,alimiter=limit=-1.5dB", # prevent clipping from HE-AAC to AAC convertion
                             ],
                         }
                     }
