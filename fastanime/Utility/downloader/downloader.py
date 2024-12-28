@@ -45,6 +45,7 @@ class YtDLPDownloader:
         prompt=True,
         force_ffmpeg=False,
         hls_use_mpegts=False,
+        hls_use_h264=False,
     ):
         """Helper function that downloads anime given url and path details
 
@@ -100,12 +101,28 @@ class YtDLPDownloader:
                         "external_downloader": {"default": "ffmpeg"},
                         "external_downloader_args": {
                             "ffmpeg_i1": ["-v", "error", "-stats"],
-                            "ffmpeg_o1": ["-f", "mp4"],
                         },
                     }
                 if hls_use_mpegts:
                     options = options | {
-                        "hls_use_mpegts": hls_use_mpegts,
+                        "hls_use_mpegts": True,
+                        "outtmpl": ".".join(options["outtmpl"].split(".")[:-1]) + ".ts", # force .ts extension
+                    }
+                elif hls_use_h264:
+                    options = options | {
+                        "hls_use_mpegts": True,
+                        "postprocessors": [
+                            {"key": "FFmpegCopyStream"},
+                        ],
+                        "postprocessor_args": {
+                            "copystream": [
+                                "-c:v", "copy",
+                                "-c:a", "aac",
+                                "-q:a", "1",
+                                "-f", "mp4",
+                                "-ac", "2",
+                            ],
+                        }
                     }
 
             with yt_dlp.YoutubeDL(options) as ydl:
