@@ -64,6 +64,26 @@ If you have any difficulty consult for help on the [discord channel](https://dis
 nix profile install github:Benexl/fastanime
 ```
 
+### Installation on Arch
+
+![Static Badge](https://img.shields.io/badge/arch-black?style=flat&logo=archlinux)
+
+Install from the AUR using an AUR helper such as [yay](https://github.com/Jguer/yay) or [paru](https://github.com/Morganamilo/paru) either the git version, which uses the latest commit:
+
+![AUR Version](https://img.shields.io/aur/version/fastanime-git?label=git)
+
+```bash
+yay -S fastanime-git
+```
+
+or the stable version, which uses a tagged release:
+
+![AUR Version](https://img.shields.io/aur/version/fastanime?label=stable)
+
+```bash
+yay -S fastanime
+```
+
 ### Installation using your favourite package manager
 
 Currently the app is only published on [pypi](https://pypi.org/project/fastanime/).
