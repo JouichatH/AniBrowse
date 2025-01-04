@@ -84,18 +84,18 @@ class Config(object):
         "use_rofi": "false",
     }
 
-    def __init__(self) -> None:
+    def __init__(self, no_config) -> None:
         self.initialize_user_data_and_watch_history_recent_anime()
-        self.load_config()
+        self.load_config(no_config)
 
-    def load_config(self):
+    def load_config(self, no_config=False):
         self.configparser = ConfigParser(self.default_config)
         self.configparser.add_section("stream")
         self.configparser.add_section("general")
         self.configparser.add_section("anilist")
 
         # --- set config values from file or using defaults ---
-        if os.path.exists(USER_CONFIG_PATH):
+        if os.path.exists(USER_CONFIG_PATH) and not no_config:
             self.configparser.read(USER_CONFIG_PATH, encoding="utf-8")
 
         # get the configuration
