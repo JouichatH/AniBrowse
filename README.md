@@ -68,7 +68,7 @@ nix profile install github:Benexl/fastanime
 
 ![Static Badge](https://img.shields.io/badge/arch-black?style=flat&logo=archlinux)
 
-Install from the AUR using an AUR helper such as [yay](https://github.com/Jguer/yay) or [paru](https://github.com/Morganamilo/paru) either the git version, which uses the latest commit:
+Install from the AUR using an AUR helper such as [yay](https://github.com/Jguer/yay) or [paru](https://github.com/Morganamilo/paru), either the git version, which uses the latest commit:
 
 ![AUR Version](https://img.shields.io/aur/version/fastanime-git?label=git)
 
