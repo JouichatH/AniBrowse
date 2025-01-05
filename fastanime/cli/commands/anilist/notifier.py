@@ -35,7 +35,7 @@ def notifier(config: "Config"):
 
     if not config.user:
         print("Not Authenticated")
-        print("Run the following to get started: fastanime anilist loggin")
+        print("Run the following to get started: fastanime anilist login")
         exit(1)
     run = True
     # WARNING: Mess around with this value at your own risk
