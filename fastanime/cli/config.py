@@ -57,7 +57,7 @@ class Config(object):
         "icons": "false",
         "image_previews": "True" if S_PLATFORM != "win32" else "False",
         "normalize_titles": "True",
-        "notification_duration": "2",
+        "notification_duration": "120",
         "max_cache_lifetime": "03:00:00",
         "per_page": "15",
         "player": "mpv",

@@ -43,7 +43,6 @@
 
 </details>
 
-
 ## Installation
 
 ![Windows](https://img.shields.io/badge/-Windows_x64-blue.svg?style=for-the-badge&logo=windows)
@@ -209,7 +208,6 @@ The only required external dependency, unless you won't be streaming, is [MPV](h
 - [ffmpegthumbnailer](https://github.com/dirkvdb/ffmpegthumbnailer) used for local previews of downloaded anime
 - [syncplay](https://syncplay.pl/) to enable watch together.
 - [feh](https://github.com/derf/feh) used in manga mode
-
 
 ## Usage
 
@@ -773,7 +771,7 @@ rofi_theme_input =
 
 rofi_theme_confirm =
 
-notification_duration = 2
+notification_duration = 120
 
 sub_lang = eng
 
@@ -814,7 +812,6 @@ format = best[height<=1080]/bestvideo[height<=1080]+bestaudio/best
 player = mpv
 ```
 
-  
 ## Contributing
 
 pr's are highly welcome

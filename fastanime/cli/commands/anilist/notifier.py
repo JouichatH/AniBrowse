@@ -30,7 +30,7 @@ def notifier(config: "Config"):
 
     notified = os.path.join(APP_DATA_DIR, "last_notification.json")
     anime_image_path = os.path.join(APP_CACHE_DIR, "notification_image")
-    notification_duration = config.notification_duration * 60
+    notification_duration = config.notification_duration
     notification_image_path = ""
 
     if not config.user:
