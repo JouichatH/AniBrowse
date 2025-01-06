@@ -30,12 +30,12 @@ def notifier(config: "Config"):
 
     notified = os.path.join(APP_DATA_DIR, "last_notification.json")
     anime_image_path = os.path.join(APP_CACHE_DIR, "notification_image")
-    notification_duration = config.notification_duration * 60
+    notification_duration = config.notification_duration
     notification_image_path = ""
 
     if not config.user:
         print("Not Authenticated")
-        print("Run the following to get started: fastanime anilist loggin")
+        print("Run the following to get started: fastanime anilist login")
         exit(1)
     run = True
     # WARNING: Mess around with this value at your own risk

@@ -184,6 +184,7 @@ signal.signal(signal.SIGINT, handle_exit)
 @click.option(
     "--fresh-requests", is_flag=True, help="Force the requests cache to be updated"
 )
+@click.option("--no-config", is_flag=True, help="Don't load the user config")
 @click.pass_context
 def run_cli(
     ctx: click.Context,
@@ -220,13 +221,14 @@ def run_cli(
     sync_play,
     player,
     fresh_requests,
+    no_config,
 ):
     import os
     import sys
 
     from .config import Config
 
-    ctx.obj = Config()
+    ctx.obj = Config(no_config)
     if (
         ctx.obj.check_for_updates
         and ctx.invoked_subcommand != "completions"

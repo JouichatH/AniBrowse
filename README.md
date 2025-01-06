@@ -43,7 +43,6 @@
 
 </details>
 
-
 ## Installation
 
 ![Windows](https://img.shields.io/badge/-Windows_x64-blue.svg?style=for-the-badge&logo=windows)
@@ -62,6 +61,26 @@ If you have any difficulty consult for help on the [discord channel](https://dis
 
 ```bash
 nix profile install github:Benexl/fastanime
+```
+
+### Installation on Arch
+
+![Static Badge](https://img.shields.io/badge/arch-black?style=flat&logo=archlinux)
+
+Install from the AUR using an AUR helper such as [yay](https://github.com/Jguer/yay) or [paru](https://github.com/Morganamilo/paru), either the git version, which uses the latest commit:
+
+![AUR Version](https://img.shields.io/aur/version/fastanime-git?label=git)
+
+```bash
+yay -S fastanime-git
+```
+
+or the stable version, which uses a tagged release:
+
+![AUR Version](https://img.shields.io/aur/version/fastanime?label=stable)
+
+```bash
+yay -S fastanime
 ```
 
 ### Installation using your favourite package manager
@@ -189,7 +208,6 @@ The only required external dependency, unless you won't be streaming, is [MPV](h
 - [ffmpegthumbnailer](https://github.com/dirkvdb/ffmpegthumbnailer) used for local previews of downloaded anime
 - [syncplay](https://syncplay.pl/) to enable watch together.
 - [feh](https://github.com/derf/feh) used in manga mode
-
 
 ## Usage
 
@@ -753,7 +771,7 @@ rofi_theme_input =
 
 rofi_theme_confirm =
 
-notification_duration = 2
+notification_duration = 120
 
 sub_lang = eng
 
@@ -794,7 +812,6 @@ format = best[height<=1080]/bestvideo[height<=1080]+bestaudio/best
 player = mpv
 ```
 
-  
 ## Contributing
 
 pr's are highly welcome
