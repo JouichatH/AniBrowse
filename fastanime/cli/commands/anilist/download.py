@@ -116,7 +116,12 @@ from .data import (
 @click.option(
     "--hls-use-mpegts",
     is_flag=True,
-    help="Use mpegts for hls streams (useful for some streams: see Docs) (this option forces --force-ffmpeg to be True)",
+    help="Use mpegts for hls streams, resulted in .ts file (useful for some streams: see Docs) (this option forces --force-ffmpeg to be True)",
+)
+@click.option(
+    "--hls-use-h264",
+    is_flag=True,
+    help="Use H.264 (MP4) for hls streams, resulted in .mp4 file (useful for some streams: see Docs) (this option forces --force-ffmpeg to be True)",
 )
 @click.option(
     "--max-results", "-M", type=int, help="The maximum number of results to show"
@@ -143,13 +148,14 @@ def download(
     prompt,
     force_ffmpeg,
     hls_use_mpegts,
+    hls_use_h264,
     max_results,
 ):
     from rich import print
 
     from ....anilist import AniList
 
-    force_ffmpeg |= hls_use_mpegts
+    force_ffmpeg |= (hls_use_mpegts or hls_use_h264)
 
     success, anilist_search_results = AniList.search(
         query=title,
@@ -379,6 +385,7 @@ def download(
                         prompt=prompt,
                         force_ffmpeg=force_ffmpeg,
                         hls_use_mpegts=hls_use_mpegts,
+                        hls_use_h264=hls_use_h264,
                     )
                 except Exception as e:
                     print(e)
