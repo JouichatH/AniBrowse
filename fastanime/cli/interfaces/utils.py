@@ -169,7 +169,7 @@ def write_search_results(
             {template}
             echo "
             {textwrap.fill(
-                clean_html(anime.get('description', '')).replace('"', SINGLE_QUOTE), width=45
+                clean_html(anime.get('description', '').strip()).replace('"', SINGLE_QUOTE), width=45
             )}
             "
             """
