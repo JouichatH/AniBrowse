@@ -163,7 +163,7 @@ def write_search_results(
                 ((ll++))
             done
             echo
-            # echo "{get_true_fg('Description:',*HEADER_COLOR).replace('"',SINGLE_QUOTE)}"
+            echo "{get_true_fg('Description:',*HEADER_COLOR).replace('"',SINGLE_QUOTE)}"
             """
             template = textwrap.dedent(template)
             template = f"""
