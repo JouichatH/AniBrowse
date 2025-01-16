@@ -158,19 +158,18 @@ def write_search_results(
             echo "{get_true_fg('Media List:',*HEADER_COLOR)} {mediaListName.replace('"',SINGLE_QUOTE)}"
             echo "{get_true_fg('Progress:',*HEADER_COLOR)} {progress}"
             ll=2
-            while [ $ll -le $FZF_PREVIEW_COLUMNS ]; do
-                echo -n -e "{get_true_fg('─', *SEPARATOR_COLOR, bold=False)}"
+            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+                echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                 ((ll++))
             done
-            echo test
-            #echo "{get_true_fg('Description:',*HEADER_COLOR).replace('"',SINGLE_QUOTE)}"
+            echo
+            # echo "{get_true_fg('Description:',*HEADER_COLOR).replace('"',SINGLE_QUOTE)}"
             """
             template = textwrap.dedent(template)
             template = f"""
             {template}
             echo "
-            {textwrap.fill(clean_html(
-                clean_html(anime.get('description', '')).replace('"', SINGLE_QUOTE), width=45
+            {textwrap.fill(clean_html(anime.get('description', '').strip()).replace('"', SINGLE_QUOTE), width=45)}
             "
             """
             future_to_task[executor.submit(save_info_from_str, template, title)] = title
