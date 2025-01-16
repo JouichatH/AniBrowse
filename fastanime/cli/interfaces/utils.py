@@ -168,9 +168,7 @@ def write_search_results(
             template = textwrap.dedent(template)
             template = f"""
             {template}
-            echo "
-            {textwrap.fill(clean_html(anime.get('description', '').strip()).replace('"', SINGLE_QUOTE), width=45)}
-            "
+            echo "{textwrap.fill(clean_html(anime.get('description', '').strip()).replace('"', SINGLE_QUOTE), width=45)}"
             """
             future_to_task[executor.submit(save_info_from_str, template, title)] = title
 
