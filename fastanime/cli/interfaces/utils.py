@@ -1,4 +1,4 @@
-import concurrent.futures
+eimport concurrent.futures
 import logging
 import os
 import shutil
@@ -163,14 +163,14 @@ def write_search_results(
                 ((ll++))
             done
             echo
-            echo "{get_true_fg('Description:',*HEADER_COLOR).replace('"',SINGLE_QUOTE)}"
-            """
+            #echo "{get_true_fg('Description:',*HEADER_COLOR).replace('"',SINGLE_QUOTE)}"
             template = textwrap.dedent(template)
             template = f"""
             {template}
             echo "
-            {textwrap.fill(clean_html(
-                (anime['description']) or "").replace('"',SINGLE_QUOTE), width=45)}
+            {textwrap.fill(
+                clean_html(anime.get('description', '')).replace('"', SINGLE_QUOTE), width=45
+            )}
             "
             """
             future_to_task[executor.submit(save_info_from_str, template, title)] = title
