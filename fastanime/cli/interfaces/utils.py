@@ -164,14 +164,14 @@ def write_search_results(
             done
             echo test
             #echo "{get_true_fg('Description:',*HEADER_COLOR).replace('"',SINGLE_QUOTE)}"
+            """
             template = textwrap.dedent(template)
             template = f"""
             {template}
-            echo '
-            {textwrap.fill(
-                clean_html(anime.get('description', '').strip()).replace('"', SINGLE_QUOTE), width=45
-            )}
-            '
+            echo "
+            {textwrap.fill(clean_html(
+                clean_html(anime.get('description', '')).replace('"', SINGLE_QUOTE), width=45
+            "
             """
             future_to_task[executor.submit(save_info_from_str, template, title)] = title
 
