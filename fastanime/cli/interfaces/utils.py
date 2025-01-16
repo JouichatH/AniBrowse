@@ -162,8 +162,8 @@ def write_search_results(
                 echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                 ((ll++))
             done
-            echo "test"
-            # echo "{get_true_fg('Description:',*HEADER_COLOR).replace('"',SINGLE_QUOTE)}"
+            echo
+            echo "{get_true_fg('Description:',*HEADER_COLOR).replace('"',SINGLE_QUOTE)}"
             """
             template = textwrap.dedent(template)
             template = f"""
