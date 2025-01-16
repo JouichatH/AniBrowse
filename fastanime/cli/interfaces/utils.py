@@ -158,8 +158,8 @@ def write_search_results(
             echo "{get_true_fg('Media List:',*HEADER_COLOR)} {mediaListName.replace('"',SINGLE_QUOTE)}"
             echo "{get_true_fg('Progress:',*HEADER_COLOR)} {progress}"
             ll=2
-            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
-                echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
+            while [ $ll -le $FZF_PREVIEW_COLUMNS ]; do
+                echo -n -e "{get_true_fg('─', *SEPARATOR_COLOR, bold=False)}"
                 ((ll++))
             done
             echo
