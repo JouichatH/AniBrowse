@@ -2,7 +2,7 @@ import click
 
 
 @click.command(
-    help="Fetch the 15 most anticipited anime", short_help="View upcoming anime"
+    help="Fetch the 15 most anticipated anime", short_help="View upcoming anime"
 )
 @click.option(
     "--dump-json",

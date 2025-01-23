@@ -64,7 +64,7 @@ class AniListApi:
         self.session = requests.session()
 
     def login_user(self, token: str):
-        """methosd used to login a new user enabling authenticated requests
+        """method used to login a new user enabling authenticated requests
 
         Args:
             token: anilist app token
@@ -247,7 +247,7 @@ class AniListApi:
             return (False, None)
 
         except Exception as e:
-            logger.error(f"Something unexpected occured {e}")
+            logger.error(f"Something unexpected occurred {e}")
             return (False, None)  # type: ignore
 
     def get_data(
@@ -311,7 +311,7 @@ class AniListApi:
                 },
             )  # type: ignore
         except Exception as e:
-            logger.error(f"Something unexpected occured {e}")
+            logger.error(f"Something unexpected occurred {e}")
             return (False, {"Error": f"{e}"})  # type: ignore
 
     def search(
@@ -456,7 +456,7 @@ class AniListApi:
         recommended_anime = self.get_data(recommended_query, variables)
         return recommended_anime
 
-    def get_charcters_of(self, id: int, type="ANIME", *_, **kwargs):
+    def get_characters_of(self, id: int, type="ANIME", *_, **kwargs):
         variables = {"id": id}
         characters = self.get_data(anime_characters_query, variables)
         return characters

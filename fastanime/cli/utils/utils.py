@@ -92,7 +92,7 @@ def filter_by_quality(quality: str, stream_links: "list[EpisodeStream]", default
 
 
 def format_bytes_to_human(num_of_bytes: float, suffix: str = "B"):
-    """Helper function usedd to format bytes to human
+    """Helper function used to format bytes to human
 
     Args:
         num_of_bytes: the number of bytes to format

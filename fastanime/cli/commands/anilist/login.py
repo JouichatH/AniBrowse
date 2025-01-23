@@ -19,7 +19,7 @@ def login(config: "Config", status, erase):
     if status:
         is_logged_in = True if config.user else False
         message = (
-            "You are logged in :smile:" if is_logged_in else "You arent logged in :cry:"
+            "You are logged in :smile:" if is_logged_in else "You aren't logged in :cry:"
         )
         print(message)
         print(config.user)

@@ -1,5 +1,5 @@
 """
-This module contains all the preset queries for the sake of neatness and convinience
+This module contains all the preset queries for the sake of neatness and convenience
 Mostly for internal usage
 """
 
@@ -26,7 +26,7 @@ query($id:Int){
         }
       }
       body
-      
+
     }
   }
 }
@@ -88,7 +88,7 @@ query{
       large
       medium
     }
-    
+
   }
 }
 """
@@ -909,7 +909,7 @@ query ($id: Int,$type:MediaType) {
           airingAt
           timeUntilAiring
           episode
-          
+
         }
       }
     }

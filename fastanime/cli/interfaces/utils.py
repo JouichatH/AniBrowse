@@ -96,7 +96,7 @@ def write_search_results(
     titles: list[str],
     workers: int | None = None,
 ):
-    """A helper function used by and run in a background thread by get_fzf_preview function inorder to get the actual preview data to be displayed by fzf
+    """A helper function used by and run in a background thread by get_fzf_preview function in order to get the actual preview data to be displayed by fzf
 
     Args:
         anilist_results: the anilist results from an anilist action
@@ -122,7 +122,7 @@ def write_search_results(
             # handle the text data
             template = f"""
             ll=2
-            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                 echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                 ((ll++))
             done
@@ -130,7 +130,7 @@ def write_search_results(
             echo "{get_true_fg('Title(jp):',*HEADER_COLOR)} {(anime['title']['romaji'] or "").replace('"',SINGLE_QUOTE)}"
             echo "{get_true_fg('Title(eng):',*HEADER_COLOR)} {(anime['title']['english'] or "").replace('"',SINGLE_QUOTE)}"
             ll=2
-            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                 echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                 ((ll++))
             done
@@ -141,7 +141,7 @@ def write_search_results(
             echo "{get_true_fg('Next Episode:',*HEADER_COLOR)} {anilist_data_helper.extract_next_airing_episode(anime['nextAiringEpisode']).replace('"',SINGLE_QUOTE)}"
             echo "{get_true_fg('Genres:',*HEADER_COLOR)} {anilist_data_helper.format_list_data_with_comma(anime['genres']).replace('"',SINGLE_QUOTE)}"
             ll=2
-            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                 echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                 ((ll++))
             done
@@ -150,7 +150,7 @@ def write_search_results(
             echo "{get_true_fg('Start Date:',*HEADER_COLOR)} {anilist_data_helper.format_anilist_date_object(anime['startDate']).replace('"',SINGLE_QUOTE)}"
             echo "{get_true_fg('End Date:',*HEADER_COLOR)} {anilist_data_helper.format_anilist_date_object(anime['endDate']).replace('"',SINGLE_QUOTE)}"
             ll=2
-            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                 echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                 ((ll++))
             done
@@ -158,7 +158,7 @@ def write_search_results(
             echo "{get_true_fg('Media List:',*HEADER_COLOR)} {mediaListName.replace('"',SINGLE_QUOTE)}"
             echo "{get_true_fg('Progress:',*HEADER_COLOR)} {progress}"
             ll=2
-            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                 echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                 ((ll++))
             done
@@ -305,7 +305,7 @@ def get_fzf_episode_preview(
                     template = textwrap.dedent(
                         f"""
                     ll=2
-                    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+                    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                         echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                         ((ll++))
                     done
@@ -313,13 +313,13 @@ def get_fzf_episode_preview(
                     echo "{get_true_fg('Anime Title(jp):',*HEADER_COLOR)} {(anilist_result['title']['romaji'] or '').replace('"',SINGLE_QUOTE)}"
 
                     ll=2
-                    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+                    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                         echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                         ((ll++))
                     done
                     echo "{str(episode_title).replace('"',SINGLE_QUOTE)}"
                     ll=2
-                    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+                    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                         echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                         ((ll++))
                     done
@@ -352,15 +352,15 @@ def get_fzf_episode_preview(
             title={}
             show_image_previews="%s"
             dim=${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}
-            if [ $show_image_previews = "true" ];then 
-                if [ -s "%s\\\\\\${title}.png" ]; then 
+            if [ $show_image_previews = "true" ];then
+                if [ -s "%s\\\\\\${title}.png" ]; then
                     if command -v "chafa">/dev/null;then
                         chafa -s $dim "%s\\\\\\${title}.png"
                     else
                         echo please install chafa to enjoy image previews
                     fi
-                    echo 
-                else 
+                    echo
+                else
                     echo Loading...
                 fi
             fi
@@ -380,7 +380,7 @@ def get_fzf_episode_preview(
             title={}
             %s
             show_image_previews="%s"
-            if [ $show_image_previews = "true" ];then 
+            if [ $show_image_previews = "true" ];then
                 if [ -s %s/${title}.png ]; then fzf-preview %s/${title}.png
                 else echo Loading...
                 fi
@@ -431,14 +431,14 @@ def get_fzf_anime_preview(
             show_image_previews="%s"
             dim=${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}
             if [ $show_image_previews = "true" ];then
-                if [ -s "%s\\\\\\${title}.png" ]; then 
+                if [ -s "%s\\\\\\${title}.png" ]; then
                     if command -v "chafa">/dev/null;then
                         chafa  -s $dim "%s\\\\\\${title}.png"
                     else
                         echo please install chafa to enjoy image previews
                     fi
-                    echo 
-                else 
+                    echo
+                else
                     echo Loading...
                 fi
             fi
