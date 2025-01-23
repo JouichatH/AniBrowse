@@ -10,8 +10,10 @@ from rich import print
 
 logger = logging.getLogger(__name__)
 
+from ...cli.utils.tools import exit_app
 
-FZF_DEFAULT_OPTS = """ 
+
+FZF_DEFAULT_OPTS = """
     --color=fg:#d0d0d0,fg+:#d0d0d0,bg:#121212,bg+:#262626
     --color=hl:#5f87af,hl+:#5fd7ff,info:#afaf87,marker:#87ff00
     --color=prompt:#d7005f,spinner:#af5fff,pointer:#af5fff,header:#87afaf
@@ -127,7 +129,10 @@ class FZF:
             encoding="utf-8",
         )
         if not result or result.returncode != 0 or not result.stdout:
-            print("sth went wrong:confused:")
+            if result.returncode == 130: # fzf terminated by ctrl-c
+                exit_app()
+
+            print("sth went wrong :confused:")
             input("press enter to try again...")
             clear()
             return self._run_fzf(commands, _fzf_input)
