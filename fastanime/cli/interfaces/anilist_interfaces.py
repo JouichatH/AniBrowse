@@ -764,18 +764,22 @@ def provider_anime_episodes_menu(
     if not current_episode_number or current_episode_number not in available_episodes:
         choices = [*available_episodes, "Back"]
         preview = None
-        if config.preview:
-            from .utils import get_fzf_episode_preview
-
-            e = fastanime_runtime_state.selected_anime_anilist["episodes"]
-            if e:
-                eps = range(0, e + 1)
-            else:
-                eps = available_episodes
-            preview = get_fzf_episode_preview(
-                fastanime_runtime_state.selected_anime_anilist, eps
-            )
         if config.use_fzf:
+            if config.preview:
+                from .utils import get_fzf_episode_preview
+
+                e = fastanime_runtime_state.selected_anime_anilist["episodes"]
+                if e:
+                    eps = range(0, e + 1)
+                else:
+                    eps = available_episodes
+                preview = get_fzf_episode_preview(
+                    fastanime_runtime_state.selected_anime_anilist, eps
+                )
+
+                if not preview:
+                    print("Failed to find bash executable which is necessary for preview with fzf.\nIf you are on Windows, please make sure Git is installed and available in PATH.")
+
             current_episode_number = fzf.run(
                 choices, prompt="Select Episode", header=anime_title, preview=preview
             )
@@ -1498,6 +1502,9 @@ def anilist_results_menu(
             from .utils import get_fzf_anime_preview
 
             preview = get_fzf_anime_preview(search_results, anime_data.keys())
+            if not preview:
+                print("Failed to find bash executable which is necessary for preview with fzf.\nIf you are on Windows, please make sure Git is installed and available in PATH.")
+
             selected_anime_title = fzf.run(
                 choices,
                 prompt="Select Anime",

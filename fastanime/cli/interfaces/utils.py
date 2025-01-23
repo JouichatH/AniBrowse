@@ -13,7 +13,7 @@ from ...constants import APP_CACHE_DIR, S_PLATFORM
 from ...libs.anilist.types import AnilistBaseMediaDataSchema
 from ...Utility import anilist_data_helper
 from ..utils.scripts import fzf_preview
-from ..utils.utils import get_true_fg
+from ..utils.utils import get_true_fg, which_bashlike
 
 logger = logging.getLogger(__name__)
 
@@ -279,6 +279,9 @@ def get_fzf_episode_preview(
         titles (list[str]): sanitized titles of the anime; NOTE: its important that they are sanitized since they are used as the filenames of the images
         workers ([TODO:parameter]): Number of threads to use to download the images; defaults to as many as possible
         anilist_results: the anilist results from an anilist action
+
+    Returns:
+        The fzf preview script to use or None if the bash is not found
     """
 
     # HEADER_COLOR = 215, 0, 95
@@ -345,7 +348,11 @@ def get_fzf_episode_preview(
     background_worker.start()
 
     # the preview script is in bash so making sure fzf doesnt use any other shell lang to process the preview script
-    os.environ["SHELL"] = shutil.which("bash") or "bash"
+    bash_path = which_bashlike()
+    if not bash_path:
+        return
+
+    os.environ["SHELL"] = bash_path
     if S_PLATFORM == "win32":
         preview = """
             %s
@@ -412,7 +419,7 @@ def get_fzf_anime_preview(
         anilist_results: the anilist results got from an anilist action
 
     Returns:
-        THe fzf preview script to use
+        The fzf preview script to use or None if the bash is not found
     """
     # ensure images and info exists
 
@@ -423,7 +430,12 @@ def get_fzf_anime_preview(
     background_worker.start()
 
     # the preview script is in bash so making sure fzf doesnt use any other shell lang to process the preview script
-    os.environ["SHELL"] = shutil.which("bash") or "bash"
+    bash_path = which_bashlike()
+    if not bash_path:
+        return
+
+    os.environ["SHELL"] = bash_path
+
     if S_PLATFORM == "win32":
         preview = """
             %s

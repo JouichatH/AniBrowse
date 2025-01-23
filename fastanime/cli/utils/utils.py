@@ -1,7 +1,10 @@
 import logging
+import shutil
 from typing import TYPE_CHECKING
 
 from InquirerPy import inquirer
+
+from fastanime.constants import S_PLATFORM
 
 logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
@@ -155,3 +158,38 @@ def fuzzy_inquirer(choices: list, prompt: str, **kwargs):
         **kwargs,
     ).execute()
     return action
+
+
+def which_win32_gitbash():
+    """Helper function that returns absolute path to the git bash executable
+    (came with Git for Windows) on Windows
+
+    Returns:
+        the path to the git bash executable or None if not found
+    """
+    from os import path
+
+    gb_path = shutil.which("bash")
+
+    # Windows came with its own bash.exe but it's just an entry point for WSL not Git Bash
+    if gb_path and not path.dirname(gb_path).lower().endswith("windows\\system32"):
+        return gb_path
+
+    git_path = shutil.which("git")
+
+    if git_path and path.dirname(git_path).endswith("cmd"):
+        gb_path = path.abspath(
+            path.join(path.dirname(git_path), "..", "bin", "bash.exe")
+        )
+
+        if path.exists(gb_path):
+            return gb_path
+
+
+def which_bashlike():
+    """Helper function that returns absolute path to the bash executable for the current platform
+
+    Returns:
+        the path to the bash executable or None if not found
+    """
+    return (shutil.which("bash") or "bash") if S_PLATFORM != "win32" else which_win32_gitbash()
