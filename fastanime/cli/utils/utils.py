@@ -177,10 +177,13 @@ def which_win32_gitbash():
 
     git_path = shutil.which("git")
 
-    if git_path and path.dirname(git_path).endswith("cmd"):
-        gb_path = path.abspath(
-            path.join(path.dirname(git_path), "..", "bin", "bash.exe")
-        )
+    if git_path:
+        if path.dirname(git_path).endswith("cmd"):
+            gb_path = path.abspath(
+                path.join(path.dirname(git_path), "..", "bin", "bash.exe")
+            )
+        else:
+            gb_path = path.join(path.dirname(git_path), "bash.exe")
 
         if path.exists(gb_path):
             return gb_path
