@@ -26,7 +26,7 @@
 
 <details>
   <summary>
-    <b>How it looks</b>
+    <b>Riced</b>
   </summary>
 
 **Anilist results menu:**
