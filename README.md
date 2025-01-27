@@ -815,7 +815,7 @@ player = mpv
 ### Other Terminal Browsers I Made
 [yt-x](https://github.com/Benexl/yt-x) - browse youtube and other yt-dlp sites from the terminal
 
-[fastanime](https://github.com/Benexl/FastAnime) - browse anime from the terminal
+[lib-x](https://github.com/Benexl/lib-x) - browse your calibre library from the terminal
 
 
 
