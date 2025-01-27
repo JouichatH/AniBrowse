@@ -812,6 +812,13 @@ format = best[height<=1080]/bestvideo[height<=1080]+bestaudio/best
 player = mpv
 ```
 
+### Other Terminal Browsers I Made
+[yt-x](https://github.com/Benexl/yt-x) - browse youtube and other yt-dlp sites from the terminal
+
+[fastanime](https://github.com/Benexl/FastAnime) - browse anime from the terminal
+
+
+
 ## Contributing
 
 pr's are highly welcome
