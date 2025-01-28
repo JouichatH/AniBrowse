@@ -8,9 +8,9 @@ from typing import Callable, List
 from click import clear
 from rich import print
 
-logger = logging.getLogger(__name__)
-
 from ...cli.utils.tools import exit_app
+
+logger = logging.getLogger(__name__)
 
 
 FZF_DEFAULT_OPTS = """
