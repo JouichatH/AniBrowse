@@ -56,6 +56,7 @@ class Config(object):
         "format": "best[height<=1080]/bestvideo[height<=1080]+bestaudio/best",
         "icons": "false",
         "image_previews": "True" if S_PLATFORM != "win32" else "False",
+        "image_renderer": "icat" if os.environ.get("KITTY_WINDOW_ID") else "chafa",
         "normalize_titles": "True",
         "notification_duration": "120",
         "max_cache_lifetime": "03:00:00",
@@ -132,6 +133,7 @@ class Config(object):
         self.header_ascii_art = self.configparser.get("general", "header_ascii_art")
         self.icons = self.configparser.getboolean("general", "icons")
         self.image_previews = self.configparser.getboolean("general", "image_previews")
+        self.image_renderer = self.configparser.get("general", "image_renderer")
         self.normalize_titles = self.configparser.getboolean(
             "general", "normalize_titles"
         )
@@ -290,6 +292,9 @@ header_ascii_art = {new_line.join([tab + line for line in self.header_ascii_art.
 
 header_color = {self.header_color}
 
+# the image renderer to use [icat/chafa]
+image_renderer = {self.image_renderer}
+ 
 # To be passed to fzf
 # Be sure to indent
 fzf_opts = {new_line.join([tab + line for line in self.fzf_opts.split(new_line)])}
