@@ -124,7 +124,7 @@ def downloads(
             return
 
         from ...constants import APP_CACHE_DIR
-        from ..utils.scripts import fzf_preview
+        from ..utils.scripts import bash_functions
 
         downloads_thumbnail_cache_dir = os.path.join(APP_CACHE_DIR, "video_thumbnails")
         Path(downloads_thumbnail_cache_dir).mkdir(parents=True, exist_ok=True)
@@ -183,7 +183,7 @@ def downloads(
             else echo Loading...
             fi
         """ % (
-            fzf_preview,
+            bash_functions,
             downloads_thumbnail_cache_dir,
             downloads_thumbnail_cache_dir,
         )
@@ -194,7 +194,7 @@ def downloads(
         from pathlib import Path
 
         from ...constants import APP_CACHE_DIR
-        from ..utils.scripts import fzf_preview
+        from ..utils.scripts import bash_functions
 
         if not shutil.which("ffmpegthumbnailer"):
             print("ffmpegthumbnailer not found")
@@ -256,7 +256,7 @@ def downloads(
             else echo Loading...
             fi
         """ % (
-            fzf_preview,
+            bash_functions,
             downloads_thumbnail_cache_dir,
             downloads_thumbnail_cache_dir,
         )

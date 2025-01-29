@@ -1,4 +1,26 @@
-fzf_preview = r"""
+bash_functions = r"""
+generate_sha256() {
+  local input
+
+  # Check if input is passed as an argument or piped
+  if [ -n "$1" ]; then
+    input="$1"
+  else
+    input=$(cat)
+  fi
+
+  if command -v sha256sum &>/dev/null; then
+    echo -n "$input" | sha256sum | awk '{print $1}'
+  elif command -v shasum &>/dev/null; then
+    echo -n "$input" | shasum -a 256 | awk '{print $1}'
+  elif command -v sha256 &>/dev/null; then
+    echo -n "$input" | sha256 | awk '{print $1}'
+  elif command -v openssl &>/dev/null; then
+    echo -n "$input" | openssl dgst -sha256 | awk '{print $2}'
+  else
+    echo -n "$input" | base64 | tr '/+' '_-' | tr -d '\n'
+  fi
+}
 fzf_preview() {
   file=$1
 

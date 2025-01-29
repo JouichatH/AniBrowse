@@ -5,14 +5,14 @@ import shutil
 import subprocess
 import textwrap
 from threading import Thread
+from hashlib import sha256
 
 import requests
-from yt_dlp.utils import clean_html, sanitize_filename
-
+from yt_dlp.utils import clean_html
 from ...constants import APP_CACHE_DIR, S_PLATFORM
 from ...libs.anilist.types import AnilistBaseMediaDataSchema
 from ...Utility import anilist_data_helper
-from ..utils.scripts import fzf_preview
+from ..utils.scripts import bash_functions
 from ..utils.utils import get_true_fg, which_bashlike
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,12 @@ def save_image_from_url(url: str, file_name: str):
         file_name: filename to use
     """
     image = requests.get(url)
-    with open(os.path.join(IMAGES_CACHE_DIR, f"{file_name}.png"), "wb") as f:
+    with open(
+        os.path.join(
+            IMAGES_CACHE_DIR, f"{sha256(file_name.encode('utf-8')).hexdigest()}.png"
+        ),
+        "wb",
+    ) as f:
         f.write(image.content)
 
 
@@ -83,7 +88,7 @@ def save_info_from_str(info: str, file_name: str):
     with open(
         os.path.join(
             ANIME_INFO_CACHE_DIR,
-            file_name,
+            sha256(file_name.encode("utf-8")).hexdigest(),
         ),
         "w",
         encoding="utf-8",
@@ -108,11 +113,21 @@ def write_search_results(
         future_to_task = {}
         for anime, title in zip(anilist_results, titles):
             # actual image url
+            image_url = ""
             if os.environ.get("FASTANIME_IMAGE_PREVIEWS", "true").lower() == "true":
                 image_url = anime["coverImage"]["large"]
-                future_to_task[
-                    executor.submit(save_image_from_url, image_url, title)
-                ] = image_url
+
+                if not (
+                    os.path.exists(
+                        os.path.join(
+                            IMAGES_CACHE_DIR,
+                            f"{sha256(title.encode('utf-8')).hexdigest()}.png",
+                        )
+                    )
+                ):
+                    future_to_task[
+                        executor.submit(save_image_from_url, image_url, title)
+                    ] = image_url
 
             mediaListName = "Not in any of your lists"
             progress = "UNKNOWN"
@@ -121,54 +136,55 @@ def write_search_results(
                 progress = anime_list["progress"]
             # handle the text data
             template = f"""
+            image_url={image_url}
             ll=2
             while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
-                echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
+                echo -n -e "{get_true_fg("─", *SEPARATOR_COLOR, bold=False)}"
                 ((ll++))
             done
             echo
-            echo "{get_true_fg('Title(jp):',*HEADER_COLOR)} {(anime['title']['romaji'] or "").replace('"',SINGLE_QUOTE)}"
-            echo "{get_true_fg('Title(eng):',*HEADER_COLOR)} {(anime['title']['english'] or "").replace('"',SINGLE_QUOTE)}"
+            echo "{get_true_fg("Title(jp):", *HEADER_COLOR)} {(anime["title"]["romaji"] or "").replace('"', SINGLE_QUOTE)}"
+            echo "{get_true_fg("Title(eng):", *HEADER_COLOR)} {(anime["title"]["english"] or "").replace('"', SINGLE_QUOTE)}"
             ll=2
             while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
-                echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
+                echo -n -e "{get_true_fg("─", *SEPARATOR_COLOR, bold=False)}"
                 ((ll++))
             done
             echo
-            echo "{get_true_fg('Popularity:',*HEADER_COLOR)} {anilist_data_helper.format_number_with_commas(anime['popularity'])}"
-            echo "{get_true_fg('Favourites:',*HEADER_COLOR)} {anilist_data_helper.format_number_with_commas(anime['favourites'])}"
-            echo "{get_true_fg('Status:',*HEADER_COLOR)} {str(anime['status']).replace('"',SINGLE_QUOTE)}"
-            echo "{get_true_fg('Next Episode:',*HEADER_COLOR)} {anilist_data_helper.extract_next_airing_episode(anime['nextAiringEpisode']).replace('"',SINGLE_QUOTE)}"
-            echo "{get_true_fg('Genres:',*HEADER_COLOR)} {anilist_data_helper.format_list_data_with_comma(anime['genres']).replace('"',SINGLE_QUOTE)}"
+            echo "{get_true_fg("Popularity:", *HEADER_COLOR)} {anilist_data_helper.format_number_with_commas(anime["popularity"])}"
+            echo "{get_true_fg("Favourites:", *HEADER_COLOR)} {anilist_data_helper.format_number_with_commas(anime["favourites"])}"
+            echo "{get_true_fg("Status:", *HEADER_COLOR)} {str(anime["status"]).replace('"', SINGLE_QUOTE)}"
+            echo "{get_true_fg("Next Episode:", *HEADER_COLOR)} {anilist_data_helper.extract_next_airing_episode(anime["nextAiringEpisode"]).replace('"', SINGLE_QUOTE)}"
+            echo "{get_true_fg("Genres:", *HEADER_COLOR)} {anilist_data_helper.format_list_data_with_comma(anime["genres"]).replace('"', SINGLE_QUOTE)}"
             ll=2
             while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
-                echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
+                echo -n -e "{get_true_fg("─", *SEPARATOR_COLOR, bold=False)}"
                 ((ll++))
             done
             echo
-            echo "{get_true_fg('Episodes:',*HEADER_COLOR)} {(anime['episodes']) or 'UNKNOWN'}"
-            echo "{get_true_fg('Start Date:',*HEADER_COLOR)} {anilist_data_helper.format_anilist_date_object(anime['startDate']).replace('"',SINGLE_QUOTE)}"
-            echo "{get_true_fg('End Date:',*HEADER_COLOR)} {anilist_data_helper.format_anilist_date_object(anime['endDate']).replace('"',SINGLE_QUOTE)}"
+            echo "{get_true_fg("Episodes:", *HEADER_COLOR)} {(anime["episodes"]) or "UNKNOWN"}"
+            echo "{get_true_fg("Start Date:", *HEADER_COLOR)} {anilist_data_helper.format_anilist_date_object(anime["startDate"]).replace('"', SINGLE_QUOTE)}"
+            echo "{get_true_fg("End Date:", *HEADER_COLOR)} {anilist_data_helper.format_anilist_date_object(anime["endDate"]).replace('"', SINGLE_QUOTE)}"
             ll=2
             while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
-                echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
+                echo -n -e "{get_true_fg("─", *SEPARATOR_COLOR, bold=False)}"
                 ((ll++))
             done
             echo
-            echo "{get_true_fg('Media List:',*HEADER_COLOR)} {mediaListName.replace('"',SINGLE_QUOTE)}"
-            echo "{get_true_fg('Progress:',*HEADER_COLOR)} {progress}"
+            echo "{get_true_fg("Media List:", *HEADER_COLOR)} {mediaListName.replace('"', SINGLE_QUOTE)}"
+            echo "{get_true_fg("Progress:", *HEADER_COLOR)} {progress}"
             ll=2
             while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
-                echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
+                echo -n -e "{get_true_fg("─", *SEPARATOR_COLOR, bold=False)}"
                 ((ll++))
             done
             echo
-            # echo "{get_true_fg('Description:',*HEADER_COLOR).replace('"',SINGLE_QUOTE)}"
+            # echo "{get_true_fg("Description:", *HEADER_COLOR).replace('"', SINGLE_QUOTE)}"
             """
             template = textwrap.dedent(template)
             template = f"""
             {template}
-            echo "{textwrap.fill(clean_html((anime['description']) or "").replace('"',SINGLE_QUOTE), width=45)}"
+            echo "{textwrap.fill(clean_html((anime["description"]) or "").replace('"', SINGLE_QUOTE), width=45)}"
             """
             future_to_task[executor.submit(save_info_from_str, template, title)] = title
 
@@ -199,9 +215,18 @@ def get_rofi_icons(
         for anime, title in zip(anilist_results, titles):
             # actual link to download image from
             image_url = anime["coverImage"]["large"]
-            future_to_url[executor.submit(save_image_from_url, image_url, title)] = (
-                image_url
-            )
+
+            if not (
+                os.path.exists(
+                    os.path.join(
+                        IMAGES_CACHE_DIR,
+                        f"{sha256(title.encode('utf-8')).hexdigest()}.png",
+                    )
+                )
+            ):
+                future_to_url[
+                    executor.submit(save_image_from_url, image_url, title)
+                ] = image_url
 
         # execute the jobs
         for future in concurrent.futures.as_completed(future_to_url):
@@ -229,13 +254,22 @@ def get_fzf_manga_preview(manga_results, workers=None, wait=False):
             future_to_url = {}
             for manga in manga_results:
                 image_url = manga["poster"]
-                future_to_url[
-                    executor.submit(
-                        save_image_from_url,
-                        image_url,
-                        sanitize_filename(manga["title"]),
+
+                if not (
+                    os.path.exists(
+                        os.path.join(
+                            IMAGES_CACHE_DIR,
+                            f"{sha256(manga['title'].encode('utf-8')).hexdigest()}.png",
+                        )
                     )
-                ] = image_url
+                ):
+                    future_to_url[
+                        executor.submit(
+                            save_image_from_url,
+                            image_url,
+                            manga["title"],
+                        )
+                    ] = image_url
 
             # execute the jobs
             for future in concurrent.futures.as_completed(future_to_url):
@@ -256,11 +290,13 @@ def get_fzf_manga_preview(manga_results, workers=None, wait=False):
     os.environ["SHELL"] = shutil.which("bash") or "bash"
     preview = """
         %s
-        if [ -s %s/{} ]; then fzf-preview %s/{}
+        title="$(echo -n {})"
+        title="$(echo -n "$title" |generate_sha256)"
+        if [ -s "%s/$title" ]; then fzf_preview "%s/title"
         else echo Loading...
         fi
     """ % (
-        fzf_preview,
+        bash_functions,
         IMAGES_CACHE_DIR,
         IMAGES_CACHE_DIR,
     )
@@ -303,27 +339,29 @@ def get_fzf_episode_preview(
 
                 if episode_title and image_url:
                     future_to_url[
-                        executor.submit(save_image_from_url, image_url, episode)
+                        executor.submit(save_image_from_url, image_url, str(episode))
                     ] = image_url
                     template = textwrap.dedent(
                         f"""
                     ll=2
                     while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
-                        echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
+                        echo -n -e "{get_true_fg("─", *SEPARATOR_COLOR, bold=False)}"
                         ((ll++))
                     done
-                    echo "{get_true_fg('Anime Title(eng):',*HEADER_COLOR)} {('' or anilist_result['title']['english']).replace('"',SINGLE_QUOTE)}"
-                    echo "{get_true_fg('Anime Title(jp):',*HEADER_COLOR)} {(anilist_result['title']['romaji'] or '').replace('"',SINGLE_QUOTE)}"
+                    echo
+                    echo "{get_true_fg("Anime Title(eng):", *HEADER_COLOR)} {("" or anilist_result["title"]["english"]).replace('"', SINGLE_QUOTE)}"
+                    echo "{get_true_fg("Anime Title(jp):", *HEADER_COLOR)} {(anilist_result["title"]["romaji"] or "").replace('"', SINGLE_QUOTE)}"
 
                     ll=2
                     while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
-                        echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
+                        echo -n -e "{get_true_fg("─", *SEPARATOR_COLOR, bold=False)}"
                         ((ll++))
                     done
-                    echo "{str(episode_title).replace('"',SINGLE_QUOTE)}"
+                    echo
+                    echo "{str(episode_title).replace('"', SINGLE_QUOTE)}"
                     ll=2
                     while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
-                        echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
+                        echo -n -e "{get_true_fg("─", *SEPARATOR_COLOR, bold=False)}"
                         ((ll++))
                     done
                     """
@@ -356,10 +394,10 @@ def get_fzf_episode_preview(
     if S_PLATFORM == "win32":
         preview = """
             %s
-            title={}
-            show_image_previews="%s"
+            title="$(echo -n {})"
+            title="$(echo -n "$title" |generate_sha256)"
             dim=${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}
-            if [ $show_image_previews = "true" ];then
+            if [ "$FASTANIME_IMAGE_PREVIEWS" = "True" ];then
                 if [ -s "%s\\\\\\${title}.png" ]; then
                     if command -v "chafa">/dev/null;then
                         chafa -s $dim "%s\\\\\\${title}.png"
@@ -375,8 +413,7 @@ def get_fzf_episode_preview(
                 else echo Loading...
             fi
         """ % (
-            fzf_preview,
-            os.environ.get("FASTANIME_IMAGE_PREVIEWS", "true").lower(),
+            bash_functions,
             IMAGES_CACHE_DIR.replace("\\", "\\\\\\"),
             IMAGES_CACHE_DIR.replace("\\", "\\\\\\"),
             ANIME_INFO_CACHE_DIR.replace("\\", "\\\\\\"),
@@ -384,11 +421,11 @@ def get_fzf_episode_preview(
         )
     else:
         preview = """
-            title={}
             %s
-            show_image_previews="%s"
-            if [ $show_image_previews = "true" ];then
-                if [ -s %s/${title}.png ]; then fzf-preview %s/${title}.png
+            title="$(echo -n {})"
+            title="$(echo -n "$title" |generate_sha256)"
+            if [ "$FASTANIME_IMAGE_PREVIEWS" = "True" ];then
+                if [ -s %s/${title}.png ]; then fzf_preview %s/${title}.png
                 else echo Loading...
                 fi
             fi
@@ -396,8 +433,7 @@ def get_fzf_episode_preview(
             else echo Loading...
             fi
         """ % (
-            fzf_preview,
-            os.environ.get("FASTANIME_IMAGE_PREVIEWS", "true").lower(),
+            bash_functions,
             IMAGES_CACHE_DIR,
             IMAGES_CACHE_DIR,
             ANIME_INFO_CACHE_DIR,
@@ -439,10 +475,10 @@ def get_fzf_anime_preview(
     if S_PLATFORM == "win32":
         preview = """
             %s
-            title={}
-            show_image_previews="%s"
+            title="$(echo -n {})"
+            title="$(echo -n "$title" |generate_sha256)"
             dim=${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}
-            if [ $show_image_previews = "true" ];then
+            if [ "$FASTANIME_IMAGE_PREVIEWS" = "True" ];then
                 if [ -s "%s\\\\\\${title}.png" ]; then
                     if command -v "chafa">/dev/null;then
                         chafa  -s $dim "%s\\\\\\${title}.png"
@@ -458,8 +494,7 @@ def get_fzf_anime_preview(
                 else echo Loading...
             fi
         """ % (
-            fzf_preview,
-            os.environ.get("FASTANIME_IMAGE_PREVIEWS", "true").lower(),
+            bash_functions,
             IMAGES_CACHE_DIR.replace("\\", "\\\\\\"),
             IMAGES_CACHE_DIR.replace("\\", "\\\\\\"),
             ANIME_INFO_CACHE_DIR.replace("\\", "\\\\\\"),
@@ -468,10 +503,10 @@ def get_fzf_anime_preview(
     else:
         preview = """
             %s
-            title={}
-            show_image_previews="%s"
-            if [ $show_image_previews = "true" ];then
-                if [ -s "%s/${title}.png" ]; then fzf-preview "%s/${title}.png"
+            title="$(echo -n {})"
+            title="$(echo -n "$title" |generate_sha256)"
+            if [ "$FASTANIME_IMAGE_PREVIEWS" = "True" ];then
+                if [ -s "%s/${title}.png" ]; then fzf_preview "%s/${title}.png"
                 else echo Loading...
                 fi
             fi
@@ -479,8 +514,7 @@ def get_fzf_anime_preview(
             else echo Loading...
             fi
         """ % (
-            fzf_preview,
-            os.environ.get("FASTANIME_IMAGE_PREVIEWS", "true").lower(),
+            bash_functions,
             IMAGES_CACHE_DIR,
             IMAGES_CACHE_DIR,
             ANIME_INFO_CACHE_DIR,
