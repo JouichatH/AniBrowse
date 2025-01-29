@@ -5,7 +5,7 @@ import requests
 
 
 def print_img(url: str):
-    """helper funtion to print an image given its url
+    """helper function to print an image given its url
 
     Args:
         url: [TODO:description]
@@ -25,7 +25,7 @@ def print_img(url: str):
             return
         img_bytes = res.content
         """
-        Change made in call to chafa. Chafa dev dropped abilty
+        Change made in call to chafa. Chafa dev dropped ability
         to pull from urls. Keeping old line here just in case.
 
         subprocess.run([EXECUTABLE, url, "--size=15x15"], input=img_bytes)

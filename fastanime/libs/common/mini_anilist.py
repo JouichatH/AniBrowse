@@ -246,7 +246,7 @@ def get_mal_id_and_anilist_id(anime_title: str) -> "dict[str,int] | None":
             )
             return {"id_anilist": anime["id"], "id_mal": anime["idMal"]}
     except Exception as e:
-        logger.error(f"Something unexpected occured {e}")
+        logger.error(f"Something unexpected occurred {e}")
 
 
 def get_basic_anime_info_by_title(anime_title: str):
@@ -320,4 +320,4 @@ def get_basic_anime_info_by_title(anime_title: str):
                 ],
             }
     except Exception as e:
-        logger.error(f"Something unexpected occured {e}")
+        logger.error(f"Something unexpected occurred {e}")

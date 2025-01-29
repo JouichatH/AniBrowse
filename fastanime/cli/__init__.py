@@ -60,7 +60,7 @@ signal.signal(signal.SIGINT, handle_exit)
   fastanime --icons --default anilist
 \b
   # viewing manga
-  fastanime --manga search -t <manga-title> 
+  fastanime --manga search -t <manga-title>
 """,
 )
 @click.version_option(__version__, "--version")
@@ -142,7 +142,7 @@ signal.signal(signal.SIGINT, handle_exit)
 @click.option(
     "--normalize-titles/--no-normalize-titles",
     type=bool,
-    help="whether to normalize anime and episode titls given by providers",
+    help="whether to normalize anime and episode titles given by providers",
 )
 @click.option("-d", "--downloads-dir", type=click.Path(), help="Downloads location")
 @click.option("--fzf", is_flag=True, help="Use fzf for the ui")

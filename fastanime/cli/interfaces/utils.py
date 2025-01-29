@@ -13,7 +13,7 @@ from ...constants import APP_CACHE_DIR, S_PLATFORM
 from ...libs.anilist.types import AnilistBaseMediaDataSchema
 from ...Utility import anilist_data_helper
 from ..utils.scripts import fzf_preview
-from ..utils.utils import get_true_fg
+from ..utils.utils import get_true_fg, which_bashlike
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ def write_search_results(
     titles: list[str],
     workers: int | None = None,
 ):
-    """A helper function used by and run in a background thread by get_fzf_preview function inorder to get the actual preview data to be displayed by fzf
+    """A helper function used by and run in a background thread by get_fzf_preview function in order to get the actual preview data to be displayed by fzf
 
     Args:
         anilist_results: the anilist results from an anilist action
@@ -122,7 +122,7 @@ def write_search_results(
             # handle the text data
             template = f"""
             ll=2
-            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                 echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                 ((ll++))
             done
@@ -130,7 +130,7 @@ def write_search_results(
             echo "{get_true_fg('Title(jp):',*HEADER_COLOR)} {(anime['title']['romaji'] or "").replace('"',SINGLE_QUOTE)}"
             echo "{get_true_fg('Title(eng):',*HEADER_COLOR)} {(anime['title']['english'] or "").replace('"',SINGLE_QUOTE)}"
             ll=2
-            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                 echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                 ((ll++))
             done
@@ -141,7 +141,7 @@ def write_search_results(
             echo "{get_true_fg('Next Episode:',*HEADER_COLOR)} {anilist_data_helper.extract_next_airing_episode(anime['nextAiringEpisode']).replace('"',SINGLE_QUOTE)}"
             echo "{get_true_fg('Genres:',*HEADER_COLOR)} {anilist_data_helper.format_list_data_with_comma(anime['genres']).replace('"',SINGLE_QUOTE)}"
             ll=2
-            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                 echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                 ((ll++))
             done
@@ -150,7 +150,7 @@ def write_search_results(
             echo "{get_true_fg('Start Date:',*HEADER_COLOR)} {anilist_data_helper.format_anilist_date_object(anime['startDate']).replace('"',SINGLE_QUOTE)}"
             echo "{get_true_fg('End Date:',*HEADER_COLOR)} {anilist_data_helper.format_anilist_date_object(anime['endDate']).replace('"',SINGLE_QUOTE)}"
             ll=2
-            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                 echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                 ((ll++))
             done
@@ -158,7 +158,7 @@ def write_search_results(
             echo "{get_true_fg('Media List:',*HEADER_COLOR)} {mediaListName.replace('"',SINGLE_QUOTE)}"
             echo "{get_true_fg('Progress:',*HEADER_COLOR)} {progress}"
             ll=2
-            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+            while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                 echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                 ((ll++))
             done
@@ -279,6 +279,9 @@ def get_fzf_episode_preview(
         titles (list[str]): sanitized titles of the anime; NOTE: its important that they are sanitized since they are used as the filenames of the images
         workers ([TODO:parameter]): Number of threads to use to download the images; defaults to as many as possible
         anilist_results: the anilist results from an anilist action
+
+    Returns:
+        The fzf preview script to use or None if the bash is not found
     """
 
     # HEADER_COLOR = 215, 0, 95
@@ -305,7 +308,7 @@ def get_fzf_episode_preview(
                     template = textwrap.dedent(
                         f"""
                     ll=2
-                    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+                    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                         echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                         ((ll++))
                     done
@@ -313,13 +316,13 @@ def get_fzf_episode_preview(
                     echo "{get_true_fg('Anime Title(jp):',*HEADER_COLOR)} {(anilist_result['title']['romaji'] or '').replace('"',SINGLE_QUOTE)}"
 
                     ll=2
-                    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+                    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                         echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                         ((ll++))
                     done
                     echo "{str(episode_title).replace('"',SINGLE_QUOTE)}"
                     ll=2
-                    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do 
+                    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
                         echo -n -e "{get_true_fg("─",*SEPARATOR_COLOR,bold=False)}"
                         ((ll++))
                     done
@@ -345,22 +348,26 @@ def get_fzf_episode_preview(
     background_worker.start()
 
     # the preview script is in bash so making sure fzf doesnt use any other shell lang to process the preview script
-    os.environ["SHELL"] = shutil.which("bash") or "bash"
+    bash_path = which_bashlike()
+    if not bash_path:
+        return
+
+    os.environ["SHELL"] = bash_path
     if S_PLATFORM == "win32":
         preview = """
             %s
             title={}
             show_image_previews="%s"
             dim=${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}
-            if [ $show_image_previews = "true" ];then 
-                if [ -s "%s\\\\\\${title}.png" ]; then 
+            if [ $show_image_previews = "true" ];then
+                if [ -s "%s\\\\\\${title}.png" ]; then
                     if command -v "chafa">/dev/null;then
                         chafa -s $dim "%s\\\\\\${title}.png"
                     else
                         echo please install chafa to enjoy image previews
                     fi
-                    echo 
-                else 
+                    echo
+                else
                     echo Loading...
                 fi
             fi
@@ -380,7 +387,7 @@ def get_fzf_episode_preview(
             title={}
             %s
             show_image_previews="%s"
-            if [ $show_image_previews = "true" ];then 
+            if [ $show_image_previews = "true" ];then
                 if [ -s %s/${title}.png ]; then fzf-preview %s/${title}.png
                 else echo Loading...
                 fi
@@ -412,7 +419,7 @@ def get_fzf_anime_preview(
         anilist_results: the anilist results got from an anilist action
 
     Returns:
-        THe fzf preview script to use
+        The fzf preview script to use or None if the bash is not found
     """
     # ensure images and info exists
 
@@ -423,7 +430,12 @@ def get_fzf_anime_preview(
     background_worker.start()
 
     # the preview script is in bash so making sure fzf doesnt use any other shell lang to process the preview script
-    os.environ["SHELL"] = shutil.which("bash") or "bash"
+    bash_path = which_bashlike()
+    if not bash_path:
+        return
+
+    os.environ["SHELL"] = bash_path
+
     if S_PLATFORM == "win32":
         preview = """
             %s
@@ -431,14 +443,14 @@ def get_fzf_anime_preview(
             show_image_previews="%s"
             dim=${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}
             if [ $show_image_previews = "true" ];then
-                if [ -s "%s\\\\\\${title}.png" ]; then 
+                if [ -s "%s\\\\\\${title}.png" ]; then
                     if command -v "chafa">/dev/null;then
                         chafa  -s $dim "%s\\\\\\${title}.png"
                     else
                         echo please install chafa to enjoy image previews
                     fi
-                    echo 
-                else 
+                    echo
+                else
                     echo Loading...
                 fi
             fi

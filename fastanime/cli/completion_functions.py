@@ -59,7 +59,7 @@ def get_anime_titles(query: str, variables: dict = {}):
         else:
             return []
     except Exception as e:
-        logger.error(f"Something unexpected occured {e}")
+        logger.error(f"Something unexpected occurred {e}")
         return []
 
 

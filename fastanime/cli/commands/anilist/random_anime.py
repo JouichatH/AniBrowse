@@ -2,7 +2,7 @@ import click
 
 
 @click.command(
-    help="Get random anime from anilist based on a range of anilist anime ids that are seected at random",
+    help="Get random anime from anilist based on a range of anilist anime ids that are selected at random",
     short_help="View random anime",
 )
 @click.option(
