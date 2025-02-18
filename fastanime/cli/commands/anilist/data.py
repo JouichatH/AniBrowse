@@ -110,6 +110,7 @@ years_available = [
     "2022",
     "2023",
     "2024",
+    "2025",
 ]
 
 tags_available = {
