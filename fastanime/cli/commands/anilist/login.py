@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 @click.pass_obj
 def login(config: "Config", status, erase):
     from sys import exit
+    from sys import platform
+    from os import path
 
     from rich import print
     from rich.prompt import Confirm, Prompt
@@ -46,9 +48,18 @@ def login(config: "Config", status, erase):
         print(
             f"A browser session will be opened ( [link]{config.fastanime_anilist_app_login_url}[/link] )",
         )
-        launch(config.fastanime_anilist_app_login_url, wait=True)
-        print("Please paste the token provided here")
-        token = Prompt.ask("Enter token")
+        token = ""
+        if (platform.startswith('darwin')):
+            anilist_key_file_path = path.expanduser("~") + "/Downloads/anilist_key.txt"
+            launch(config.fastanime_anilist_app_login_url, wait=False)
+            Prompt.ask("MacOS detected.\nPress any key once the token provided has been pasted into " + anilist_key_file_path)
+            with open(anilist_key_file_path, "r") as key_file:
+                token = key_file.read().strip()
+        else:
+            Prompt.ask("OS which is not MacOS detected.")
+            launch(config.fastanime_anilist_app_login_url, wait=True)
+            print("Please paste the token provided here")
+            token = Prompt.ask("Enter token")
         user = AniList.login_user(token)
         if not user:
             print("Sth went wrong", user)
