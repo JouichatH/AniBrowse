@@ -329,8 +329,8 @@ def media_player_controls(
 
     icons = config.icons
     options = {
-        f"{'🔂 ' if icons else ''}Replay": _replay,
         f"{'⏭  ' if icons else ''}Next Episode": _next_episode,
+        f"{'🔂 ' if icons else ''}Replay": _replay,
         f"{'⏮  ' if icons else ''}Previous Episode": _previous_episode,
         f"{'🗃️ ' if icons else ''}Episodes": _episodes,
         f"{'📀 ' if icons else ''}Change Quality": _change_quality,
