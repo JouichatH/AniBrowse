@@ -212,7 +212,10 @@ class Config(object):
     def set_fastanime_config_environs(self):
         current_config = []
         for key in self.default_config:
-            current_config.append((f"FASTANIME_{key.upper()}", str(getattr(self, key))))
+            if not os.environ.get(f"FASTANIME_{key.upper()}"):
+                current_config.append(
+                    (f"FASTANIME_{key.upper()}", str(getattr(self, key)))
+                )
         os.environ.update(current_config)
 
     def update_user(self, user):
