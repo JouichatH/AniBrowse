@@ -756,6 +756,7 @@ def provider_anime_episodes_menu(
                     "progress"
                 )
             )
+            current_episode_number = str(int(current_episode_number) + 1)
             if current_episode_number not in available_episodes:
                 current_episode_number = ""
             print(
