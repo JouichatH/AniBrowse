@@ -208,5 +208,9 @@ def run_mpv(
                 mpv_args.append(f"--title={title}")
             if ytdl_format:
                 mpv_args.append(f"--ytdl-format={ytdl_format}")
+
+            if user_args := os.environ.get("FASTANIME_MPV_ARGS"):
+                mpv_args.extend(user_args.split(","))
+
             stop_time, total_time = stream_video(MPV, link, mpv_args, custom_args)
             return stop_time, total_time

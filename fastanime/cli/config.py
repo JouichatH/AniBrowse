@@ -1,8 +1,12 @@
 import json
 import logging
 import os
+import sys
+import time
 from configparser import ConfigParser
 from typing import TYPE_CHECKING
+
+from rich import print
 
 from ..constants import (
     ASSETS_DIR,
@@ -60,6 +64,7 @@ class Config(object):
         "normalize_titles": "True",
         "notification_duration": "120",
         "max_cache_lifetime": "03:00:00",
+        "mpv_args": "",
         "per_page": "15",
         "player": "mpv",
         "preferred_history": "local",
@@ -96,8 +101,16 @@ class Config(object):
         self.configparser.add_section("anilist")
 
         # --- set config values from file or using defaults ---
-        if os.path.exists(USER_CONFIG_PATH) and not no_config:
-            self.configparser.read(USER_CONFIG_PATH, encoding="utf-8")
+        try:
+            if os.path.exists(USER_CONFIG_PATH) and not no_config:
+                self.configparser.read(USER_CONFIG_PATH, encoding="utf-8")
+        except Exception as e:
+            print(
+                "[yellow]Warning[/]: Failed to read config file using default configuration",
+                file=sys.stderr,
+            )
+            logger.error(f"Failed to read config file: {e}")
+            time.sleep(5)
 
         # get the configuration
         self.auto_next = self.configparser.getboolean("stream", "auto_next")
@@ -149,6 +162,7 @@ class Config(object):
             + max_cache_lifetime[1] * 3600
             + max_cache_lifetime[2] * 60
         )
+        self.mpv_args = self.configparser.get("general", "mpv_args")
         self.per_page = self.configparser.get("anilist", "per_page")
         self.player = self.configparser.get("stream", "player")
         self.preferred_history = self.configparser.get("stream", "preferred_history")
@@ -447,6 +461,10 @@ recent = {self.recent}
 # If you want to enable it, please follow the link below to register the app with your Discord account:
 # https://discord.com/oauth2/authorize?client_id=1292070065583165512
 discord = {self.discord}
+
+# comma separated list of args that will be passed to mpv
+# example: --vo=kitty,--fullscreen,--volume=50
+mpv_args = {self.mpv_args}
 
 
 [stream]
