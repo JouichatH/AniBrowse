@@ -65,6 +65,7 @@ class Config(object):
         "notification_duration": "120",
         "max_cache_lifetime": "03:00:00",
         "mpv_args": "",
+        "mpv_pre_args": "",
         "per_page": "15",
         "player": "mpv",
         "preferred_history": "local",
@@ -163,6 +164,7 @@ class Config(object):
             + max_cache_lifetime[2] * 60
         )
         self.mpv_args = self.configparser.get("general", "mpv_args")
+        self.mpv_pre_args = self.configparser.get("general", "mpv_pre_args")
         self.per_page = self.configparser.get("anilist", "per_page")
         self.player = self.configparser.get("stream", "player")
         self.preferred_history = self.configparser.get("stream", "preferred_history")
@@ -469,6 +471,10 @@ discord = {self.discord}
 # example: --vo=kitty,--fullscreen,--volume=50
 mpv_args = {self.mpv_args}
 
+# command line options passed before the mpv command
+# example: kitty
+# useful incase of wanting to run sth like: kitty mpv --vo=kitty <url>
+mpv_pre_args = {self.mpv_pre_args}
 
 [stream]
 # the quality of the stream [1080,720,480,360]

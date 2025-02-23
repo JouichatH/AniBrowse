@@ -12,12 +12,13 @@ logger = logging.getLogger(__name__)
 mpv_av_time_pattern = re.compile(r"AV: ([0-9:]*) / ([0-9:]*) \(([0-9]*)%\)")
 
 
-def stream_video(MPV, url, mpv_args, custom_args):
+def stream_video(MPV, url, mpv_args, custom_args, pre_args=[]):
     last_time = "0"
     total_time = "0"
     if os.environ.get("FASTANIME_DISABLE_MPV_POPEN", "False") == "False":
         process = subprocess.Popen(
-            [
+            pre_args
+            + [
                 MPV,
                 url,
                 *mpv_args,
@@ -59,7 +60,7 @@ def stream_video(MPV, url, mpv_args, custom_args):
             process.wait()
     else:
         proc = subprocess.run(
-            [MPV, url, *mpv_args, *custom_args],
+            pre_args + [MPV, url, *mpv_args, *custom_args],
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -212,5 +213,10 @@ def run_mpv(
             if user_args := os.environ.get("FASTANIME_MPV_ARGS"):
                 mpv_args.extend(user_args.split(","))
 
-            stop_time, total_time = stream_video(MPV, link, mpv_args, custom_args)
+            pre_args = []
+            if user_args := os.environ.get("FASTANIME_MPV_PRE_ARGS"):
+                pre_args = user_args.split(",")
+            stop_time, total_time = stream_video(
+                MPV, link, mpv_args, custom_args, pre_args
+            )
             return stop_time, total_time
