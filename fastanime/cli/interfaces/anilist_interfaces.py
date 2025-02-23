@@ -56,8 +56,10 @@ def calculate_percentage_completion(start_time, end_time):
     except Exception:
         return 0
 
-def discord_updater(show,episode,switch):
-    discord.discord_connect(show,episode,switch)
+
+def discord_updater(show, episode, switch):
+    discord.discord_connect(show, episode, switch)
+
 
 def media_player_controls(
     config: "Config", fastanime_runtime_state: "FastAnimeRuntimeState"
@@ -517,7 +519,10 @@ def provider_anime_episode_servers_menu(
     # update discord activity for user
     switch = threading.Event()
     if config.discord:
-        discord_proc = threading.Thread(target=discord_updater, args=(provider_anime_title,current_episode_number,switch))
+        discord_proc = threading.Thread(
+            target=discord_updater,
+            args=(provider_anime_title, current_episode_number, switch),
+        )
         discord_proc.start()
 
     # try to get the timestamp you left off from if available
@@ -778,7 +783,9 @@ def provider_anime_episodes_menu(
                 )
 
                 if not preview:
-                    print("Failed to find bash executable which is necessary for preview with fzf.\nIf you are on Windows, please make sure Git is installed and available in PATH.")
+                    print(
+                        "Failed to find bash executable which is necessary for preview with fzf.\nIf you are on Windows, please make sure Git is installed and available in PATH."
+                    )
 
             current_episode_number = fzf.run(
                 choices, prompt="Select Episode", header=anime_title, preview=preview
@@ -967,6 +974,218 @@ def anime_provider_search_results_menu(
     ).get("progress_tracking", "prompt")
     set_prefered_progress_tracking(config, fastanime_runtime_state)
     fetch_anime_episode(config, fastanime_runtime_state)
+
+
+def download_anime(config: "Config", fastanime_runtime_state: "FastAnimeRuntimeState"):
+    import time
+
+    from rich.prompt import Confirm, Prompt
+    from thefuzz import fuzz
+
+    from ...Utility.downloader.downloader import downloader
+
+    download_dir = config.downloads_dir
+    force_unknown_ext = True
+    verbose = False
+    silent = True
+    merge = Confirm.ask("Merge audio and video", default=True)
+    clean = Confirm.ask("Clean up files", default=True)
+    prompt = Confirm.ask("Prompt incase for actions while downloading", default=True)
+    force_ffmpeg = Confirm.ask("Force ffmpeg", default=False)
+    hls_use_mpegts = Confirm.ask("Use mpegts", default=False)
+    hls_use_h264 = Confirm.ask("Use h264", default=False)
+
+    force_ffmpeg |= hls_use_mpegts or hls_use_h264
+    anime_title = Prompt.ask(
+        "Anime title", default=fastanime_runtime_state.selected_anime_title_anilist
+    )
+    translation_type = Prompt.ask("Translation type", default=config.translation_type)
+    anime_provider = config.anime_provider
+    anilist_anime_info = fastanime_runtime_state.selected_anime_anilist
+    print(f"[green bold]Now Downloading: [/] {anime_title}")
+    # ---- search for anime ----
+    with Progress() as progress:
+        progress.add_task("Fetching Search Results...", total=None)
+        search_results = anime_provider.search_for_anime(
+            anime_title, translation_type=translation_type
+        )
+    if not search_results:
+        print("Search results failed")
+        input("Enter to retry")
+        return
+    search_results = search_results["results"]
+    if not search_results:
+        print("Nothing muches your search term")
+        return
+    search_results_ = {
+        search_result["title"]: search_result for search_result in search_results
+    }
+
+    if config.auto_select:
+        selected_anime_title = max(
+            search_results_.keys(),
+            key=lambda title: fuzz.ratio(
+                anime_normalizer.get(title, title), anime_title
+            ),
+        )
+        print("[cyan]Auto selecting:[/] ", selected_anime_title)
+    else:
+        choices = list(search_results_.keys())
+        if config.use_fzf:
+            selected_anime_title = fzf.run(choices, "Please Select title", "FastAnime")
+        else:
+            selected_anime_title = fuzzy_inquirer(
+                choices,
+                "Please Select title",
+            )
+
+    # ---- fetch anime ----
+    with Progress() as progress:
+        progress.add_task("Fetching Anime...", total=None)
+        anime: Anime | None = anime_provider.get_anime(
+            search_results_[selected_anime_title]["id"]
+        )
+    if not anime:
+        print("Sth went wring anime no found")
+        input("Enter to continue...")
+        return
+
+    episodes = sorted(
+        anime["availableEpisodesDetail"][config.translation_type], key=float
+    )
+    episode_range = Prompt.ask("Enter episode range (e.g 1:12 or 1:12:2 or 1: or :12):")
+    if episode_range:
+        if ":" in episode_range:
+            ep_range_tuple = episode_range.split(":")
+            if len(ep_range_tuple) == 2 and all(ep_range_tuple):
+                episodes_start, episodes_end = ep_range_tuple
+                episodes_range = episodes[int(episodes_start) : int(episodes_end)]
+            elif len(ep_range_tuple) == 3 and all(ep_range_tuple):
+                episodes_start, episodes_end, step = ep_range_tuple
+                episodes_range = episodes[
+                    int(episodes_start) : int(episodes_end) : int(step)
+                ]
+            else:
+                episodes_start, episodes_end = ep_range_tuple
+                if episodes_start.strip():
+                    episodes_range = episodes[int(episodes_start) :]
+                elif episodes_end.strip():
+                    episodes_range = episodes[: int(episodes_end)]
+                else:
+                    episodes_range = episodes
+        else:
+            episodes_range = episodes[int(episode_range) :]
+        print(f"[green bold]Downloading: [/] {episodes_range}")
+
+    else:
+        episodes_range = sorted(episodes, key=float)
+        print(f"[green bold]Downloading: [/] {episodes_range}")
+
+    if config.normalize_titles:
+        from ...libs.common.mini_anilist import get_basic_anime_info_by_title
+
+        anilist_anime_info = get_basic_anime_info_by_title(anime["title"])
+
+    # lets download em
+    for episode in episodes_range:
+        try:
+            episode = str(episode)
+            if episode not in episodes:
+                print(f"[cyan]Warning[/]: Episode {episode} not found, skipping")
+                continue
+            with Progress() as progress:
+                progress.add_task("Fetching Episode Streams...", total=None)
+                streams = anime_provider.get_episode_streams(
+                    anime["id"], episode, config.translation_type
+                )
+                if not streams:
+                    print("No streams skipping")
+                    continue
+            # ---- fetch servers ----
+            if config.server == "top":
+                with Progress() as progress:
+                    progress.add_task("Fetching top server...", total=None)
+                    server_name = next(streams, None)
+                    if not server_name:
+                        print("Sth went wrong when fetching the server")
+                        continue
+                stream_link = filter_by_quality(config.quality, server_name["links"])
+                if not stream_link:
+                    print("[yellow bold]WARNING:[/] No streams found")
+                    time.sleep(1)
+                    print("Continuing...")
+                    continue
+                link = stream_link["link"]
+                provider_headers = server_name["headers"]
+                episode_title = server_name["episode_title"]
+                subtitles = server_name["subtitles"]
+            else:
+                with Progress() as progress:
+                    progress.add_task("Fetching servers", total=None)
+                    # prompt for server selection
+                    servers = {server["server"]: server for server in streams}
+                servers_names = list(servers.keys())
+                if config.server in servers_names:
+                    server_name = config.server
+                else:
+                    if config.use_fzf:
+                        server_name = fzf.run(servers_names, "Select an link")
+                    else:
+                        server_name = fuzzy_inquirer(
+                            servers_names,
+                            "Select link",
+                        )
+                stream_link = filter_by_quality(
+                    config.quality, servers[server_name]["links"]
+                )
+                if not stream_link:
+                    print("[yellow bold]WARNING:[/] No streams found")
+                    time.sleep(1)
+                    print("Continuing...")
+                    continue
+                link = stream_link["link"]
+                provider_headers = servers[server_name]["headers"]
+
+                subtitles = servers[server_name]["subtitles"]
+                episode_title = servers[server_name]["episode_title"]
+
+            if anilist_anime_info:
+                selected_anime_title = (
+                    anilist_anime_info["title"][config.preferred_language]
+                    or anilist_anime_info["title"]["romaji"]
+                    or anilist_anime_info["title"]["english"]
+                )
+                import re
+
+                if anilist_anime_info.get("streamingEpisodes"):
+                    for episode_detail in anilist_anime_info["streamingEpisodes"]:
+                        if re.match(f"Episode {episode} ", episode_detail["title"]):
+                            episode_title = episode_detail["title"]
+                            break
+            print(f"[purple]Now Downloading:[/] {episode_title}")
+            subtitles = move_preferred_subtitle_lang_to_top(subtitles, config.sub_lang)
+            downloader._download_file(
+                link,
+                selected_anime_title,
+                episode_title,
+                download_dir,
+                silent,
+                vid_format=config.format,
+                force_unknown_ext=force_unknown_ext,
+                verbose=verbose,
+                headers=provider_headers,
+                sub=subtitles[0]["url"] if subtitles else "",
+                merge=merge,
+                clean=clean,
+                prompt=prompt,
+                force_ffmpeg=force_ffmpeg,
+                hls_use_mpegts=hls_use_mpegts,
+                hls_use_h264=hls_use_h264,
+            )
+        except Exception as e:
+            print(e)
+            time.sleep(1)
+            print("Continuing...")
 
 
 #
@@ -1413,6 +1632,12 @@ def media_actions_menu(
         }
         anilist_results_menu(config, fastanime_runtime_state)
 
+    def _download_anime(
+        config: "Config", fastanime_runtime_state: "FastAnimeRuntimeState"
+    ):
+        download_anime(config, fastanime_runtime_state)
+        media_actions_menu(config, fastanime_runtime_state)
+
     icons = config.icons
     options = {
         f"{'📽️ ' if icons else ''}Stream ({progress}/{episodes_total})": _stream_anime,
@@ -1428,6 +1653,7 @@ def media_actions_menu(
         f"{'🎧 ' if icons else ''}Change Translation Type": _change_translation_type,
         f"{'💽 ' if icons else ''}Change Provider": _change_provider,
         f"{'💽 ' if icons else ''}Change Player": _change_player,
+        f"{'📥 ' if icons else ''}Download Anime": _download_anime,
         f"{'🔘 ' if icons else ''}Toggle auto select anime": _toggle_auto_select,  #  WARN: problematic if you choose an anime that doesnt match id
         f"{'💠 ' if icons else ''}Toggle auto next episode": _toggle_auto_next,
         f"{'🔘 ' if icons else ''}Toggle continue from history": _toggle_continue_from_history,
@@ -1503,7 +1729,9 @@ def anilist_results_menu(
 
             preview = get_fzf_anime_preview(search_results, anime_data.keys())
             if not preview:
-                print("Failed to find bash executable which is necessary for preview with fzf.\nIf you are on Windows, please make sure Git is installed and available in PATH.")
+                print(
+                    "Failed to find bash executable which is necessary for preview with fzf.\nIf you are on Windows, please make sure Git is installed and available in PATH."
+                )
 
             selected_anime_title = fzf.run(
                 choices,
@@ -1748,22 +1976,34 @@ def fastanime_main_menu(
     options = {
         f"{'🔥 ' if icons else ''}Trending": AniList.get_trending,
         f"{'🎞️ ' if icons else ''}Recent": _recent,
-        f"{'📺 ' if icons else ''}Watching": lambda config, media_list_type="Watching", page=1: _handle_animelist(
+        f"{'📺 ' if icons else ''}Watching": lambda config,
+        media_list_type="Watching",
+        page=1: _handle_animelist(
             config, fastanime_runtime_state, media_list_type, page=page
         ),
-        f"{'⏸  ' if icons else ''}Paused": lambda config, media_list_type="Paused", page=1: _handle_animelist(
+        f"{'⏸  ' if icons else ''}Paused": lambda config,
+        media_list_type="Paused",
+        page=1: _handle_animelist(
             config, fastanime_runtime_state, media_list_type, page=page
         ),
-        f"{'🚮 ' if icons else ''}Dropped": lambda config, media_list_type="Dropped", page=1: _handle_animelist(
+        f"{'🚮 ' if icons else ''}Dropped": lambda config,
+        media_list_type="Dropped",
+        page=1: _handle_animelist(
             config, fastanime_runtime_state, media_list_type, page=page
         ),
-        f"{'📑 ' if icons else ''}Planned": lambda config, media_list_type="Planned", page=1: _handle_animelist(
+        f"{'📑 ' if icons else ''}Planned": lambda config,
+        media_list_type="Planned",
+        page=1: _handle_animelist(
             config, fastanime_runtime_state, media_list_type, page=page
         ),
-        f"{'✅ ' if icons else ''}Completed": lambda config, media_list_type="Completed", page=1: _handle_animelist(
+        f"{'✅ ' if icons else ''}Completed": lambda config,
+        media_list_type="Completed",
+        page=1: _handle_animelist(
             config, fastanime_runtime_state, media_list_type, page=page
         ),
-        f"{'🔁 ' if icons else ''}Rewatching": lambda config, media_list_type="Rewatching", page=1: _handle_animelist(
+        f"{'🔁 ' if icons else ''}Rewatching": lambda config,
+        media_list_type="Rewatching",
+        page=1: _handle_animelist(
             config, fastanime_runtime_state, media_list_type, page=page
         ),
         f"{'🔔 ' if icons else ''}Recently Updated Anime": AniList.get_most_recently_updated,

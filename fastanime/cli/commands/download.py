@@ -164,7 +164,7 @@ def download(
         move_preferred_subtitle_lang_to_top,
     )
 
-    force_ffmpeg |= (hls_use_mpegts or hls_use_h264)
+    force_ffmpeg |= hls_use_mpegts or hls_use_h264
 
     anime_provider = AnimeProvider(config.provider)
     anilist_anime_info = None
@@ -294,6 +294,7 @@ def download(
 
         else:
             episodes_range = sorted(episodes, key=float)
+            print(f"[green bold]Downloading: [/] {episodes_range}")
 
         if config.normalize_titles:
             from ...libs.common.mini_anilist import get_basic_anime_info_by_title
