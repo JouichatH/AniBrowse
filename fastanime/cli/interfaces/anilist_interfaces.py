@@ -1059,16 +1059,16 @@ def download_anime(config: "Config", fastanime_runtime_state: "FastAnimeRuntimeS
             ep_range_tuple = episode_range.split(":")
             if len(ep_range_tuple) == 2 and all(ep_range_tuple):
                 episodes_start, episodes_end = ep_range_tuple
-                episodes_range = episodes[int(episodes_start) : int(episodes_end)]
+                episodes_range = episodes[int(episodes_start) - 1: int(episodes_end)]
             elif len(ep_range_tuple) == 3 and all(ep_range_tuple):
                 episodes_start, episodes_end, step = ep_range_tuple
                 episodes_range = episodes[
-                    int(episodes_start) : int(episodes_end) : int(step)
+                    int(episodes_start) - 1: int(episodes_end) : int(step)
                 ]
             else:
                 episodes_start, episodes_end = ep_range_tuple
                 if episodes_start.strip():
-                    episodes_range = episodes[int(episodes_start) :]
+                    episodes_range = episodes[int(episodes_start) - 1 :]
                 elif episodes_end.strip():
                     episodes_range = episodes[: int(episodes_end)]
                 else:
