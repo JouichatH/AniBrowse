@@ -133,10 +133,14 @@ def update_app(force=False):
             if sys.prefix == sys.base_prefix:
                 # ensure NOT in a venv, where --user flag can cause an error.
                 # TODO: Get value of 'include-system-site-packages' in pyenv.cfg.
-                args.append('--user')
+                args.append("--user")
 
             process = subprocess.run(args)
     if process.returncode == 0:
+        print(
+            "[green]Its recommended to run the following after updating:\n\tfastanime config --update (to get the latest config docs)\n\tfastanime cache --clean (to get rid of any potential issues)[/]",
+            file=sys.stderr,
+        )
         return True, release_json
     else:
         return False, release_json
