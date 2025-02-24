@@ -706,12 +706,13 @@ def provider_anime_episodes_menu(
         # the user watch history thats locally available
         # will be preferred over remote
         if (
-            user_watch_history.get(str(anime_id_anilist), {}).get("episode_no")
-            in available_episodes
+            config.preferred_history == "local"
+            or not selected_anime_anilist["mediaListEntry"]
         ):
             if (
-                config.preferred_history == "local"
-                or not selected_anime_anilist["mediaListEntry"]
+
+                user_watch_history.get(str(anime_id_anilist), {}).get("episode_no")
+                in available_episodes
             ):
                 current_episode_number = user_watch_history[str(anime_id_anilist)][
                     "episode_no"
