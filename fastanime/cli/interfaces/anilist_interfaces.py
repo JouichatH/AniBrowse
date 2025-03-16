@@ -1925,6 +1925,10 @@ def _anilist_search(config: "Config", page=1):
     else:
         search_term = Prompt.ask("[cyan]Search for[/]")
 
+    # Return to main menu if search term is empty
+    if not search_term.strip():
+        return False, "Search canceled - return to main menu"
+
     return AniList.search(query=search_term, page=page)
 
 
