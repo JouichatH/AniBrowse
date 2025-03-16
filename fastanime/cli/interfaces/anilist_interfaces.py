@@ -329,8 +329,14 @@ def media_player_controls(
         media_player_controls(config, fastanime_runtime_state)
 
     icons = config.icons
-    options = {
-        f"{'⏭  ' if icons else ''}Next Episode": _next_episode,
+    options = {}
+
+    # Only show Next Episode option if the current episode is not the last one
+    current_index = available_episodes.index(current_episode_number)
+    if current_index < len(available_episodes) - 1:
+        options[f"{'⏭  ' if icons else ''}Next Episode"] = _next_episode
+
+    options.update({
         f"{'🔂 ' if icons else ''}Replay": _replay,
         f"{'⏮  ' if icons else ''}Previous Episode": _previous_episode,
         f"{'🗃️ ' if icons else ''}Episodes": _episodes,
@@ -347,12 +353,15 @@ def media_player_controls(
             config, fastanime_runtime_state
         ),
         f"{'❌ ' if icons else ''}Exit": exit_app,
-    }
+    })
 
     if config.auto_next:
-        print("Auto selecting next episode")
-        _next_episode()
-        return
+        if current_index < len(available_episodes) - 1:
+            print("Auto selecting next episode")
+            _next_episode()
+            return
+        else:
+            print("Last episode reached")
 
     choices = list(options.keys())
     if config.use_fzf:
