@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import random
 import threading
+from hashlib import sha256
 from typing import TYPE_CHECKING
 
 from click import clear
@@ -710,7 +711,6 @@ def provider_anime_episodes_menu(
             or not selected_anime_anilist["mediaListEntry"]
         ):
             if (
-
                 user_watch_history.get(str(anime_id_anilist), {}).get("episode_no")
                 in available_episodes
             ):
@@ -1055,7 +1055,9 @@ def download_anime(config: "Config", fastanime_runtime_state: "FastAnimeRuntimeS
     episodes = sorted(
         anime["availableEpisodesDetail"][config.translation_type], key=float
     )
-    episode_ranges = Prompt.ask("Enter episode ranges (e.g 1:12 or 1:12:2 or 1: or :12 or 5)").split(" ")
+    episode_ranges = Prompt.ask(
+        "Enter episode ranges (e.g 1:12 or 1:12:2 or 1: or :12 or 5)"
+    ).split(" ")
     episodes_range = []
     if episode_ranges != [""]:
         for episode_range in episode_ranges:
@@ -1063,11 +1065,13 @@ def download_anime(config: "Config", fastanime_runtime_state: "FastAnimeRuntimeS
                 ep_range_tuple = episode_range.split(":")
                 if len(ep_range_tuple) == 2 and all(ep_range_tuple):
                     episodes_start, episodes_end = ep_range_tuple
-                    episodes_range += episodes[int(episodes_start) - 1: int(episodes_end)]
+                    episodes_range += episodes[
+                        int(episodes_start) - 1 : int(episodes_end)
+                    ]
                 elif len(ep_range_tuple) == 3 and all(ep_range_tuple):
                     episodes_start, episodes_end, step = ep_range_tuple
                     episodes_range += episodes[
-                        int(episodes_start) - 1: int(episodes_end) : int(step)
+                        int(episodes_start) - 1 : int(episodes_end) : int(step)
                     ]
                 else:
                     episodes_start, episodes_end = ep_range_tuple
@@ -1078,12 +1082,14 @@ def download_anime(config: "Config", fastanime_runtime_state: "FastAnimeRuntimeS
                     else:
                         episodes_range += episodes
             else:
-                episodes_range += ([episode_range] if episode_range in episodes else [])
+                episodes_range += [episode_range] if episode_range in episodes else []
 
     else:
         episodes_range = sorted(episodes, key=float)
 
-    episodes_range = list(dict.fromkeys(episodes_range)) # To preserve order while removing duplicates
+    episodes_range = list(
+        dict.fromkeys(episodes_range)
+    )  # To preserve order while removing duplicates
     print(f"[green bold]Downloading: [/] {episodes_range}")
 
     if config.normalize_titles:
@@ -1757,7 +1763,9 @@ def anilist_results_menu(
             get_rofi_icons(search_results, anime_data.keys())
             choices = []
             for title in anime_data.keys():
-                icon_path = os.path.join(IMAGES_CACHE_DIR, title)
+                icon_path = os.path.join(
+                    IMAGES_CACHE_DIR, sha256(title.encode("utf-8")).hexdigest()
+                )
                 choices.append(f"{title}\0icon\x1f{icon_path}.png")
             choices.append("Back")
             selected_anime_title = Rofi.run_with_icons(choices, "Select Anime")
