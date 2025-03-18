@@ -336,24 +336,41 @@ def media_player_controls(
     if current_index < len(available_episodes) - 1:
         options[f"{'⏭  ' if icons else ''}Next Episode"] = _next_episode
 
-    options.update({
-        f"{'🔂 ' if icons else ''}Replay": _replay,
-        f"{'⏮  ' if icons else ''}Previous Episode": _previous_episode,
-        f"{'🗃️ ' if icons else ''}Episodes": _episodes,
-        f"{'📀 ' if icons else ''}Change Quality": _change_quality,
-        f"{'🎧 ' if icons else ''}Change Translation Type": _change_translation_type,
-        f"{'💽 ' if icons else ''}Servers": _servers,
-        f"{'📱 ' if icons else ''}Main Menu": lambda: fastanime_main_menu(
-            config, fastanime_runtime_state
-        ),
-        f"{'📜 ' if icons else ''}Media Actions Menu": lambda: media_actions_menu(
-            config, fastanime_runtime_state
-        ),
-        f"{'🔎 ' if icons else ''}Anilist Results Menu": lambda: anilist_results_menu(
-            config, fastanime_runtime_state
-        ),
-        f"{'❌ ' if icons else ''}Exit": exit_app,
-    })
+    def _toggle_auto_next(
+        config: "Config", fastanime_runtime_state: "FastAnimeRuntimeState"
+    ):
+        """helper function to toggle auto next
+
+        Args:
+            config: [TODO:description]
+            fastanime_runtime_state: [TODO:description]
+        """
+        config.auto_next = not config.auto_next
+        media_player_controls(config, fastanime_runtime_state)
+
+    options.update(
+        {
+            f"{'🔂 ' if icons else ''}Replay": _replay,
+            f"{'⏮  ' if icons else ''}Previous Episode": _previous_episode,
+            f"{'🗃️ ' if icons else ''}Episodes": _episodes,
+            f"{'📀 ' if icons else ''}Change Quality": _change_quality,
+            f"{'🎧 ' if icons else ''}Change Translation Type": _change_translation_type,
+            f"{'💠 ' if icons else ''}Toggle auto next episode": lambda: _toggle_auto_next(
+                config, fastanime_runtime_state
+            ),
+            f"{'💽 ' if icons else ''}Servers": _servers,
+            f"{'📱 ' if icons else ''}Main Menu": lambda: fastanime_main_menu(
+                config, fastanime_runtime_state
+            ),
+            f"{'📜 ' if icons else ''}Media Actions Menu": lambda: media_actions_menu(
+                config, fastanime_runtime_state
+            ),
+            f"{'🔎 ' if icons else ''}Anilist Results Menu": lambda: anilist_results_menu(
+                config, fastanime_runtime_state
+            ),
+            f"{'❌ ' if icons else ''}Exit": exit_app,
+        }
+    )
 
     if config.auto_next:
         if current_index < len(available_episodes) - 1:
@@ -1998,34 +2015,22 @@ def fastanime_main_menu(
     options = {
         f"{'🔥 ' if icons else ''}Trending": AniList.get_trending,
         f"{'🎞️ ' if icons else ''}Recent": _recent,
-        f"{'📺 ' if icons else ''}Watching": lambda config,
-        media_list_type="Watching",
-        page=1: _handle_animelist(
+        f"{'📺 ' if icons else ''}Watching": lambda config, media_list_type="Watching", page=1: _handle_animelist(
             config, fastanime_runtime_state, media_list_type, page=page
         ),
-        f"{'⏸  ' if icons else ''}Paused": lambda config,
-        media_list_type="Paused",
-        page=1: _handle_animelist(
+        f"{'⏸  ' if icons else ''}Paused": lambda config, media_list_type="Paused", page=1: _handle_animelist(
             config, fastanime_runtime_state, media_list_type, page=page
         ),
-        f"{'🚮 ' if icons else ''}Dropped": lambda config,
-        media_list_type="Dropped",
-        page=1: _handle_animelist(
+        f"{'🚮 ' if icons else ''}Dropped": lambda config, media_list_type="Dropped", page=1: _handle_animelist(
             config, fastanime_runtime_state, media_list_type, page=page
         ),
-        f"{'📑 ' if icons else ''}Planned": lambda config,
-        media_list_type="Planned",
-        page=1: _handle_animelist(
+        f"{'📑 ' if icons else ''}Planned": lambda config, media_list_type="Planned", page=1: _handle_animelist(
             config, fastanime_runtime_state, media_list_type, page=page
         ),
-        f"{'✅ ' if icons else ''}Completed": lambda config,
-        media_list_type="Completed",
-        page=1: _handle_animelist(
+        f"{'✅ ' if icons else ''}Completed": lambda config, media_list_type="Completed", page=1: _handle_animelist(
             config, fastanime_runtime_state, media_list_type, page=page
         ),
-        f"{'🔁 ' if icons else ''}Rewatching": lambda config,
-        media_list_type="Rewatching",
-        page=1: _handle_animelist(
+        f"{'🔁 ' if icons else ''}Rewatching": lambda config, media_list_type="Rewatching", page=1: _handle_animelist(
             config, fastanime_runtime_state, media_list_type, page=page
         ),
         f"{'🔔 ' if icons else ''}Recently Updated Anime": AniList.get_most_recently_updated,
