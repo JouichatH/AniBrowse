@@ -50,6 +50,7 @@ def icat_manga_viewer(image_links: list[str], window_title: str):
         while True:
             console.clear()
             term_width, term_height = shutil.get_terminal_size((80, 24))
+            panel_height = 0
 
             # Calculate space for image based on banner visibility
             if show_banner:
