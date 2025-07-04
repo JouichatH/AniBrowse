@@ -1633,7 +1633,9 @@ def media_actions_menu(
             return
 
         relations = relations[1]["data"]["Media"]["relations"]  # pyright:ignore
-        relations["nodes"] = [node for node in relations["nodes"] if node.get("type") == "ANIME"]
+        relations["nodes"] = [
+            node for node in relations["nodes"] if node.get("type") == "ANIME"
+        ]
         fastanime_runtime_state.anilist_results_data = {
             "data": {"Page": {"media": relations["nodes"]}}  # pyright:ignore
         }
@@ -1940,6 +1942,8 @@ def _anilist_search(config: "Config", page=1):
     # TODO: Add filters and other search features
     if config.use_rofi:
         search_term = str(Rofi.ask("Search for"))
+    elif config.use_fzf:
+        search_term = fzf.search_for_anime()
     else:
         search_term = Prompt.ask("[cyan]Search for[/]")
 

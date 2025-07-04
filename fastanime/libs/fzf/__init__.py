@@ -9,6 +9,7 @@ from click import clear
 from rich import print
 
 from ...cli.utils.tools import exit_app
+from .scripts import FETCH_ANIME_SCRIPT
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +130,7 @@ class FZF:
             encoding="utf-8",
         )
         if not result or result.returncode != 0 or not result.stdout:
-            if result.returncode == 130: # fzf terminated by ctrl-c
+            if result.returncode == 130:  # fzf terminated by ctrl-c
                 exit_app()
 
             print("sth went wrong :confused:")
@@ -198,9 +199,50 @@ class FZF:
         # os.environ["FZF_DEFAULT_OPTS"] = ""
         return result
 
+    def search_for_anime(self):
+
+        commands = [
+            "--preview",
+            f"{FETCH_ANIME_SCRIPT}fetch_anime_details {{}}",
+            "--prompt",
+            "Search For Anime: ",
+            "--header",
+            "Type to search, results are dynamically loaded, enter to select",
+            "--bind",
+            f"change:reload({FETCH_ANIME_SCRIPT}fetch_anime_for_fzf {{q}})",
+            "--preview-window",
+            "wrap",
+            # "--bind",
+            # f"enter:become(echo {{}})",
+            "--reverse",
+        ]
+
+        if not self.FZF_EXECUTABLE:
+            raise Exception("fzf executable not found")
+        os.environ["SHELL"] = "bash"
+
+        result = subprocess.run(
+            [self.FZF_EXECUTABLE, *commands],
+            input="",
+            stdout=subprocess.PIPE,
+            universal_newlines=True,
+            text=True,
+            encoding="utf-8",
+        )
+        if not result or result.returncode != 0 or not result.stdout:
+            if result.returncode == 130:  # fzf terminated by ctrl-c
+                exit_app()
+
+            print("sth went wrong :confused:")
+            input("press enter to try again...")
+            clear()
+        clear()
+
+        return result.stdout.strip().split("|")[0].strip()
+
 
 fzf = FZF()
 
 if __name__ == "__main__":
-    action = fzf.run([*os.listdir(), "exit"], "Prompt: ", "Header", preview="bat {}")
-    print(action)
+    print(fzf.search_for_anime())
+    exit()
