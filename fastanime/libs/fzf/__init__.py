@@ -232,11 +232,7 @@ class FZF:
         if not result or result.returncode != 0 or not result.stdout:
             if result.returncode == 130:  # fzf terminated by ctrl-c
                 exit_app()
-
-            print("sth went wrong :confused:")
-            input("press enter to try again...")
-            clear()
-        clear()
+            return ""
 
         return result.stdout.strip().split("|")[0].strip()
 
