@@ -177,3 +177,4 @@ app/View/SearchScreen/search_screen.py~
 app/user_data.json
 .buildozer
 result
+repomix-output.xml
