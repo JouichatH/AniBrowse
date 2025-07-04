@@ -6,8 +6,11 @@ license = "UNLICENSE"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+  "beautifulsoup4>=4.13.4",
   "click>=8.1.7",
+  "httpx>=0.28.1",
   "inquirerpy>=0.3.4",
+  "lxml>=6.0.0",
   "pycryptodome>=3.21.0",
   "pypresence>=4.3.0",
   "requests>=2.32.3",
