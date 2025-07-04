@@ -52,6 +52,7 @@ class Config(object):
         "disable_mpv_popen": "True",
         "discord": "False",
         "episode_complete_at": "80",
+        "use_experimental_fzf_anilist_search": "True",
         "ffmpegthumbnailer_seek_time": "-1",
         "force_forward_tracking": "true",
         "force_window": "immediate",
@@ -134,6 +135,9 @@ class Config(object):
         self.downloads_dir = self.configparser.get("general", "downloads_dir")
         self.episode_complete_at = self.configparser.getint(
             "stream", "episode_complete_at"
+        )
+        self.use_experimental_fzf_anilist_search = self.configparser.getboolean(
+            "general", "use_experimental_fzf_anilist_search"
         )
         self.ffmpegthumbnailer_seek_time = self.configparser.getint(
             "general", "ffmpegthumbnailer_seek_time"
@@ -482,6 +486,14 @@ mpv_pre_args = {self.mpv_pre_args}
 # feh is the default and requires feh to be installed
 # icat is for kitty terminal users only
 manga_viewer = {self.manga_viewer}
+
+# a little little something i introduced
+# remember how in a browser site when you search for an anime it dynamically reloads
+# after every type
+# well who says it cant be done in the terminal lol
+# though its still experimental lol
+# use this to disable it
+use_experimental_fzf_anilist_search = {self.use_experimental_fzf_anilist_search}
 
 [stream]
 # the quality of the stream [1080,720,480,360]

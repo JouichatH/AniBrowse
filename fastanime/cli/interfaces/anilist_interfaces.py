@@ -1942,7 +1942,7 @@ def _anilist_search(config: "Config", page=1):
     # TODO: Add filters and other search features
     if config.use_rofi:
         search_term = str(Rofi.ask("Search for"))
-    elif config.use_fzf:
+    elif config.use_fzf and config.use_experimental_fzf_anilist_search:
         search_term = fzf.search_for_anime()
     else:
         search_term = Prompt.ask("[cyan]Search for[/]")
