@@ -11,7 +11,7 @@ def print_img(url: str):
         url: [TODO:description]
     """
     if EXECUTABLE := shutil.which("icat"):
-        subprocess.run([EXECUTABLE, url])
+        subprocess.run([EXECUTABLE, url], check=False)
     else:
         EXECUTABLE = shutil.which("chafa")
 
@@ -30,4 +30,4 @@ def print_img(url: str):
 
         subprocess.run([EXECUTABLE, url, "--size=15x15"], input=img_bytes)
         """
-        subprocess.run([EXECUTABLE, "--size=15x15"], input=img_bytes)
+        subprocess.run([EXECUTABLE, "--size=15x15"], input=img_bytes, check=False)

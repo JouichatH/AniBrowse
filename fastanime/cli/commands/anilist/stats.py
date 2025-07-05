@@ -51,6 +51,7 @@ def stats(
             f"{img_w}x{img_h}@{image_x}x{image_y}",
             image_url,
         ],
+        check=False,
     )
     if not image_process.returncode == 0:
         print("failed to get image from icat")

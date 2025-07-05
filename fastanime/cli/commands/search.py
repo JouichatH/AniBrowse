@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 import click
 
-from ..completion_functions import anime_titles_shell_complete
+from ..utils.completion_functions import anime_titles_shell_complete
 
 if TYPE_CHECKING:
     from ...cli.config import Config
@@ -66,7 +66,6 @@ def search(config: "Config", anime_titles: str, episode_range: str):
         from yt_dlp.utils import sanitize_filename
 
         from ...MangaProvider import MangaProvider
-
         from ..utils.feh import feh_manga_viewer
         from ..utils.icat import icat_manga_viewer
 
@@ -325,16 +324,15 @@ def search(config: "Config", anime_titles: str, episode_range: str):
                         servers_names = list(servers.keys())
                         if config.server in servers_names:
                             server = config.server
+                        elif config.use_fzf:
+                            server = fzf.run(servers_names, "Select an link")
+                        elif config.use_rofi:
+                            server = Rofi.run(servers_names, "Select an link")
                         else:
-                            if config.use_fzf:
-                                server = fzf.run(servers_names, "Select an link")
-                            elif config.use_rofi:
-                                server = Rofi.run(servers_names, "Select an link")
-                            else:
-                                server = fuzzy_inquirer(
-                                    servers_names,
-                                    "Select link",
-                                )
+                            server = fuzzy_inquirer(
+                                servers_names,
+                                "Select link",
+                            )
                         stream_link = filter_by_quality(
                             config.quality, servers[server]["links"]
                         )

@@ -200,7 +200,6 @@ class AllAnime(AnimeProvider):
         """
 
         url = embed.get("sourceUrl")
-        #
         if not url:
             return
         if url.startswith("--"):
@@ -498,4 +497,4 @@ if __name__ == "__main__":
         for header_name, header_value in headers.items():
             mpv_headers += f"{header_name}:{header_value},"
         mpv_args.append(mpv_headers)
-    subprocess.run(mpv_args)
+    subprocess.run(mpv_args, check=False)

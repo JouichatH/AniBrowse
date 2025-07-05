@@ -64,6 +64,7 @@ def stream_video(MPV, url, mpv_args, custom_args, pre_args=[]):
             capture_output=True,
             text=True,
             encoding="utf-8",
+            check=False,
         )
         if proc.stdout:
             for line in reversed(proc.stdout.split("\n")):
@@ -101,7 +102,7 @@ def run_mpv(
             time.sleep(120)
             return "0", "0"
         cmd = [WEBTORRENT_CLI, link, f"--{player}"]
-        subprocess.run(cmd, encoding="utf-8")
+        subprocess.run(cmd, encoding="utf-8", check=False)
         return "0", "0"
     if player == "vlc":
         VLC = shutil.which("vlc")
@@ -141,7 +142,7 @@ def run_mpv(
                     title,
                 ]
 
-            subprocess.run(args)
+            subprocess.run(args, check=False)
             return "0", "0"
         else:
             args = ["vlc", link]
@@ -152,7 +153,7 @@ def run_mpv(
             if title:
                 args.append("--video-title")
                 args.append(title)
-            subprocess.run(args, encoding="utf-8")
+            subprocess.run(args, encoding="utf-8", check=False)
             return "0", "0"
     else:
         # Determine if mpv is available
@@ -191,7 +192,7 @@ def run_mpv(
                     "is.xyz.mpv/.MPVActivity",
                 ]
 
-            subprocess.run(args)
+            subprocess.run(args, check=False)
             return "0", "0"
         else:
             # General mpv command with custom arguments

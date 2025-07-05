@@ -1,6 +1,6 @@
 import click
 
-from ...completion_functions import anime_titles_shell_complete
+from ...utils.completion_functions import anime_titles_shell_complete
 from .data import (
     genres_available,
     media_formats_available,

@@ -9,7 +9,7 @@ import sys
 import requests
 from rich import print
 
-from .. import APP_NAME, AUTHOR, GIT_REPO, __version__
+from ... import APP_NAME, AUTHOR, GIT_REPO, __version__
 
 API_URL = f"https://api.{GIT_REPO}/repos/{AUTHOR}/{APP_NAME}/releases/latest"
 
@@ -95,7 +95,9 @@ def update_app(force=False):
             print("[red]Cannot find nix, it looks like your system is broken.[/]")
             return False, release_json
 
-        process = subprocess.run([NIX, "profile", "upgrade", APP_NAME.lower()])
+        process = subprocess.run(
+            [NIX, "profile", "upgrade", APP_NAME.lower()], check=False
+        )
     elif is_git_repo(AUTHOR, APP_NAME):
         GIT_EXECUTABLE = shutil.which("git")
         args = [
@@ -111,31 +113,31 @@ def update_app(force=False):
 
         process = subprocess.run(
             args,
+            check=False,
         )
 
+    elif UV := shutil.which("uv"):
+        process = subprocess.run([UV, "tool", "upgrade", APP_NAME], check=False)
+    elif PIPX := shutil.which("pipx"):
+        process = subprocess.run([PIPX, "upgrade", APP_NAME], check=False)
     else:
-        if UV := shutil.which("uv"):
-            process = subprocess.run([UV, "tool", "upgrade", APP_NAME])
-        elif PIPX := shutil.which("pipx"):
-            process = subprocess.run([PIPX, "upgrade", APP_NAME])
-        else:
-            PYTHON_EXECUTABLE = sys.executable
+        PYTHON_EXECUTABLE = sys.executable
 
-            args = [
-                PYTHON_EXECUTABLE,
-                "-m",
-                "pip",
-                "install",
-                APP_NAME,
-                "-U",
-                "--no-warn-script-location",
-            ]
-            if sys.prefix == sys.base_prefix:
-                # ensure NOT in a venv, where --user flag can cause an error.
-                # TODO: Get value of 'include-system-site-packages' in pyenv.cfg.
-                args.append("--user")
+        args = [
+            PYTHON_EXECUTABLE,
+            "-m",
+            "pip",
+            "install",
+            APP_NAME,
+            "-U",
+            "--no-warn-script-location",
+        ]
+        if sys.prefix == sys.base_prefix:
+            # ensure NOT in a venv, where --user flag can cause an error.
+            # TODO: Get value of 'include-system-site-packages' in pyenv.cfg.
+            args.append("--user")
 
-            process = subprocess.run(args)
+        process = subprocess.run(args, check=False)
     if process.returncode == 0:
         print(
             "[green]Its recommended to run the following after updating:\n\tfastanime config --update (to get the latest config docs)\n\tfastanime cache --clean (to get rid of any potential issues)[/]",

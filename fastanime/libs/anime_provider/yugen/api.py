@@ -78,7 +78,6 @@ class Yugen(AnimeProvider):
                 if excl is not None:
                     if "dub" in excl.lower():
                         languages["dub"] = 1
-                #
                 results.append(
                     {
                         "id": identifier,
@@ -200,7 +199,6 @@ class Yugen(AnimeProvider):
             video_query = f"{id_num}|{episode_number}|dub"
         else:
             video_query = f"{id_num}|{episode_number}"
-        #
 
         res = self.session.post(
             f"{YUGEN_ENDPOINT}/api/embed/",

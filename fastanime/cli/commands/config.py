@@ -1,9 +1,6 @@
-from typing import TYPE_CHECKING
-
 import click
 
-if TYPE_CHECKING:
-    from ..config import Config
+from ..config.model import AppConfig
 
 
 @click.command(
@@ -46,75 +43,81 @@ if TYPE_CHECKING:
     is_flag=True,
 )
 @click.pass_obj
-def config(user_config: "Config", path, view, desktop_entry, update):
-    import sys
+def config(user_config: AppConfig, path, view, desktop_entry, update):
+    from ..constants import USER_CONFIG_PATH
+    from ..config.generate import generate_config_ini_from_app_model
 
-    from rich import print
-
-    from ... import __version__
-    from ...constants import APP_NAME, ICON_PATH, S_PLATFORM, USER_CONFIG_PATH
-
+    print(user_config.mpv.args)
     if path:
         print(USER_CONFIG_PATH)
     elif view:
-        print(user_config)
+        print(generate_config_ini_from_app_model(user_config))
     elif desktop_entry:
-        import os
-        import shutil
-        from pathlib import Path
-        from textwrap import dedent
-
-        from rich import print
-        from rich.prompt import Confirm
-
-        from ..utils.tools import exit_app
-
-        FASTANIME_EXECUTABLE = shutil.which("fastanime")
-        if FASTANIME_EXECUTABLE:
-            cmds = f"{FASTANIME_EXECUTABLE} --rofi anilist"
-        else:
-            cmds = f"{sys.executable} -m fastanime --rofi anilist"
-
-        # TODO: Get funs of the other platforms to complete this lol
-        if S_PLATFORM == "win32":
-            print(
-                "Not implemented; the author thinks its not straight forward so welcomes lovers of windows to try and implement it themselves or to switch to a proper os like arch linux or pray the author gets bored 😜"
-            )
-        elif S_PLATFORM == "darwin":
-            print(
-                "Not implemented; the author thinks its not straight forward so welcomes lovers of mac to try and implement it themselves  or to switch to a proper os like arch linux or pray the author gets bored 😜"
-            )
-        else:
-            desktop_entry = dedent(
-                f"""
-                [Desktop Entry]
-                Name={APP_NAME}
-                Type=Application
-                version={__version__}
-                Path={Path().home()}
-                Comment=Watch anime from your terminal 
-                Terminal=false
-                Icon={ICON_PATH}
-                Exec={cmds}
-                Categories=Entertainment
-            """
-            )
-            base = os.path.expanduser("~/.local/share/applications")
-            desktop_entry_path = os.path.join(base, f"{APP_NAME}.desktop")
-            if os.path.exists(desktop_entry_path):
-                if not Confirm.ask(
-                    f"The file already exists {desktop_entry_path}; or would you like to rewrite it",
-                    default=False,
-                ):
-                    exit_app(1)
-            with open(desktop_entry_path, "w") as f:
-                f.write(desktop_entry)
-            with open(desktop_entry_path) as f:
-                print(f"Successfully wrote \n{f.read()}")
-                exit_app(0)
+        _generate_desktop_entry()
     elif update:
         with open(USER_CONFIG_PATH, "w", encoding="utf-8") as file:
-            file.write(user_config.__str__())
+            file.write(generate_config_ini_from_app_model(user_config))
         print("update successfull")
     else:
-        click.edit(filename=USER_CONFIG_PATH)
+        click.edit(filename=str(USER_CONFIG_PATH))
+
+
+def _generate_desktop_entry():
+    """
+    Generates a desktop entry for FastAnime.
+    """
+    from ... import __version__
+    import sys
+
+    import os
+    import shutil
+    from pathlib import Path
+    from textwrap import dedent
+
+    from rich import print
+    from rich.prompt import Confirm
+
+    from ..constants import APP_NAME, ICON_PATH, PLATFORM
+
+    FASTANIME_EXECUTABLE = shutil.which("fastanime")
+    if FASTANIME_EXECUTABLE:
+        cmds = f"{FASTANIME_EXECUTABLE} --rofi anilist"
+    else:
+        cmds = f"{sys.executable} -m fastanime --rofi anilist"
+
+    # TODO: Get funs of the other platforms to complete this lol
+    if PLATFORM == "win32":
+        print(
+            "Not implemented; the author thinks its not straight forward so welcomes lovers of windows to try and implement it themselves or to switch to a proper os like arch linux or pray the author gets bored 😜"
+        )
+    elif PLATFORM == "darwin":
+        print(
+            "Not implemented; the author thinks its not straight forward so welcomes lovers of mac to try and implement it themselves  or to switch to a proper os like arch linux or pray the author gets bored 😜"
+        )
+    else:
+        desktop_entry = dedent(
+            f"""
+            [Desktop Entry]
+            Name={APP_NAME}
+            Type=Application
+            version={__version__}
+            Path={Path().home()}
+            Comment=Watch anime from your terminal 
+            Terminal=false
+            Icon={ICON_PATH}
+            Exec={cmds}
+            Categories=Entertainment
+        """
+        )
+        base = os.path.expanduser("~/.local/share/applications")
+        desktop_entry_path = os.path.join(base, f"{APP_NAME}.desktop")
+        if os.path.exists(desktop_entry_path):
+            if not Confirm.ask(
+                f"The file already exists {desktop_entry_path}; or would you like to rewrite it",
+                default=False,
+            ):
+                return
+        with open(desktop_entry_path, "w") as f:
+            f.write(desktop_entry)
+        with open(desktop_entry_path) as f:
+            print(f"Successfully wrote \n{f.read()}")

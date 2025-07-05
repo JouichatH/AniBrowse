@@ -1,6 +1,6 @@
 import click
 
-from ...completion_functions import anime_titles_shell_complete
+from ...utils.completion_functions import anime_titles_shell_complete
 from .data import (
     genres_available,
     media_formats_available,
@@ -155,7 +155,7 @@ def download(
 
     from ....anilist import AniList
 
-    force_ffmpeg |= (hls_use_mpegts or hls_use_h264)
+    force_ffmpeg |= hls_use_mpegts or hls_use_h264
 
     success, anilist_search_results = AniList.search(
         query=title,
@@ -206,9 +206,7 @@ def download(
                     anime_title, translation_type=translation_type
                 )
             if not search_results:
-                print(
-                    "No search results found from provider for {}".format(anime_title)
-                )
+                print(f"No search results found from provider for {anime_title}")
                 continue
             search_results = search_results["results"]
             if not search_results:
@@ -246,7 +244,7 @@ def download(
                     search_results_[selected_anime_title]["id"]
                 )
             if not anime:
-                print("Failed to fetch anime {}".format(selected_anime_title))
+                print(f"Failed to fetch anime {selected_anime_title}")
                 continue
 
             episodes = sorted(
@@ -329,14 +327,13 @@ def download(
                         servers_names = list(servers.keys())
                         if config.server in servers_names:
                             server_name = config.server
+                        elif config.use_fzf:
+                            server_name = fzf.run(servers_names, "Select an link")
                         else:
-                            if config.use_fzf:
-                                server_name = fzf.run(servers_names, "Select an link")
-                            else:
-                                server_name = fuzzy_inquirer(
-                                    servers_names,
-                                    "Select link",
-                                )
+                            server_name = fuzzy_inquirer(
+                                servers_names,
+                                "Select link",
+                            )
                         stream_link = filter_by_quality(
                             config.quality, servers[server_name]["links"]
                         )

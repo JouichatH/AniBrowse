@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 import click
 
-from ..completion_functions import downloaded_anime_titles
+from ..utils.completion_functions import downloaded_anime_titles
 
 logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
@@ -110,6 +110,7 @@ def downloads(
             ],
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
+            check=False,
         )
 
     def get_previews_anime(workers=None, bg=True):
@@ -343,16 +344,15 @@ def downloads(
             stream_episode(
                 playlist,
             )
-        else:
-            if config.sync_play:
-                from ..utils.syncplay import SyncPlayer
+        elif config.sync_play:
+            from ..utils.syncplay import SyncPlayer
 
-                SyncPlayer(playlist)
-            else:
-                run_mpv(
-                    playlist,
-                    player=config.player,
-                )
+            SyncPlayer(playlist)
+        else:
+            run_mpv(
+                playlist,
+                player=config.player,
+            )
         stream_anime()
 
     stream_anime(title)

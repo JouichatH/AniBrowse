@@ -40,7 +40,7 @@ def give_random_quality(links):
 
     return [
         {**episode_stream, "quality": quality}
-        for episode_stream, quality in zip(links, qualities)
+        for episode_stream, quality in zip(links, qualities, strict=False)
     ]
 
 

@@ -4,11 +4,12 @@ import os
 import shutil
 import subprocess
 import textwrap
-from threading import Thread
 from hashlib import sha256
+from threading import Thread
 
 import requests
 from yt_dlp.utils import clean_html
+
 from ...constants import APP_CACHE_DIR, S_PLATFORM
 from ...libs.anilist.types import AnilistBaseMediaDataSchema
 from ...Utility import anilist_data_helper
@@ -34,7 +35,9 @@ def aniskip(mal_id: int, episode: str):
         print("Aniskip not found, please install and try again")
         return
     args = [ANISKIP, "-q", str(mal_id), "-e", str(episode)]
-    aniskip_result = subprocess.run(args, text=True, stdout=subprocess.PIPE)
+    aniskip_result = subprocess.run(
+        args, text=True, stdout=subprocess.PIPE, check=False
+    )
     if aniskip_result.returncode != 0:
         return
     mpv_skip_args = aniskip_result.stdout.strip()
@@ -111,7 +114,7 @@ def write_search_results(
     # use concurency to download and write as fast as possible
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         future_to_task = {}
-        for anime, title in zip(anilist_results, titles):
+        for anime, title in zip(anilist_results, titles, strict=False):
             # actual image url
             image_url = ""
             if os.environ.get("FASTANIME_IMAGE_PREVIEWS", "true").lower() == "true":
@@ -212,7 +215,7 @@ def get_rofi_icons(
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         # load the jobs
         future_to_url = {}
-        for anime, title in zip(anilist_results, titles):
+        for anime, title in zip(anilist_results, titles, strict=False):
             # actual link to download image from
             image_url = anime["coverImage"]["large"]
 

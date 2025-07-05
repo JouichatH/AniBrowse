@@ -19,9 +19,7 @@ class SqliteDB:
         start_time = time.time()
         self.connection = sqlite3.connect(self.db_path)
         logger.debug(
-            "Successfully got a new connection in {} seconds".format(
-                time.time() - start_time
-            )
+            f"Successfully got a new connection in {time.time() - start_time} seconds"
         )
         return self.connection
 

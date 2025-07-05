@@ -32,9 +32,7 @@ class Nyaa(AnimeProvider):
 
     @debug_provider
     def search_for_anime(self, user_query: str, *args, **_):
-        self.search_results = search_for_anime_with_anilist(
-            user_query, True
-        )  # pyright: ignore
+        self.search_results = search_for_anime_with_anilist(user_query, True)  # pyright: ignore
         self.user_query = user_query
         return self.search_results
 
@@ -74,7 +72,7 @@ class Nyaa(AnimeProvider):
             try:
                 url_arguments: dict[str, str] = {
                     "c": "1_2",  # Language (English)
-                    "q": f"{title} {'0' if len(episode_number)==1 else ''}{episode_number}",  # Search Query
+                    "q": f"{title} {'0' if len(episode_number) == 1 else ''}{episode_number}",  # Search Query
                 }
                 # url_arguments["q"] = anime_title
 
@@ -160,7 +158,7 @@ class Nyaa(AnimeProvider):
                     if not torrent_anchor_tag_atrrs:
                         continue
                     torrent_file_url = (
-                        f'{NYAA_ENDPOINT}{torrent_anchor_tag_atrrs["href"]}'
+                        f"{NYAA_ENDPOINT}{torrent_anchor_tag_atrrs['href']}"
                     )
                     if server in servers:
                         link = {
@@ -235,7 +233,7 @@ class Nyaa(AnimeProvider):
                     if not torrent_anchor_tag_atrrs:
                         continue
                     torrent_file_url = (
-                        f'{NYAA_ENDPOINT}{torrent_anchor_tag_atrrs["href"]}'
+                        f"{NYAA_ENDPOINT}{torrent_anchor_tag_atrrs['href']}"
                     )
                     if server in servers:
                         link = {
@@ -312,7 +310,7 @@ class Nyaa(AnimeProvider):
                     if not torrent_anchor_tag_atrrs:
                         continue
                     torrent_file_url = (
-                        f'{NYAA_ENDPOINT}{torrent_anchor_tag_atrrs["href"]}'
+                        f"{NYAA_ENDPOINT}{torrent_anchor_tag_atrrs['href']}"
                     )
                     if server in servers:
                         link = {

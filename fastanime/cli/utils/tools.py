@@ -1,13 +1,14 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, Callable
+    from collections.abc import Callable
+    from typing import Any
 
     from ...libs.anilist.types import AnilistBaseMediaDataSchema
     from ...libs.anime_provider.types import Anime, EpisodeStream, SearchResult, Server
 
 
-class FastAnimeRuntimeState(object):
+class FastAnimeRuntimeState:
     """A class that manages fastanime runtime during anilist command runtime"""
 
     provider_current_episode_stream_link: str

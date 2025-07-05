@@ -1,7 +1,7 @@
 import click
 
 from ...utils.tools import FastAnimeRuntimeState
-from .__lazyloader__ import LazyGroup
+from ...utils.lazyloader import LazyGroup
 
 commands = {
     "trending": "trending.trending",

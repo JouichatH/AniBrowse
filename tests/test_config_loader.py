@@ -1,6 +1,7 @@
 from pathlib import Path
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from fastanime.cli.config.loader import ConfigLoader
 from fastanime.cli.config.model import AppConfig, GeneralConfig

@@ -37,7 +37,7 @@ def completions(fish, zsh, bash):
             current_shell = None
     else:
         current_shell = None
-    if fish or current_shell == "fish" and not zsh and not bash:
+    if fish or (current_shell == "fish" and not zsh and not bash):
         print(
             """
 function _fastanime_completion;
@@ -59,7 +59,7 @@ end;
 complete --no-files --command fastanime --arguments "(_fastanime_completion)";
         """
         )
-    elif zsh or current_shell == "zsh" and not bash:
+    elif zsh or (current_shell == "zsh" and not bash):
         print(
             """
 #compdef fastanime

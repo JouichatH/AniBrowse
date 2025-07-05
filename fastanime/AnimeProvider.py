@@ -5,10 +5,10 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from .libs.anime_provider import anime_sources
+from .libs.anime_provider import PROVIDERS_AVAILABLE
 
 if TYPE_CHECKING:
-    from typing import Iterator
+    from collections.abc import Iterator
 
     from .libs.anime_provider.types import Anime, SearchResults, Server
 
@@ -27,7 +27,7 @@ class AnimeProvider:
         anime_provider: [TODO:attribute]
     """
 
-    PROVIDERS = list(anime_sources.keys())
+    PROVIDERS = list(PROVIDERS_AVAILABLE.keys())
     provider = PROVIDERS[0]
 
     def __init__(
@@ -53,7 +53,7 @@ class AnimeProvider:
             self.anime_provider.session.kill_connection_to_db()
         except Exception:
             pass
-        _, anime_provider_cls_name = anime_sources[provider].split(".", 1)
+        _, anime_provider_cls_name = PROVIDERS_AVAILABLE[provider].split(".", 1)
         package = f"fastanime.libs.anime_provider.{provider}"
         provider_api = importlib.import_module(".api", package)
         anime_provider = getattr(provider_api, anime_provider_cls_name)

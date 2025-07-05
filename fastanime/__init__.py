@@ -1,12 +1,13 @@
 import sys
+import importlib.metadata
 
 if sys.version_info < (3, 10):
     raise ImportError(
         "You are using an unsupported version of Python. Only Python versions 3.10 and above are supported by FastAnime"
-    )  # noqa: F541
+    )
 
 
-__version__ = "v2.8.8"
+__version__ = importlib.metadata.version("FastAnime")
 
 APP_NAME = "FastAnime"
 AUTHOR = "Benexl"

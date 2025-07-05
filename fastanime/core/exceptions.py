@@ -1,6 +1,3 @@
-from typing import Optional
-
-
 class FastAnimeError(Exception):
     """
     Base exception for all custom errors raised by the FastAnime library and application.
@@ -34,7 +31,7 @@ class DependencyNotFoundError(FastAnimeError):
     This indicates a problem with the user's environment setup.
     """
 
-    def __init__(self, dependency_name: str, hint: Optional[str] = None):
+    def __init__(self, dependency_name: str, hint: str | None = None):
         self.dependency_name = dependency_name
         message = (
             f"Required dependency '{dependency_name}' not found in your system's PATH."
@@ -71,7 +68,7 @@ class ProviderAPIError(ProviderError):
     """
 
     def __init__(
-        self, provider_name: str, http_status: Optional[int] = None, details: str = ""
+        self, provider_name: str, http_status: int | None = None, details: str = ""
     ):
         self.http_status = http_status
         message = "An API communication error occurred."

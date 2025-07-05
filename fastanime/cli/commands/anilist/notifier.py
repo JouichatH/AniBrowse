@@ -41,7 +41,7 @@ def notifier(config: "Config"):
     # WARNING: Mess around with this value at your own risk
     timeout = 2  # time is in minutes
     if os.path.exists(notified):
-        with open(notified, "r") as f:
+        with open(notified) as f:
             past_notifications = json.load(f)
     else:
         past_notifications = {}

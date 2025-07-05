@@ -3,7 +3,8 @@ import os
 import shutil
 import subprocess
 import sys
-from typing import Callable, List
+from collections.abc import Callable
+from typing import List
 
 from click import clear
 from rich import print
@@ -62,7 +63,7 @@ class FZF:
         "--wrap",
     ]
 
-    def _with_filter(self, command: str, work: Callable) -> List[str]:
+    def _with_filter(self, command: str, work: Callable) -> list[str]:
         """ported from the fzf docs demo
 
         Args:
@@ -125,9 +126,9 @@ class FZF:
             [self.FZF_EXECUTABLE, *commands],
             input=fzf_input,
             stdout=subprocess.PIPE,
-            universal_newlines=True,
             text=True,
             encoding="utf-8",
+            check=False,
         )
         if not result or result.returncode != 0 or not result.stdout:
             if result.returncode == 130:  # fzf terminated by ctrl-c
@@ -200,7 +201,6 @@ class FZF:
         return result
 
     def search_for_anime(self):
-
         commands = [
             "--preview",
             f"{FETCH_ANIME_SCRIPT}fetch_anime_details {{}}",
@@ -225,9 +225,9 @@ class FZF:
             [self.FZF_EXECUTABLE, *commands],
             input="",
             stdout=subprocess.PIPE,
-            universal_newlines=True,
             text=True,
             encoding="utf-8",
+            check=False,
         )
         if not result or result.returncode != 0 or not result.stdout:
             if result.returncode == 130:  # fzf terminated by ctrl-c

@@ -242,7 +242,7 @@ class HiAnime(AnimeProvider):
                                     link_to_streams
                                 )
                                 if link_to_streams_response.ok:
-                                    juicy_streams_json: "HiAnimeStream" = (
+                                    juicy_streams_json: HiAnimeStream = (
                                         link_to_streams_response.json()
                                     )
 

@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 import click
 
-from ..completion_functions import anime_titles_shell_complete
+from ..utils.completion_functions import anime_titles_shell_complete
 
 if TYPE_CHECKING:
     from ..config import Config
@@ -344,14 +344,13 @@ def download(
                     servers_names = list(servers.keys())
                     if config.server in servers_names:
                         server_name = config.server
+                    elif config.use_fzf:
+                        server_name = fzf.run(servers_names, "Select an link")
                     else:
-                        if config.use_fzf:
-                            server_name = fzf.run(servers_names, "Select an link")
-                        else:
-                            server_name = fuzzy_inquirer(
-                                servers_names,
-                                "Select link",
-                            )
+                        server_name = fuzzy_inquirer(
+                            servers_names,
+                            "Select link",
+                        )
                     stream_link = filter_by_quality(
                         config.quality, servers[server_name]["links"]
                     )

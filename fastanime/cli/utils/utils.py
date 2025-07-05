@@ -39,8 +39,7 @@ def get_requested_quality_or_default_to_first(url, quality):
             m3u8_format["height"] < quality_u and m3u8_format["height"] > quality_l
         ):
             return m3u8_format["url"]
-    else:
-        return m3u8_formats[0]["url"]
+    return m3u8_formats[0]["url"]
 
 
 def move_preferred_subtitle_lang_to_top(sub_list, lang_str):
@@ -78,20 +77,19 @@ def filter_by_quality(quality: str, stream_links: "list[EpisodeStream]", default
         # some providers have inaccurate/weird/non-standard eg qualities 718 instead of 720
         if Q <= q + 80 and Q >= q - 80:
             return stream_link
-    else:
-        if stream_links and default:
-            from rich import print
+    if stream_links and default:
+        from rich import print
 
-            try:
-                print("[yellow bold]WARNING Qualities were:[/] ", stream_links)
-                print(
-                    "[cyan bold]Using default of quality:[/] ",
-                    stream_links[0]["quality"],
-                )
-                return stream_links[0]
-            except Exception as e:
-                print(e)
-                return
+        try:
+            print("[yellow bold]WARNING Qualities were:[/] ", stream_links)
+            print(
+                "[cyan bold]Using default of quality:[/] ",
+                stream_links[0]["quality"],
+            )
+            return stream_links[0]
+        except Exception as e:
+            print(e)
+            return
 
 
 def format_bytes_to_human(num_of_bytes: float, suffix: str = "B"):
@@ -195,4 +193,8 @@ def which_bashlike():
     Returns:
         the path to the bash executable or None if not found
     """
-    return (shutil.which("bash") or "bash") if S_PLATFORM != "win32" else which_win32_gitbash()
+    return (
+        (shutil.which("bash") or "bash")
+        if S_PLATFORM != "win32"
+        else which_win32_gitbash()
+    )

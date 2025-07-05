@@ -30,6 +30,7 @@ class RofiApi:
             input=rofi_input,
             stdout=subprocess.PIPE,
             text=True,
+            check=False,
         )
 
         choice = result.stdout.strip()
@@ -66,6 +67,7 @@ class RofiApi:
             input=rofi_input,
             stdout=subprocess.PIPE,
             text=True,
+            check=False,
         )
 
         choice = result.stdout.strip()
@@ -100,6 +102,7 @@ class RofiApi:
             input=rofi_choices,
             stdout=subprocess.PIPE,
             text=True,
+            check=False,
         )
 
         choice = result.stdout.strip()
@@ -136,6 +139,7 @@ class RofiApi:
             args,
             stdout=subprocess.PIPE,
             text=True,
+            check=False,
         )
 
         user_input = result.stdout.strip()

@@ -157,10 +157,12 @@ class CachedRequestsSession(requests.Session):
             response = super().request(method, url, *args, **kwargs)
             if response.ok and (
                 force_caching
-                or self.is_content_type_cachable(
-                    response.headers.get("content-type"), caching_mimetypes
+                or (
+                    self.is_content_type_cachable(
+                        response.headers.get("content-type"), caching_mimetypes
+                    )
+                    and len(response.content) < self.max_size
                 )
-                and len(response.content) < self.max_size
             ):
                 logger.debug("Caching the current request")
                 cursor.execute(

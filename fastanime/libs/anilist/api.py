@@ -80,7 +80,7 @@ class AniListApi:
             return
         if not success or not user:
             return
-        user_info: "AnilistUser_" = user["data"]["Viewer"]
+        user_info: AnilistUser_ = user["data"]["Viewer"]
         self.user_id = user_info["id"]
         return user_info
 

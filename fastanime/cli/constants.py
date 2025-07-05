@@ -1,33 +1,30 @@
 import os
 import sys
 from pathlib import Path
-from platform import system
 
 import click
 
 from ..core.constants import APP_NAME, ICONS_DIR
 
-ASCII_ART = """
-
+APP_ASCII_ART = """\
 ███████╗░█████╗░░██████╗████████╗░█████╗░███╗░░██╗██╗███╗░░░███╗███████╗
 ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗████╗░██║██║████╗░████║██╔════╝
 █████╗░░███████║╚█████╗░░░░██║░░░███████║██╔██╗██║██║██╔████╔██║█████╗░░
 ██╔══╝░░██╔══██║░╚═══██╗░░░██║░░░██╔══██║██║╚████║██║██║╚██╔╝██║██╔══╝░░
 ██║░░░░░██║░░██║██████╔╝░░░██║░░░██║░░██║██║░╚███║██║██║░╚═╝░██║███████╗
 ╚═╝░░░░░╚═╝░░╚═╝╚═════╝░░░░╚═╝░░░╚═╝░░╚═╝╚═╝░░╚══╝╚═╝╚═╝░░░░░╚═╝╚══════╝
-
 """
-PLATFORM = system()
+PLATFORM = sys.platform
 USER_NAME = os.environ.get("USERNAME", "Anime Fan")
 
 
 APP_DATA_DIR = Path(click.get_app_dir(APP_NAME, roaming=False))
 
-if sys.platform == "win32":
+if PLATFORM == "win32":
     APP_CACHE_DIR = APP_DATA_DIR / "cache"
     USER_VIDEOS_DIR = Path.home() / "Videos" / APP_NAME
 
-elif sys.platform == "darwin":
+elif PLATFORM == "darwin":
     APP_CACHE_DIR = Path.home() / "Library" / "Caches" / APP_NAME
     USER_VIDEOS_DIR = Path.home() / "Movies" / APP_NAME
 

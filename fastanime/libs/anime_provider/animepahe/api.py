@@ -37,7 +37,7 @@ class AnimePahe(AnimeProvider):
             ANIMEPAHE_ENDPOINT, params={"m": "search", "q": search_keywords}
         )
         response.raise_for_status()
-        data: "AnimePaheSearchPage" = response.json()
+        data: AnimePaheSearchPage = response.json()
         results = []
         for result in data["data"]:
             results.append(
@@ -81,9 +81,8 @@ class AnimePahe(AnimeProvider):
         response.raise_for_status()
         if not data:
             data.update(response.json())
-        else:
-            if ep_data := response.json().get("data"):
-                data["data"].extend(ep_data)
+        elif ep_data := response.json().get("data"):
+            data["data"].extend(ep_data)
         if response.json()["next_page_url"]:
             # TODO: Refine this
             time.sleep(
@@ -110,15 +109,15 @@ class AnimePahe(AnimeProvider):
                 page=page,
                 standardized_episode_number=standardized_episode_number,
             )
-        else: 
-                for episode in data.get("data", []):
-                    if episode["episode"] % 1 == 0:
-                        standardized_episode_number += 1
-                        episode.update({"episode": standardized_episode_number})
-                    else:
-                        standardized_episode_number += episode["episode"] % 1
-                        episode.update({"episode": standardized_episode_number})
-                        standardized_episode_number = int(standardized_episode_number)
+        else:
+            for episode in data.get("data", []):
+                if episode["episode"] % 1 == 0:
+                    standardized_episode_number += 1
+                    episode.update({"episode": standardized_episode_number})
+                else:
+                    standardized_episode_number += episode["episode"] % 1
+                    episode.update({"episode": standardized_episode_number})
+                    standardized_episode_number = int(standardized_episode_number)
         return data
 
     @debug_provider
@@ -126,8 +125,8 @@ class AnimePahe(AnimeProvider):
         page = 1
         standardized_episode_number = 0
         if d := self.store.get(str(session_id), "search_result"):
-            anime_result: "AnimePaheSearchResult" = d
-            data: "AnimePaheAnimePage" = {}  # pyright:ignore
+            anime_result: AnimePaheSearchResult = d
+            data: AnimePaheAnimePage = {}  # pyright:ignore
 
             data = self._pages_loader(
                 data,
@@ -335,4 +334,4 @@ if __name__ == "__main__":
         for header_name, header_value in headers.items():
             mpv_headers += f"{header_name}:{header_value},"
         mpv_args.append(mpv_headers)
-    subprocess.run(mpv_args)
+    subprocess.run(mpv_args, check=False)

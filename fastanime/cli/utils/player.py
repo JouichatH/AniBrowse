@@ -20,7 +20,7 @@ def format_time(duration_in_secs: float):
     return f"{int(h):2d}:{int(m):2d}:{int(s):2d}".replace(" ", "0")
 
 
-class MpvPlayer(object):
+class MpvPlayer:
     anime_provider: "AnimeProvider"
     config: "Config"
     subs = []
@@ -97,8 +97,7 @@ class MpvPlayer(object):
         else:
             self.mpv_player.show_text("Fetching previous episode...")
             prev_episode = total_episodes.index(current_episode_number) - 1
-            if prev_episode <= 0:
-                prev_episode = 0
+            prev_episode = max(0, prev_episode)
             fastanime_runtime_state.provider_current_episode_number = total_episodes[
                 prev_episode
             ]

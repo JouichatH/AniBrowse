@@ -59,7 +59,7 @@ def login(config: "Config", status, erase):
                 "MacOS detected.\nPress any key once the token provided has been pasted into "
                 + anilist_key_file_path
             )
-            with open(anilist_key_file_path, "r") as key_file:
+            with open(anilist_key_file_path) as key_file:
                 token = key_file.read().strip()
         else:
             launch(config.fastanime_anilist_app_login_url, wait=False)

@@ -67,7 +67,7 @@ def search_for_manga_with_anilist(manga_title: str):
         timeout=10,
     )
     if response.status_code == 200:
-        anilist_data: "AnilistDataSchema" = response.json()
+        anilist_data: AnilistDataSchema = response.json()
         return {
             "pageInfo": anilist_data["data"]["Page"]["pageInfo"],
             "results": [
@@ -133,7 +133,7 @@ query ($query: String) {
         timeout=10,
     )
     if response.status_code == 200:
-        anilist_data: "AnilistDataSchema" = response.json()
+        anilist_data: AnilistDataSchema = response.json()
         return {
             "pageInfo": anilist_data["data"]["Page"]["pageInfo"],
             "results": [
@@ -233,7 +233,7 @@ def get_mal_id_and_anilist_id(anime_title: str) -> "dict[str,int] | None":
             json={"query": query, "variables": variables},
             timeout=10,
         )
-        anilist_data: "AnilistDataSchema" = response.json()
+        anilist_data: AnilistDataSchema = response.json()
         if response.status_code == 200:
             anime = max(
                 anilist_data["data"]["Page"]["media"],
@@ -291,7 +291,7 @@ def get_basic_anime_info_by_title(anime_title: str):
             json={"query": query, "variables": variables},
             timeout=10,
         )
-        anilist_data: "AnilistDataSchema" = response.json()
+        anilist_data: AnilistDataSchema = response.json()
         if response.status_code == 200:
             anime = max(
                 anilist_data["data"]["Page"]["media"],

@@ -3,7 +3,7 @@ import json
 import re
 import time
 from base64 import b64decode
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 from Crypto.Cipher import AES
 
@@ -28,9 +28,9 @@ class HiAnimeError(Exception):
 # Adapted from https://github.com/ghoshRitesh12/aniwatch
 class MegaCloud:
     def __init__(self, session):
-        self.session: "CachedRequestsSession" = session
+        self.session: CachedRequestsSession = session
 
-    def extract(self, video_url: str) -> Dict:
+    def extract(self, video_url: str) -> dict:
         try:
             extracted_data = {
                 "tracks": [],
@@ -113,7 +113,7 @@ class MegaCloud:
         except Exception as err:
             raise err
 
-    def extract_variables(self, text: str) -> List[List[int]]:
+    def extract_variables(self, text: str) -> list[list[int]]:
         regex = r"case\s*0x[0-9a-f]+:(?![^;]*=partKey)\s*\w+\s*=\s*(\w+)\s*,\s*\w+\s*=\s*(\w+);"
         matches = re.finditer(regex, text)
         vars_ = []
@@ -127,7 +127,7 @@ class MegaCloud:
         return vars_
 
     def get_secret(
-        self, encrypted_string: str, values: List[List[int]]
+        self, encrypted_string: str, values: list[list[int]]
     ) -> tuple[str, str]:
         secret = []
         encrypted_source_array = list(encrypted_string)

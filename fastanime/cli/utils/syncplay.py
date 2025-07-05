@@ -27,7 +27,8 @@ def SyncPlayer(url: str, anime_title=None, headers={}, subtitles=[], *args):
             [
                 SYNCPLAY_EXECUTABLE,
                 url,
-            ]
+            ],
+            check=False,
         )
     else:
         subprocess.run(
@@ -37,7 +38,8 @@ def SyncPlayer(url: str, anime_title=None, headers={}, subtitles=[], *args):
                 "--",
                 f"--force-media-title={anime_title}",
                 *mpv_args,
-            ]
+            ],
+            check=False,
         )
 
     # for compatability
