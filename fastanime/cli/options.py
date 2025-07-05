@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Literal, get_args, get_origin
+from typing import Any, Literal, get_origin, get_args
 
 import click
 from pydantic import BaseModel
@@ -113,7 +113,7 @@ def options_from_model(model: type[BaseModel], parent_name: str = "") -> Callabl
         return f
 
     # Store the list of decorators as an attribute for nested calls
-    decorator.decorators = decorators
+    setattr(decorator, "decorators", decorators)
     return decorator
 
 
