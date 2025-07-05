@@ -2,11 +2,11 @@ import click
 from click.core import ParameterSource
 
 from .. import __version__
-from .utils.lazyloader import LazyGroup
-from .utils.logging import setup_logging
 from .config import AppConfig, ConfigLoader
 from .constants import USER_CONFIG_PATH
 from .options import options_from_model
+from .utils.lazyloader import LazyGroup
+from .utils.logging import setup_logging
 
 commands = {
     "config": ".config",

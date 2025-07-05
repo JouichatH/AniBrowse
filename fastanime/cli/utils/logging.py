@@ -1,5 +1,7 @@
 import logging
+
 from rich.traceback import install as rich_install
+
 from ..constants import LOG_FILE_PATH
 
 

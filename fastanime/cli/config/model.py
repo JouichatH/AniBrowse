@@ -1,18 +1,19 @@
+import os
 from pathlib import Path
 from typing import Literal
-import os
+
 from pydantic import BaseModel, Field, field_validator
 
 from ...core.constants import (
     FZF_DEFAULT_OPTS,
-    ROFI_THEME_MAIN,
-    ROFI_THEME_INPUT,
     ROFI_THEME_CONFIRM,
+    ROFI_THEME_INPUT,
+    ROFI_THEME_MAIN,
     ROFI_THEME_PREVIEW,
 )
-from ..constants import USER_VIDEOS_DIR, APP_ASCII_ART
-from ...libs.anime_provider import SERVERS_AVAILABLE, PROVIDERS_AVAILABLE
 from ...libs.anilist.constants import SORTS_AVAILABLE
+from ...libs.anime_provider import PROVIDERS_AVAILABLE, SERVERS_AVAILABLE
+from ..constants import APP_ASCII_ART, USER_VIDEOS_DIR
 
 
 class External(BaseModel):

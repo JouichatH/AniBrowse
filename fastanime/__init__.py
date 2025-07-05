@@ -1,5 +1,5 @@
-import sys
 import importlib.metadata
+import sys
 
 if sys.version_info < (3, 10):
     raise ImportError(

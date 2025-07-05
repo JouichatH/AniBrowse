@@ -44,8 +44,8 @@ from ..config.model import AppConfig
 )
 @click.pass_obj
 def config(user_config: AppConfig, path, view, desktop_entry, update):
-    from ..constants import USER_CONFIG_PATH
     from ..config.generate import generate_config_ini_from_app_model
+    from ..constants import USER_CONFIG_PATH
 
     print(user_config.mpv.args)
     if path:
@@ -66,17 +66,16 @@ def _generate_desktop_entry():
     """
     Generates a desktop entry for FastAnime.
     """
-    from ... import __version__
-    import sys
-
     import os
     import shutil
+    import sys
     from pathlib import Path
     from textwrap import dedent
 
     from rich import print
     from rich.prompt import Confirm
 
+    from ... import __version__
     from ..constants import APP_NAME, ICON_PATH, PLATFORM
 
     FASTANIME_EXECUTABLE = shutil.which("fastanime")

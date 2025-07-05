@@ -4,7 +4,7 @@ import click
 
 
 class LazyGroup(click.Group):
-    def __init__(self, root:str, *args, lazy_subcommands=None, **kwargs):
+    def __init__(self, root: str, *args, lazy_subcommands=None, **kwargs):
         super().__init__(*args, **kwargs)
         # lazy_subcommands is a map of the form:
         #

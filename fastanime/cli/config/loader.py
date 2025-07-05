@@ -6,8 +6,8 @@ from pydantic import ValidationError
 
 from ...core.exceptions import ConfigError
 from ..constants import USER_CONFIG_PATH
-from .model import AppConfig
 from .generate import generate_config_ini_from_app_model
+from .model import AppConfig
 
 
 class ConfigLoader:
