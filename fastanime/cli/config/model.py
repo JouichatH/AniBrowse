@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, PrivateAttr, computed_field, field_validator
 
 from ...core.constants import (
     FZF_DEFAULT_OPTS,
@@ -23,29 +23,43 @@ class OtherConfig(BaseModel):
 class FzfConfig(OtherConfig):
     """Configuration specific to the FZF selector."""
 
-    opts: str = Field(
-        default_factory=lambda: "\n"
-        + "\n".join(
-            [
-                f"\t{line}"
-                for line in FZF_DEFAULT_OPTS.read_text(encoding="utf-8").split()
-            ]
-        ),
-        description="Command-line options to pass to FZF for theming and behavior.",
-    )
+    _opts: str = PrivateAttr(default=FZF_DEFAULT_OPTS.read_text(encoding="utf-8"))
     header_color: str = Field(
         default="95,135,175", description="RGB color for the main TUI header."
     )
-    header_ascii_art: str = Field(
-        default="\n" + "\n".join([f"\t{line}" for line in APP_ASCII_ART.split("\n")]),
-        description="The ASCII art to display in TUI headers.",
-    )
+    _header_ascii_art: str = PrivateAttr(default=APP_ASCII_ART)
     preview_header_color: str = Field(
         default="215,0,95", description="RGB color for preview pane headers."
     )
     preview_separator_color: str = Field(
         default="208,208,208", description="RGB color for preview pane separators."
     )
+
+    def __init__(self, **kwargs):
+        opts = kwargs.pop("opts", None)
+        header_ascii_art = kwargs.pop("header_ascii_art", None)
+
+        super().__init__(**kwargs)
+        if opts:
+            self._opts = opts
+        if header_ascii_art:
+            self._header_ascii_art = header_ascii_art
+
+    @computed_field(
+        description="The FZF options, formatted with leading tabs for the config file."
+    )
+    @property
+    def opts(self) -> str:
+        return "\n" + "\n".join([f"\t{line}" for line in self._opts.split()])
+
+    @computed_field(
+        description="The ASCII art to display as a header in the FZF interface."
+    )
+    @property
+    def header_ascii_art(self) -> str:
+        return "\n" + "\n".join(
+            [f"\t{line}" for line in self._header_ascii_art.split()]
+        )
 
 
 class RofiConfig(OtherConfig):
@@ -203,7 +217,7 @@ class StreamConfig(BaseModel):
         default="sub", description="Preferred audio/subtitle language type."
     )
     server: str = Field(
-        default="top",
+        default="TOP",
         description="The default server to use from a provider. 'top' uses the first available.",
         examples=SERVERS_AVAILABLE,
     )

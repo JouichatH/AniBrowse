@@ -2,6 +2,7 @@ import click
 from click.core import ParameterSource
 
 from .. import __version__
+from ..core.constants import APP_NAME
 from .config import AppConfig, ConfigLoader
 from .constants import USER_CONFIG_PATH
 from .options import options_from_model
@@ -15,7 +16,12 @@ commands = {
 
 @click.version_option(__version__, "--version")
 @click.option("--no-config", is_flag=True, help="Don't load the user config file.")
-@click.group(cls=LazyGroup, root="fastanime.cli.commands", lazy_subcommands=commands)
+@click.group(
+    cls=LazyGroup,
+    root="fastanime.cli.commands",
+    lazy_subcommands=commands,
+    context_settings=dict(auto_envvar_prefix=APP_NAME),
+)
 @options_from_model(AppConfig)
 @click.pass_context
 def cli(ctx: click.Context, no_config: bool, **kwargs):
@@ -34,7 +40,10 @@ def cli(ctx: click.Context, no_config: bool, **kwargs):
     # update app config with command line parameters
     for param_name, param_value in ctx.params.items():
         source = ctx.get_parameter_source(param_name)
-        if source == ParameterSource.COMMANDLINE:
+        if (
+            source == ParameterSource.ENVIRONMENT
+            or source == ParameterSource.COMMANDLINE
+        ):
             parameter = None
             for param in ctx.command.params:
                 if param.name == param_name:

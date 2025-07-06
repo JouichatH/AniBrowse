@@ -21,25 +21,27 @@ CONFIG_HEADER = f"""
 def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
     """Generate a configuration file content from a Pydantic model."""
 
-    model_schema = AppConfig.model_json_schema()
-
+    model_schema = AppConfig.model_json_schema(mode="serialization")
+    app_model_dict = app_model.model_dump()
     config_ini_content = [CONFIG_HEADER]
 
-    for section_name, section_model in app_model:
-        section_class_name = model_schema["properties"][section_name]["$ref"].split(
-            "/"
-        )[-1]
-        section_comment = model_schema["$defs"][section_class_name]["description"]
+    for section_name, section_dict in app_model_dict.items():
+        section_ref = model_schema["properties"][section_name].get("$ref")
+        if not section_ref:
+            continue
+
+        section_class_name = section_ref.split("/")[-1]
+        section_schema = model_schema["$defs"][section_class_name]
+        section_comment = section_schema.get("description", "")
+
         config_ini_content.append(f"\n#\n# {section_comment}\n#")
         config_ini_content.append(f"[{section_name}]")
 
-        for field_name, field_value in section_model:
-            description = model_schema["$defs"][section_class_name]["properties"][
-                field_name
-            ].get("description", "")
+        for field_name, field_value in section_dict.items():
+            field_properties = section_schema.get("properties", {}).get(field_name, {})
+            description = field_properties.get("description", "")
 
             if description:
-                # Wrap long comments for better readability in the .ini file
                 wrapped_comment = textwrap.fill(
                     description,
                     width=78,
@@ -58,4 +60,5 @@ def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
                 value_str = str(field_value)
 
             config_ini_content.append(f"{field_name} = {value_str}")
+
     return "\n".join(config_ini_content)

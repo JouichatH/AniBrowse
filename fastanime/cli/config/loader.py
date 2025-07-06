@@ -78,7 +78,6 @@ class ConfigLoader:
             section: dict(self.parser.items(section))
             for section in self.parser.sections()
         }
-
         try:
             app_config = AppConfig.model_validate(config_dict)
             return app_config

@@ -28,7 +28,7 @@ MP4_SERVER_JUICY_STREAM_REGEX = re.compile(
 )
 
 # graphql files
-GQLS = resources.files("fastanime.libs.anime_provider.allanime")
+GQLS = resources.files("fastanime.libs.providers.anime.allanime") / "queries"
 SEARCH_GQL = Path(str(GQLS / "search.gql"))
 ANIME_GQL = Path(str(GQLS / "anime.gql"))
 EPISODE_GQL = Path(str(GQLS / "episode.gql"))

@@ -9,7 +9,6 @@ from pydantic_core import PydanticUndefined
 
 from .config.model import OtherConfig
 
-# Mapping from Python/Pydantic types to Click types
 TYPE_MAP = {
     str: click.STRING,
     int: click.INT,
@@ -49,38 +48,29 @@ def options_from_model(model: type[BaseModel], parent_name: str = "") -> Callabl
     """
     decorators = []
 
-    # Check if this model inherits from ExternalTool
     is_external_tool = issubclass(model, OtherConfig)
     model_name = model.__name__.lower().replace("config", "")
 
     # Introspect the model's fields
     for field_name, field_info in model.model_fields.items():
-        # Handle nested models by calling this function recursively
         if isinstance(field_info.annotation, type) and issubclass(
             field_info.annotation, BaseModel
         ):
-            # Apply decorators from the nested model with current model as parent
             nested_decorators = options_from_model(field_info.annotation, field_name)
             nested_decorator_list = getattr(nested_decorators, "decorators", [])
             decorators.extend(nested_decorator_list)
             continue
 
-        # Determine the option name for the CLI
         if is_external_tool:
-            # For ExternalTool subclasses, use --model_name-field_name format
             cli_name = f"--{model_name}-{field_name.replace('_', '-')}"
         else:
             cli_name = f"--{field_name.replace('_', '-')}"
-
-        # Build the arguments for the click.option decorator
         kwargs = {
             "type": _get_click_type(field_info),
             "help": field_info.description or "",
         }
 
-        # Handle boolean flags (e.g., --foo/--no-foo)
         if field_info.annotation is bool:
-            # Set default value for boolean flags
             if field_info.default is not PydanticUndefined:
                 kwargs["default"] = field_info.default
                 kwargs["show_default"] = True
@@ -89,12 +79,31 @@ def options_from_model(model: type[BaseModel], parent_name: str = "") -> Callabl
                     f"{cli_name}/--no-{model_name}-{field_name.replace('_', '-')}"
                 )
             else:
-                # For non-external tools, we use the --no- prefix directly
                 cli_name = f"{cli_name}/--no-{field_name.replace('_', '-')}"
-        # For other types, set default if one is provided in the model
         elif field_info.default is not PydanticUndefined:
             kwargs["default"] = field_info.default
             kwargs["show_default"] = True
+
+        decorators.append(
+            click.option(
+                cli_name,
+                cls=ConfigOption,
+                model_name=model_name,
+                field_name=field_name,
+                **kwargs,
+            )
+        )
+
+    for field_name, computed_field_info in model.model_computed_fields.items():
+        if is_external_tool:
+            cli_name = f"--{model_name}-{field_name.replace('_', '-')}"
+        else:
+            cli_name = f"--{field_name.replace('_', '-')}"
+
+        kwargs = {
+            "type": TYPE_MAP[computed_field_info.return_type],
+            "help": computed_field_info.description or "",
+        }
 
         decorators.append(
             click.option(

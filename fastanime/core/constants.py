@@ -1,7 +1,7 @@
 import os
 from importlib import resources
 
-APP_NAME = os.environ.get("FASTANIME_APPNAME", "fastanime")
+APP_NAME = os.environ.get("FASTANIME_APP_NAME", "fastanime")
 
 try:
     pkg = resources.files("fastanime")
