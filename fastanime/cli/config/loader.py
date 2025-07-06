@@ -4,10 +4,10 @@ from pathlib import Path
 import click
 from pydantic import ValidationError
 
+from ...core.config import AppConfig
 from ...core.exceptions import ConfigError
 from ..constants import USER_CONFIG_PATH
 from .generate import generate_config_ini_from_app_model
-from .model import AppConfig
 
 
 class ConfigLoader:

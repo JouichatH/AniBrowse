@@ -1,10 +1,9 @@
 import os
-import sys
 from pathlib import Path
 
 import click
 
-from ..core.constants import APP_NAME, ICONS_DIR
+from ..core.constants import APP_NAME, ICONS_DIR, PLATFORM
 
 APP_ASCII_ART = """\
 ███████╗░█████╗░░██████╗████████╗░█████╗░███╗░░██╗██╗███╗░░░███╗███████╗
@@ -14,7 +13,6 @@ APP_ASCII_ART = """\
 ██║░░░░░██║░░██║██████╔╝░░░██║░░░██║░░██║██║░╚███║██║██║░╚═╝░██║███████╗
 ╚═╝░░░░░╚═╝░░╚═╝╚═════╝░░░░╚═╝░░░╚═╝░░╚═╝╚═╝░░╚══╝╚═╝╚═╝░░░░░╚═╝╚══════╝
 """
-PLATFORM = sys.platform
 USER_NAME = os.environ.get("USERNAME", "Anime Fan")
 
 

@@ -1,6 +1,8 @@
 import os
+import sys
 from importlib import resources
 
+PLATFORM = sys.platform
 APP_NAME = os.environ.get("FASTANIME_APP_NAME", "fastanime")
 
 try:

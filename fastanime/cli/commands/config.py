@@ -1,6 +1,6 @@
 import click
 
-from ..config.model import AppConfig
+from ...core.config import AppConfig
 
 
 @click.command(
@@ -47,7 +47,6 @@ def config(user_config: AppConfig, path, view, desktop_entry, update):
     from ..config.generate import generate_config_ini_from_app_model
     from ..constants import USER_CONFIG_PATH
 
-    print(user_config.mpv.args)
     if path:
         print(USER_CONFIG_PATH)
     elif view:

@@ -2,8 +2,9 @@ import click
 from click.core import ParameterSource
 
 from .. import __version__
+from ..core.config import AppConfig
 from ..core.constants import APP_NAME
-from .config import AppConfig, ConfigLoader
+from .config import ConfigLoader
 from .constants import USER_CONFIG_PATH
 from .options import options_from_model
 from .utils.lazyloader import LazyGroup

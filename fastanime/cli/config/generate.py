@@ -1,8 +1,8 @@
 import textwrap
 from pathlib import Path
 
+from ...core.config import AppConfig
 from ..constants import APP_ASCII_ART
-from .model import AppConfig
 
 # The header for the config file.
 config_asci = "\n".join([f"# {line}" for line in APP_ASCII_ART.split()])
