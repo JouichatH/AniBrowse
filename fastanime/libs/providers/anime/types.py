@@ -1,7 +1,5 @@
 from dataclasses import dataclass
-from typing import Literal, TypedDict
-
-from _typeshed import NoneType
+from typing import Literal
 
 
 @dataclass

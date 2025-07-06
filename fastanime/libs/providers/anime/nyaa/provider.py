@@ -11,7 +11,7 @@ from yt_dlp.utils import (
 )
 
 from ...common.mini_anilist import search_for_anime_with_anilist
-from ..base import AnimeProvider
+from ..base import BaseAnimeProvider
 from ..decorators import debug_provider
 from ..types import SearchResults
 from .constants import NYAA_ENDPOINT
@@ -27,7 +27,7 @@ EXTRACT_USEFUL_INFO_PATTERN_2 = re.compile(
 )
 
 
-class Nyaa(AnimeProvider):
+class Nyaa(BaseAnimeProvider):
     search_results: SearchResults
 
     @debug_provider

@@ -13,7 +13,7 @@ from yt_dlp.utils import (
     get_elements_html_by_class,
 )
 
-from ..base import AnimeProvider
+from ..base import BaseAnimeProvider
 from ..decorators import debug_provider
 from ..utils.utils import give_random_quality
 from .constants import SERVERS_AVAILABLE
@@ -39,7 +39,7 @@ class ParseAnchorAndImgTag(HTMLParser):
             self.a_tag = {attr[0]: attr[1] for attr in attrs}
 
 
-class HiAnime(AnimeProvider):
+class HiAnime(BaseAnimeProvider):
     # HEADERS = {"Referer": "https://hianime.to/home"}
 
     @debug_provider

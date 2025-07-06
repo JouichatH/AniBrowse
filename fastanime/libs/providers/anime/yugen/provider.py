@@ -10,13 +10,13 @@ from yt_dlp.utils import (
 )
 from yt_dlp.utils.traversal import get_element_html_by_attribute
 
-from ..base import AnimeProvider
+from ..base import BaseAnimeProvider
 from ..decorators import debug_provider
 from .constants import SEARCH_URL, YUGEN_ENDPOINT
 
 
 # ** Adapted from anipy-cli **
-class Yugen(AnimeProvider):
+class Yugen(BaseAnimeProvider):
     """
     Provides a fast and effective interface to YugenApi site.
     """

@@ -2,7 +2,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from .....core.utils.graphql import execute_graphql_query
-from ..base import AnimeProvider
+from ..base import BaseAnimeProvider
 from ..utils.decorators import debug_provider
 from .constants import (
     ANIME_GQL,
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class AllAnime(AnimeProvider):
+class AllAnime(BaseAnimeProvider):
     HEADERS = {"Referer": API_GRAPHQL_REFERER}
 
     @debug_provider

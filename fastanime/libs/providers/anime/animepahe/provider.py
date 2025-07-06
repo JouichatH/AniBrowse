@@ -9,7 +9,7 @@ from yt_dlp.utils import (
     get_elements_html_by_class,
 )
 
-from ..base import AnimeProvider
+from ..base import BaseAnimeProvider
 from ..decorators import debug_provider
 from .constants import (
     ANIMEPAHE_BASE,
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class AnimePahe(AnimeProvider):
+class AnimePahe(BaseAnimeProvider):
     search_page: "AnimePaheSearchPage"
     anime: "AnimePaheAnimePage"
     HEADERS = REQUEST_HEADERS

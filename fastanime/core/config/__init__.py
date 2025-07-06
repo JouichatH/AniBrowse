@@ -4,12 +4,14 @@ from .model import (
     FzfConfig,
     GeneralConfig,
     MpvConfig,
+    RofiConfig,
     StreamConfig,
 )
 
 __all__ = [
     "AppConfig",
     "FzfConfig",
+    "RofiConfig",
     "MpvConfig",
     "AnilistConfig",
     "StreamConfig",

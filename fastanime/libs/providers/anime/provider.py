@@ -1,21 +1,13 @@
 import importlib
 import logging
-from typing import TYPE_CHECKING
 
+from httpx import Client
 from yt_dlp.utils.networking import random_user_agent
 
 from .allanime.constants import SERVERS_AVAILABLE as ALLANIME_SERVERS
 from .animepahe.constants import SERVERS_AVAILABLE as ANIMEPAHE_SERVERS
-from .base import AnimeProvider as Base
+from .base import BaseAnimeProvider
 from .hianime.constants import SERVERS_AVAILABLE as HIANIME_SERVERS
-from .params import AnimeParams, EpisodeStreamsParams, SearchParams
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
-    from httpx import AsyncClient, Client
-
-    from .types import Anime, SearchResults, Server
 
 logger = logging.getLogger(__name__)
 
@@ -29,58 +21,57 @@ PROVIDERS_AVAILABLE = {
 SERVERS_AVAILABLE = ["TOP", *ALLANIME_SERVERS, *ANIMEPAHE_SERVERS, *HIANIME_SERVERS]
 
 
-class AnimeProvider:
-    """An abstraction over all anime providers"""
+class AnimeProviderFactory:
+    """Factory for creating anime provider instances."""
 
-    PROVIDERS = list(PROVIDERS_AVAILABLE.keys())
-    current_provider_name = PROVIDERS[0]
-    current_provider: Base
+    @staticmethod
+    def create(provider_name: str) -> BaseAnimeProvider:
+        """
+        Dynamically creates an instance of the specified anime provider.
 
-    def __init__(
-        self,
-        provider: str,
-        cache_requests=False,
-        use_persistent_provider_store=False,
-        dynamic=False,
-        retries=0,
-    ) -> None:
-        self.current_provider_name = provider
-        self.dynamic = dynamic
-        self.retries = retries
-        self.cache_requests = cache_requests
-        self.use_persistent_provider_store = use_persistent_provider_store
-        self.lazyload(self.current_provider_name)
+        This method imports the necessary provider module, instantiates its main class,
+        and injects a pre-configured HTTP client.
 
-    def search(self, params: SearchParams) -> "SearchResults | None":
-        results = self.current_provider.search(params)
+        Args:
+            provider_name: The name of the provider to create (e.g., 'allanime').
 
-        return results
+        Returns:
+            An instance of a class that inherits from BaseProvider.
 
-    def get(self, params: AnimeParams) -> "Anime | None":
-        results = self.current_provider.get(params)
+        Raises:
+            ValueError: If the provider_name is not supported.
+            ImportError: If the provider module or class cannot be found.
+        """
+        if provider_name not in PROVIDERS_AVAILABLE:
+            raise ValueError(
+                f"Unsupported provider: '{provider_name}'. Supported providers are: "
+                f"{list(PROVIDERS_AVAILABLE.keys())}"
+            )
 
-        return results
+        # Correctly determine module and class name from the map
+        import_path = PROVIDERS_AVAILABLE[provider_name]
+        module_name, class_name = import_path.split(".", 1)
 
-    def episode_streams(
-        self, params: EpisodeStreamsParams
-    ) -> "Iterator[Server] | None":
-        results = self.current_provider.episode_streams(params)
-        return results
+        # Construct the full package path for dynamic import
+        package_path = f"fastanime.libs.providers.anime.{provider_name}"
 
-    def setup_httpx_client(self, headers) -> "Client":
-        """Sets up a httpx client with a random user agent"""
-        client = Client(headers={"User-Agent": random_user_agent(), **headers})
-        return client
+        try:
+            provider_module = importlib.import_module(f".{module_name}", package_path)
+            provider_class = getattr(provider_module, class_name)
+        except (ImportError, AttributeError) as e:
+            logger.error(f"Failed to load provider '{provider_name}': {e}")
+            raise ImportError(
+                f"Could not load provider '{provider_name}'. "
+                "Check the module path and class name in PROVIDERS_AVAILABLE."
+            ) from e
 
-    def setup_httpx_async_client(self) -> "AsyncClient":
-        """Sets up a httpx client with a random user agent"""
-        client = AsyncClient(headers={"User-Agent": random_user_agent()})
-        return client
+        # Each provider class requires an httpx.Client, which we set up here.
+        client = Client(
+            headers={"User-Agent": random_user_agent(), **provider_class.HEADERS}
+        )
 
-    def lazyload(self, provider):
-        _, anime_provider_cls_name = PROVIDERS_AVAILABLE[provider].split(".", 1)
-        package = f"fastanime.libs.providers.anime.{provider}"
-        provider_api = importlib.import_module(".api", package)
-        anime_provider = getattr(provider_api, anime_provider_cls_name)
-        client = self.setup_httpx_client(anime_provider.HEADERS)
-        self.current_provider = anime_provider(client)
+        return provider_class(client)
+
+
+# Simple alias for ease of use, consistent with other factories in the codebase.
+create_provider = AnimeProviderFactory.create

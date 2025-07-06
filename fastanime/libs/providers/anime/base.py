@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from .types import Anime, SearchResults, Server
 
 
-class AnimeProvider(ABC):
+class BaseAnimeProvider(ABC):
     HEADERS: ClassVar[Dict[str, str]]
 
     def __init_subclass__(cls, **kwargs):
