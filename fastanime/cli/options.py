@@ -1,13 +1,13 @@
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Literal, get_origin, get_args
+from typing import Any, Literal, get_args, get_origin
 
 import click
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
-from .config.model import External
+from .config.model import OtherConfig
 
 # Mapping from Python/Pydantic types to Click types
 TYPE_MAP = {
@@ -50,7 +50,7 @@ def options_from_model(model: type[BaseModel], parent_name: str = "") -> Callabl
     decorators = []
 
     # Check if this model inherits from ExternalTool
-    is_external_tool = issubclass(model, External)
+    is_external_tool = issubclass(model, OtherConfig)
     model_name = model.__name__.lower().replace("config", "")
 
     # Introspect the model's fields

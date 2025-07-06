@@ -12,15 +12,15 @@ from ...core.constants import (
     ROFI_THEME_PREVIEW,
 )
 from ...libs.anilist.constants import SORTS_AVAILABLE
-from ...libs.anime_provider import PROVIDERS_AVAILABLE, SERVERS_AVAILABLE
+from ...libs.providers.anime import PROVIDERS_AVAILABLE, SERVERS_AVAILABLE
 from ..constants import APP_ASCII_ART, USER_VIDEOS_DIR
 
 
-class External(BaseModel):
+class OtherConfig(BaseModel):
     pass
 
 
-class FzfConfig(External):
+class FzfConfig(OtherConfig):
     """Configuration specific to the FZF selector."""
 
     opts: str = Field(
@@ -48,7 +48,7 @@ class FzfConfig(External):
     )
 
 
-class RofiConfig(External):
+class RofiConfig(OtherConfig):
     """Configuration specific to the Rofi selector."""
 
     theme_main: Path = Field(
@@ -69,7 +69,7 @@ class RofiConfig(External):
     )
 
 
-class MpvConfig(External):
+class MpvConfig(OtherConfig):
     """Configuration specific to the MPV player integration."""
 
     args: str = Field(
@@ -92,7 +92,7 @@ class MpvConfig(External):
     )
 
 
-class AnilistConfig(External):
+class AnilistConfig(OtherConfig):
     """Configuration for interacting with the AniList API."""
 
     per_page: int = Field(
@@ -182,10 +182,10 @@ class GeneralConfig(BaseModel):
 
     @field_validator("provider")
     @classmethod
-    def validate_server(cls, v: str) -> str:
-        if v.lower() != "top" and v not in PROVIDERS_AVAILABLE:
+    def validate_provider(cls, v: str) -> str:
+        if v not in PROVIDERS_AVAILABLE:
             raise ValueError(
-                f"'{v}' is not a valid server. Must be 'top' or one of: {PROVIDERS_AVAILABLE}"
+                f"'{v}' is not a valid provider. Must be one of: {PROVIDERS_AVAILABLE}"
             )
         return v
 

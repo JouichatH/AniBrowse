@@ -1,12 +1,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-from fastanime.libs.anime_provider.allanime.parser import (
-    map_to_anime_result,
-    map_to_search_results,
-)
-
-from ....core.utils.graphql import execute_graphql_query
+from .....core.utils.graphql import execute_graphql_query
 from ..base import AnimeProvider
 from ..utils.decorators import debug_provider
 from .constants import (
@@ -18,6 +13,10 @@ from .constants import (
     SEARCH_GQL,
 )
 from .extractors import extract_server
+from .parser import (
+    map_to_anime_result,
+    map_to_search_results,
+)
 
 if TYPE_CHECKING:
     from .types import AllAnimeEpisode
@@ -25,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class AllAnime(AnimeProvider):
-    DEFAULT_HEADERS = {"Referer": API_GRAPHQL_REFERER}
+    HEADERS = {"Referer": API_GRAPHQL_REFERER}
 
     @debug_provider
     def search_for_anime(self, params):
