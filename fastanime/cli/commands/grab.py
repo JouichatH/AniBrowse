@@ -131,9 +131,9 @@ def grab(
         print(json.dumps(chapter_info))
 
     else:
-        from ...AnimeProvider import AnimeProvider
+        from ...BaseAnimeProvider import BaseAnimeProvider
 
-        anime_provider = AnimeProvider(config.provider)
+        anime_provider = BaseAnimeProvider(config.provider)
 
         grabbed_animes = []
         for anime_title in anime_titles:

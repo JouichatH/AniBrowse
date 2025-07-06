@@ -151,13 +151,13 @@ def search(config: "Config", anime_titles: str, episode_range: str):
 
         _manga_viewer()
     else:
-        from ...AnimeProvider import AnimeProvider
+        from ...BaseAnimeProvider import BaseAnimeProvider
         from ...libs.anime_provider.types import Anime
         from ...Utility.data import anime_normalizer
         from ..utils.mpv import run_mpv
         from ..utils.utils import filter_by_quality, move_preferred_subtitle_lang_to_top
 
-        anime_provider = AnimeProvider(config.provider)
+        anime_provider = BaseAnimeProvider(config.provider)
         anilist_anime_info = None
 
         print(f"[green bold]Streaming:[/] {anime_titles}")

@@ -39,5 +39,11 @@ dev-dependencies = [
   "pyinstaller>=6.11.1",
   "pyright>=1.1.384",
   "pytest>=8.3.3",
+  "pytest-httpx>=0.35.0",
   "ruff>=0.6.9",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests that require a live network connection",
 ]

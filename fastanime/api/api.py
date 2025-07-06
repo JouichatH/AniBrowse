@@ -4,11 +4,11 @@ from fastapi import FastAPI
 from requests import post
 from thefuzz import fuzz
 
-from ..AnimeProvider import AnimeProvider
+from ..BaseAnimeProvider import BaseAnimeProvider
 from ..Utility.data import anime_normalizer
 
 app = FastAPI()
-anime_provider = AnimeProvider("allanime", "true", "true")
+anime_provider = BaseAnimeProvider("allanime", "true", "true")
 ANILIST_ENDPOINT = "https://graphql.anilist.co"
 
 

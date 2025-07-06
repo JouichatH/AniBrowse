@@ -152,7 +152,7 @@ def download(
     from rich.progress import Progress
     from thefuzz import fuzz
 
-    from ...AnimeProvider import AnimeProvider
+    from ...BaseAnimeProvider import BaseAnimeProvider
     from ...libs.anime_provider.types import Anime
     from ...libs.fzf import fzf
     from ...Utility.data import anime_normalizer
@@ -166,7 +166,7 @@ def download(
 
     force_ffmpeg |= hls_use_mpegts or hls_use_h264
 
-    anime_provider = AnimeProvider(config.provider)
+    anime_provider = BaseAnimeProvider(config.provider)
     anilist_anime_info = None
 
     translation_type = config.translation_type

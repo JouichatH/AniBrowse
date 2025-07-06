@@ -1,0 +1,43 @@
+{
+  "data": {
+    "Page": {
+      "pageInfo": {
+        "total": 1,
+        "currentPage": 1,
+        "hasNextPage": false,
+        "perPage": 1
+      },
+      "mediaList": [
+        {
+          "media": {
+            "id": 16498,
+            "idMal": 16498,
+            "title": {
+              "romaji": "Shingeki no Kyojin",
+              "english": "Attack on Titan",
+              "native": "進撃の巨人"
+            },
+            "status": "FINISHED",
+            "episodes": 25,
+            "averageScore": 85,
+            "popularity": 300000,
+            "favourites": 200000,
+            "genres": [
+              "Action",
+              "Drama",
+              "Mystery"
+            ],
+            "coverImage": {
+              "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-C6FPmWm59CyP.jpg"
+            },
+            "mediaListEntry": {
+              "status": "CURRENT",
+              "progress": 10,
+              "score": 9.0
+            }
+          }
+        }
+      ]
+    }
+  }
+}

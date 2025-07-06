@@ -68,7 +68,7 @@ class Session:
 
         logger.debug("Initializing session components...")
         self.selector: BaseSelector = create_selector(self.config)
-        self.provider: AnimeProvider = create_provider(self.config.general.provider)
+        self.provider: BaseAnimeProvider = create_provider(self.config.general.provider)
         self.player: BasePlayer = create_player(self.config.stream.player, self.config)
 
         # Instantiate and use the API factory

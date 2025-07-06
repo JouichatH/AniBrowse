@@ -1,3 +1,3 @@
-from .anime import AnimeProvider
+from .anime import BaseAnimeProvider
 
-__all__ = ["AnimeProvider"]
+__all__ = ["BaseAnimeProvider"]
