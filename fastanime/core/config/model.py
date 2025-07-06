@@ -11,7 +11,7 @@ from ...core.constants import (
     ROFI_THEME_MAIN,
     ROFI_THEME_PREVIEW,
 )
-from ...libs.anilist.constants import SORTS_AVAILABLE
+from ...libs.api.anilist.constants import SORTS_AVAILABLE
 from ...libs.providers.anime import PROVIDERS_AVAILABLE, SERVERS_AVAILABLE
 from ..constants import APP_ASCII_ART, USER_VIDEOS_DIR
 
@@ -135,9 +135,19 @@ class AnilistConfig(OtherConfig):
         return v
 
 
+class JikanConfig(OtherConfig):
+    """Configuration for the Jikan API (currently none)."""
+
+    pass
+
+
 class GeneralConfig(BaseModel):
     """Configuration for general application behavior and integrations."""
 
+    api_client: Literal["anilist", "jikan"] = Field(
+        default="anilist",
+        description="The media database API to use (e.g., 'anilist', 'jikan').",
+    )
     provider: str = Field(
         default="allanime",
         description="The default anime provider to use for scraping.",
