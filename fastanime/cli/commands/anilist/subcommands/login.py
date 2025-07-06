@@ -1,76 +1,57 @@
-from typing import TYPE_CHECKING
+from __future__ import annotations
 
 import click
+from rich import print
+from rich.prompt import Confirm, Prompt
 
-if TYPE_CHECKING:
-    from ...config import Config
+from .....cli.auth.manager import CredentialsManager
 
 
-@click.command(help="Login to your anilist account")
-@click.option("--status", "-s", help="Whether you are logged in or not", is_flag=True)
-@click.option("--erase", "-e", help="Erase your login details", is_flag=True)
-@click.pass_obj
-def login(config: "Config", status, erase):
-    from os import path
-    from sys import exit
-
-    from rich import print
-    from rich.prompt import Confirm, Prompt
-
-    from ....constants import S_PLATFORM
+@click.command(help="Login to your AniList account to enable progress tracking.")
+@click.option("--status", "-s", is_flag=True, help="Check current login status.")
+@click.option("--logout", "-l", is_flag=True, help="Log out and erase credentials.")
+@click.pass_context
+def login(ctx: click.Context, status: bool, logout: bool):
+    """Handles user authentication and credential management."""
+    manager = CredentialsManager()
 
     if status:
-        is_logged_in = True if config.user else False
-        message = (
-            "You are logged in :smile:"
-            if is_logged_in
-            else "You aren't logged in :cry:"
-        )
-        print(message)
-        print(config.user)
-        exit(0)
-    elif erase:
+        user_data = manager.load_user_profile()
+        if user_data:
+            print(f"[bold green]Logged in as:[/] {user_data.get('name')}")
+            print(f"User ID: {user_data.get('id')}")
+        else:
+            print("[bold yellow]Not logged in.[/]")
+        return
+
+    if logout:
         if Confirm.ask(
-            "Are you sure you want to erase your login status", default=False
+            "[bold red]Are you sure you want to log out and erase your token?[/]"
         ):
-            config.update_user({})
-            print("Success")
-            exit(0)
-        else:
-            exit(1)
+            manager.clear_user_profile()
+            print("You have been logged out.")
+        return
+
+    # --- Start Login Flow ---
+    from ....libs.api.factory import create_api_client
+
+    api_client = create_api_client("anilist", ctx.obj)
+
+    click.launch(
+        "https://anilist.co/api/v2/oauth/authorize?client_id=20148&response_type=token"
+    )
+    print("Your browser has been opened to obtain an AniList token.")
+    print("After authorizing, copy the token from the address bar and paste it below.")
+
+    token = Prompt.ask("Enter your AniList Access Token")
+    if not token.strip():
+        print("[bold red]Login cancelled.[/]")
+        return
+
+    profile = api_client.authenticate(token.strip())
+
+    if profile:
+        manager.save_user_profile(profile, token)
+        print(f"[bold green]Successfully logged in as {profile.name}! ✨[/]")
     else:
-        from click import launch
-
-        from ....anilist import AniList
-
-        if config.user:
-            print("Already logged in :confused:")
-            if not Confirm.ask("or would you like to reloggin", default=True):
-                exit(0)
-        # ---- new loggin -----
-        print(
-            f"A browser session will be opened ( [link]{config.fastanime_anilist_app_login_url}[/link] )",
-        )
-        token = ""
-        if S_PLATFORM.startswith("darwin"):
-            anilist_key_file_path = path.expanduser("~") + "/Downloads/anilist_key.txt"
-            launch(config.fastanime_anilist_app_login_url, wait=False)
-            Prompt.ask(
-                "MacOS detected.\nPress any key once the token provided has been pasted into "
-                + anilist_key_file_path
-            )
-            with open(anilist_key_file_path) as key_file:
-                token = key_file.read().strip()
-        else:
-            launch(config.fastanime_anilist_app_login_url, wait=False)
-            token = Prompt.ask("Enter token")
-        user = AniList.login_user(token)
-        if not user:
-            print("Sth went wrong", user)
-            exit(1)
-            return
-        user["token"] = token
-        config.update_user(user)
-        print("Successfully saved credentials")
-        print(user)
-        exit(0)
+        print("[bold red]Login failed. The token may be invalid or expired.[/]")

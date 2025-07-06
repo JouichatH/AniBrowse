@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Callable, Optional, Tuple
 
+from .....libs.api.base import ApiSearchParams
 from .base import GoBack, State
-from .task_states import (
-    AnimeActionsState,
-    EpisodeSelectionState,
-    ProviderSearchState,
-    StreamPlaybackState,
-)
+from .task_states import AnimeActionsState
 
 if TYPE_CHECKING:
+    from .....libs.api.types import MediaSearchResult
     from ...session import Session
     from .. import ui
 
@@ -24,46 +21,72 @@ class MainMenuState(State):
     def run(self, session: Session) -> Optional[State | type[GoBack]]:
         from .. import ui
 
-        menu_actions = {
-            "🔥 Trending": (session.anilist.get_trending, ResultsState()),
-            "🔎 Search": (
-                lambda: session.anilist.search(query=ui.prompt_for_search(session)),
+        # Define actions as tuples: (Display Name, SearchParams, Next State)
+        # This centralizes the "business logic" of what each menu item means.
+        menu_actions: List[
+            Tuple[str, Callable[[], Optional[ApiSearchParams]], Optional[State]]
+        ] = [
+            (
+                "🔥 Trending",
+                lambda: ApiSearchParams(sort="TRENDING_DESC"),
                 ResultsState(),
             ),
-            "📺 Watching": (
-                lambda: session.anilist.get_anime_list("CURRENT"),
+            (
+                "🌟 Most Popular",
+                lambda: ApiSearchParams(sort="POPULARITY_DESC"),
                 ResultsState(),
             ),
-            "🌟 Most Popular": (session.anilist.get_most_popular, ResultsState()),
-            "💖 Most Favourite": (session.anilist.get_most_favourite, ResultsState()),
-            "❌ Exit": (lambda: (True, None), None),
-        }
+            (
+                "💖 Most Favourite",
+                lambda: ApiSearchParams(sort="FAVOURITES_DESC"),
+                ResultsState(),
+            ),
+            (
+                "🔎 Search",
+                lambda: ApiSearchParams(query=ui.prompt_for_search(session)),
+                ResultsState(),
+            ),
+            (
+                "📺 Watching",
+                lambda: session.api_client.fetch_user_list,
+                ResultsState(),
+            ),  # Direct method call
+            ("❌ Exit", lambda: None, None),
+        ]
 
-        choice = ui.prompt_main_menu(session, list(menu_actions.keys()))
+        display_choices = [action[0] for action in menu_actions]
+        choice_str = ui.prompt_main_menu(session, display_choices)
 
-        if not choice:
+        if not choice_str:
             return None
 
-        data_loader, next_state = menu_actions[choice]
-        if not next_state:
+        # Find the chosen action
+        chosen_action = next(
+            (action for action in menu_actions if action[0] == choice_str), None
+        )
+        if not chosen_action:
+            return self  # Should not happen
+
+        _, param_creator, next_state = chosen_action
+
+        if not next_state:  # Exit case
             return None
 
-        with ui.progress_spinner(f"Fetching {choice.strip('🔥🔎📺🌟💖❌ ')}..."):
-            success, data = data_loader()
+        # Execute the data fetch
+        with ui.progress_spinner(f"Fetching {choice_str.strip('🔥🔎📺🌟💖❌ ')}..."):
+            if choice_str == "📺 Watching":  # Special case for user list
+                result_data = param_creator(status="CURRENT")
+            else:
+                search_params = param_creator()
+                if search_params is None:  # User cancelled search prompt
+                    return self
+                result_data = session.api_client.search_media(search_params)
 
-        if not success or not data:
-            ui.display_error(f"Failed to fetch data. Reason: {data}")
+        if not result_data:
+            ui.display_error(f"Failed to fetch data for '{choice_str}'.")
             return self
 
-        if "mediaList" in data.get("data", {}).get("Page", {}):
-            data["data"]["Page"]["media"] = [
-                item["media"] for item in data["data"]["Page"]["mediaList"]
-            ]
-
-        session.state.anilist.results_data = data
-        session.state.navigation.current_page = 1
-        # Store the data loader for pagination
-        session.current_data_loader = data_loader
+        session.state.anilist.results_data = result_data  # Store the generic dataclass
         return next_state
 
 
@@ -73,59 +96,20 @@ class ResultsState(State):
     def run(self, session: Session) -> Optional[State | type[GoBack]]:
         from .. import ui
 
-        if not session.state.anilist.results_data:
+        search_result = session.state.anilist.results_data
+        if not search_result or not isinstance(search_result, MediaSearchResult):
             ui.display_error("No results to display.")
             return GoBack
 
-        media_list = (
-            session.state.anilist.results_data.get("data", {})
-            .get("Page", {})
-            .get("media", [])
-        )
-        selection = ui.prompt_anime_selection(session, media_list)
+        selection = ui.prompt_anime_selection(session, search_result.media)
 
         if selection == "Back":
             return GoBack
         if selection is None:
-            return None  # User cancelled prompt
+            return None
 
-        if selection == "Next Page":
-            page_info = (
-                session.state.anilist.results_data.get("data", {})
-                .get("Page", {})
-                .get("pageInfo", {})
-            )
-            if page_info.get("hasNextPage"):
-                session.state.navigation.current_page += 1
-                with ui.progress_spinner("Fetching next page..."):
-                    success, data = session.current_data_loader(
-                        page=session.state.navigation.current_page
-                    )
-                if success:
-                    session.state.anilist.results_data = data
-                else:
-                    ui.display_error("Failed to fetch next page.")
-                    session.state.navigation.current_page -= 1
-            else:
-                ui.display_error("Already on the last page.")
-            return self  # Return to the same results state
+        # TODO: Implement pagination logic here by checking selection for "Next Page" etc.
+        # and re-calling the search_media method with an updated page number.
 
-        if selection == "Previous Page":
-            if session.state.navigation.current_page > 1:
-                session.state.navigation.current_page -= 1
-                with ui.progress_spinner("Fetching previous page..."):
-                    success, data = session.current_data_loader(
-                        page=session.state.navigation.current_page
-                    )
-                if success:
-                    session.state.anilist.results_data = data
-                else:
-                    ui.display_error("Failed to fetch previous page.")
-                    session.state.navigation.current_page += 1
-            else:
-                ui.display_error("Already on the first page.")
-            return self
-
-        # If it's a valid anime object
         session.state.anilist.selected_anime = selection
         return AnimeActionsState()
