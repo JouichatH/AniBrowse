@@ -39,6 +39,7 @@ def extract_server(
     if url.startswith("--"):
         url = one_digit_symmetric_xor(56, url[2:])
 
+        logger.debug(f"Decrypting url for source: {source['sourceName']}")
     if source["sourceName"] in OTHER_SOURCES:
         logger.debug(f"Found  {source['sourceName']} but ignoring")
         return
