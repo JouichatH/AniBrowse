@@ -40,4 +40,4 @@ class EpisodeStreamsParams:
 class AnimeParams:
     """Parameters for fetching anime details."""
 
-    anime_id: str
+    id: str

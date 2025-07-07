@@ -2,6 +2,12 @@ from typing import Literal, TypedDict
 
 
 class AllAnimeEpisodesDetail(TypedDict):
+    dub: list[str]
+    sub: list[str]
+    raw: list[str]
+
+
+class AllAnimeEpisodes(TypedDict):
     dub: int
     sub: int
     raw: int
@@ -21,7 +27,7 @@ class AllAnimeShow(TypedDict):
 class AllAnimeSearchResult(TypedDict):
     _id: str
     name: str
-    availableEpisodes: list[str]
+    availableEpisodes: AllAnimeEpisodesDetail
     __typename: str | None
 
 
@@ -61,6 +67,17 @@ class AllAnimeSource(TypedDict):
     className: str
     streamerId: str
     downloads: AllAnimeSourceDownload
+
+
+class AllAnimeEpisodeStream(TypedDict):
+    link: str
+    hls: bool
+    resolutionStr: str
+    fromCache: str
+
+
+class AllAnimeEpisodeStreams(TypedDict):
+    links: [AllAnimeEpisodeStream]
 
 
 Server = Literal["gogoanime", "dropbox", "wetransfer", "sharepoint"]

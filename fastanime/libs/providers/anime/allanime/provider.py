@@ -3,10 +3,9 @@ from typing import TYPE_CHECKING
 
 from .....core.utils.graphql import execute_graphql_query
 from ..base import BaseAnimeProvider
-from ..utils.decorators import debug_provider
+from ..utils.debug import debug_provider
 from .constants import (
     ANIME_GQL,
-    API_BASE_URL,
     API_GRAPHQL_ENDPOINT,
     API_GRAPHQL_REFERER,
     EPISODE_GQL,
@@ -27,7 +26,7 @@ class AllAnime(BaseAnimeProvider):
     HEADERS = {"Referer": API_GRAPHQL_REFERER}
 
     @debug_provider
-    def search_for_anime(self, params):
+    def search(self, params):
         response = execute_graphql_query(
             API_GRAPHQL_ENDPOINT,
             self.client,
@@ -47,19 +46,19 @@ class AllAnime(BaseAnimeProvider):
         return map_to_search_results(response)
 
     @debug_provider
-    def get_anime(self, params):
+    def get(self, params):
         response = execute_graphql_query(
             API_GRAPHQL_ENDPOINT,
             self.client,
             ANIME_GQL,
-            variables={"showId": params.anime_id},
+            variables={"showId": params.id},
         )
         return map_to_anime_result(response)
 
     @debug_provider
-    def get_episode_streams(self, params):
+    def episode_streams(self, params):
         episode_response = execute_graphql_query(
-            API_BASE_URL,
+            API_GRAPHQL_ENDPOINT,
             self.client,
             EPISODE_GQL,
             variables={
@@ -72,3 +71,9 @@ class AllAnime(BaseAnimeProvider):
         for source in episode["sourceUrls"]:
             if server := extract_server(self.client, params.episode, episode, source):
                 yield server
+
+
+if __name__ == "__main__":
+    from ..utils.debug import test_anime_provider
+
+    test_anime_provider(AllAnime)

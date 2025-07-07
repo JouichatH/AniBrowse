@@ -1,26 +1,28 @@
-from dataclasses import dataclass
 from typing import Literal
 
+from pydantic import BaseModel
 
-@dataclass
-class PageInfo:
+
+class BaseAnimeProviderModel(BaseModel):
+    pass
+
+
+class PageInfo(BaseAnimeProviderModel):
     total: int | None = None
     per_page: int | None = None
     current_page: int | None = None
 
 
-@dataclass
-class AnimeEpisodes:
+class AnimeEpisodes(BaseAnimeProviderModel):
     sub: list[str]
     dub: list[str] = []
     raw: list[str] = []
 
 
-@dataclass
-class SearchResult:
+class SearchResult(BaseAnimeProviderModel):
     id: str
     title: str
-    available_episodes: AnimeEpisodes
+    episodes: AnimeEpisodes
     other_titles: list[str] = []
     media_type: str | None = None
     score: int | None = None
@@ -29,24 +31,20 @@ class SearchResult:
     poster: str | None = None
 
 
-@dataclass
-class SearchResults:
+class SearchResults(BaseAnimeProviderModel):
     page_info: PageInfo
     results: list[SearchResult]
 
 
-@dataclass
-class AnimeEpisodeInfo:
+class AnimeEpisodeInfo(BaseAnimeProviderModel):
     id: str
-    title: str
     episode: str
-    poster: str | None
-    duration: str | None
-    translation_type: str | None
+    title: str | None = None
+    poster: str | None = None
+    duration: str | None = None
 
 
-@dataclass
-class Anime:
+class Anime(BaseAnimeProviderModel):
     id: str
     title: str
     episodes: AnimeEpisodes
@@ -56,25 +54,23 @@ class Anime:
     year: str | None = None
 
 
-@dataclass
-class EpisodeStream:
+class EpisodeStream(BaseAnimeProviderModel):
     link: str
+    title: str | None = None
     quality: Literal["360", "480", "720", "1080"] = "720"
     translation_type: Literal["dub", "sub"] = "sub"
-    resolution: str | None = None
+    format: str | None = None
     hls: bool | None = None
     mp4: bool | None = None
     priority: int | None = None
 
 
-@dataclass
-class Subtitle:
+class Subtitle(BaseAnimeProviderModel):
     url: str
     language: str | None = None
 
 
-@dataclass
-class Server:
+class Server(BaseAnimeProviderModel):
     name: str
     links: list[EpisodeStream]
     episode_title: str | None = None

@@ -17,7 +17,11 @@ def map_to_search_results(response: Response) -> SearchResults:
                 id=result["_id"],
                 title=result["name"],
                 media_type=result["__typename"],
-                available_episodes=AnimeEpisodes(sub=result["availableEpisodes"]),
+                episodes=AnimeEpisodes(
+                    sub=generate_list(result["availableEpisodes"]["sub"]),
+                    dub=generate_list(result["availableEpisodes"]["dub"]),
+                    raw=generate_list(result["availableEpisodes"]["raw"]),
+                ),
             )
             for result in search_results["shows"]["edges"]
         ],
@@ -30,9 +34,9 @@ def map_to_anime_result(response: Response) -> Anime:
         id=anime["_id"],
         title=anime["name"],
         episodes=AnimeEpisodes(
-            sub=generate_list(anime["availableEpisodesDetail"]["sub"]),
-            dub=generate_list(anime["availableEpisodesDetail"]["dub"]),
-            raw=generate_list(anime["availableEpisodesDetail"]["raw"]),
+            sub=anime["availableEpisodesDetail"]["sub"],
+            dub=anime["availableEpisodesDetail"]["dub"],
+            raw=anime["availableEpisodesDetail"]["raw"],
         ),
         type=anime.get("__typename"),
     )

@@ -1,9 +1,8 @@
-from abc import ABC, abstractmethod
-from logging import getLogger
+from httpx import Client
 
 from ...types import Server
 from ..types import AllAnimeEpisode, AllAnimeSource
-from ..utils import one_digit_symmetric_xor
+from ..utils import debug_extractor, logger, one_digit_symmetric_xor
 from .ak import AkExtractor
 from .dropbox import SakExtractor
 from .filemoon import FmHlsExtractor, OkExtractor
@@ -15,16 +14,6 @@ from .vid_mp4 import VidMp4Extractor
 from .we_transfer import KirExtractor
 from .wixmp import DefaultExtractor
 from .yt_mp4 import YtExtractor
-
-logger = getLogger(__name__)
-
-
-class BaseExtractor(ABC):
-    @abstractmethod
-    @classmethod
-    def extract(cls, url, client, episode_number, episode, source) -> Server:
-        pass
-
 
 AVAILABLE_SOURCES = {
     "Sak": SakExtractor,
@@ -44,8 +33,12 @@ OTHER_SOURCES = {
 }
 
 
+@debug_extractor
 def extract_server(
-    client, episode_number: str, episode: AllAnimeEpisode, source: AllAnimeSource
+    client: Client,
+    episode_number: str,
+    episode: AllAnimeEpisode,
+    source: AllAnimeSource,
 ) -> Server | None:
     url = source.get("sourceUrl")
     if not url:

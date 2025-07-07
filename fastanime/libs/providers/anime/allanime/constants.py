@@ -1,6 +1,6 @@
 import re
-from importlib import resources
-from pathlib import Path
+
+from .....core.constants import APP_DIR
 
 SERVERS_AVAILABLE = [
     "sharepoint",
@@ -28,7 +28,7 @@ MP4_SERVER_JUICY_STREAM_REGEX = re.compile(
 )
 
 # graphql files
-GQLS = resources.files("fastanime.libs.providers.anime.allanime") / "queries"
-SEARCH_GQL = Path(str(GQLS / "search.gql"))
-ANIME_GQL = Path(str(GQLS / "anime.gql"))
-EPISODE_GQL = Path(str(GQLS / "episode.gql"))
+GQLS = APP_DIR / "libs" / "providers" / "anime" / "allanime" / "queries"
+SEARCH_GQL = GQLS / "search.gql"
+ANIME_GQL = GQLS / "anime.gql"
+EPISODE_GQL = GQLS / "episodes.gql"

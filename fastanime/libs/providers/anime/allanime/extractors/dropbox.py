@@ -1,7 +1,7 @@
 from ...types import EpisodeStream, Server
 from ..constants import API_BASE_URL
 from ..types import AllAnimeEpisode, AllAnimeSource
-from .extractor import BaseExtractor
+from .base import BaseExtractor
 
 
 class SakExtractor(BaseExtractor):

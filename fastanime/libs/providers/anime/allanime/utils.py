@@ -1,5 +1,10 @@
+import functools
+import logging
+import os
 import re
 from itertools import cycle
+
+logger = logging.getLogger(__name__)
 
 # Dictionary to map hex values to characters
 hex_to_char = {
@@ -33,6 +38,22 @@ hex_to_char = {
     "57": "o",
     "51": "i",
 }
+
+
+def debug_extractor(extractor_function):
+    @functools.wraps(extractor_function)
+    def _provider_function_wrapper(*args):
+        if not os.environ.get("FASTANIME_DEBUG"):
+            try:
+                return extractor_function(*args)
+            except Exception as e:
+                logger.error(
+                    f"[AllAnime@Server={args[3].get('sourceName', 'UNKNOWN')}]: {e}"
+                )
+        else:
+            return extractor_function(*args, **kwargs)
+
+    return _provider_function_wrapper
 
 
 def give_random_quality(links):

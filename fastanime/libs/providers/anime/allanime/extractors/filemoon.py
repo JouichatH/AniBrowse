@@ -1,7 +1,7 @@
 from ...types import EpisodeStream, Server
 from ..constants import API_BASE_URL, MP4_SERVER_JUICY_STREAM_REGEX
 from ..types import AllAnimeEpisode, AllAnimeSource
-from .extractor import BaseExtractor
+from .base import BaseExtractor
 
 
 # TODO: requires decoding obsfucated js (filemoon)
