@@ -30,7 +30,7 @@ def load_graphql_from_file(file: Path) -> str:
         raise
 
 
-def execute_graphql_query(
+def execute_graphql_query_with_get_request(
     url: str, httpx_client: Client, graphql_file: Path, variables: dict
 ) -> Response:
     query = load_graphql_from_file(graphql_file)
@@ -39,7 +39,7 @@ def execute_graphql_query(
     return response
 
 
-def execute_graphql_mutation(
+def execute_graphql(
     url: str, httpx_client: Client, graphql_file: Path, variables: dict
 ) -> Response:
     query = load_graphql_from_file(graphql_file)

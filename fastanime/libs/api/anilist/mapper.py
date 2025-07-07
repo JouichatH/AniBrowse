@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 from ..types import (
     AiringSchedule,
@@ -17,17 +15,27 @@ from ..types import (
     UserListStatus,
     UserProfile,
 )
-
-if TYPE_CHECKING:
-    from .types import AnilistBaseMediaDataSchema, AnilistPageInfo, AnilistUser_
+from .types import (
+    AnilistBaseMediaDataSchema,
+    AnilistCurrentlyLoggedInUser,
+    AnilistDataSchema,
+    AnilistImage,
+    AnilistMediaList,
+    AnilistMediaLists,
+    AnilistMediaNextAiringEpisode,
+    AnilistMediaTag,
+    AnilistMediaTitle,
+    AnilistMediaTrailer,
+    AnilistPageInfo,
+    AnilistStudioNodes,
+    AnilistViewerData,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def _to_generic_media_title(anilist_title: Optional[dict]) -> MediaTitle:
+def _to_generic_media_title(anilist_title: AnilistMediaTitle) -> MediaTitle:
     """Maps an AniList title object to a generic MediaTitle."""
-    if not anilist_title:
-        return MediaTitle()
     return MediaTitle(
         romaji=anilist_title.get("romaji"),
         english=anilist_title.get("english"),
@@ -35,19 +43,17 @@ def _to_generic_media_title(anilist_title: Optional[dict]) -> MediaTitle:
     )
 
 
-def _to_generic_media_image(anilist_image: Optional[dict]) -> MediaImage:
+def _to_generic_media_image(anilist_image: AnilistImage) -> MediaImage:
     """Maps an AniList image object to a generic MediaImage."""
-    if not anilist_image:
-        return MediaImage()
     return MediaImage(
         medium=anilist_image.get("medium"),
-        large=anilist_image.get("large"),
+        large=anilist_image["large"],
         extra_large=anilist_image.get("extraLarge"),
     )
 
 
 def _to_generic_media_trailer(
-    anilist_trailer: Optional[dict],
+    anilist_trailer: Optional[AnilistMediaTrailer],
 ) -> Optional[MediaTrailer]:
     """Maps an AniList trailer object to a generic MediaTrailer."""
     if not anilist_trailer or not anilist_trailer.get("id"):
@@ -60,32 +66,34 @@ def _to_generic_media_trailer(
 
 
 def _to_generic_airing_schedule(
-    anilist_schedule: Optional[dict],
+    anilist_schedule: AnilistMediaNextAiringEpisode,
 ) -> Optional[AiringSchedule]:
     """Maps an AniList nextAiringEpisode object to a generic AiringSchedule."""
-    if not anilist_schedule or not anilist_schedule.get("airingAt"):
-        return None
+    if not anilist_schedule:
+        return
+
     return AiringSchedule(
-        airing_at=datetime.fromtimestamp(anilist_schedule["airingAt"]),
+        airing_at=datetime.fromtimestamp(anilist_schedule["airingAt"])
+        if anilist_schedule.get("airingAt")
+        else None,
         episode=anilist_schedule.get("episode", 0),
     )
 
 
-def _to_generic_studios(anilist_studios: Optional[dict]) -> List[Studio]:
+def _to_generic_studios(anilist_studios: AnilistStudioNodes) -> List[Studio]:
     """Maps AniList studio nodes to a list of generic Studio objects."""
-    if not anilist_studios or not anilist_studios.get("nodes"):
-        return []
     return [
-        Studio(id=s["id"], name=s["name"])
+        Studio(
+            name=s["name"],
+            favourites=s["favourites"],
+            is_animation_studio=s["isAnimationStudio"],
+        )
         for s in anilist_studios["nodes"]
-        if s.get("id") and s.get("name")
     ]
 
 
-def _to_generic_tags(anilist_tags: Optional[list[dict]]) -> List[MediaTag]:
+def _to_generic_tags(anilist_tags: list[AnilistMediaTag]) -> List[MediaTag]:
     """Maps a list of AniList tags to generic MediaTag objects."""
-    if not anilist_tags:
-        return []
     return [
         MediaTag(name=t["name"], rank=t.get("rank"))
         for t in anilist_tags
@@ -94,35 +102,53 @@ def _to_generic_tags(anilist_tags: Optional[list[dict]]) -> List[MediaTag]:
 
 
 def _to_generic_user_status(
-    anilist_list_entry: Optional[dict],
+    anilist_media: AnilistBaseMediaDataSchema,
+    anilist_list_entry: Optional[AnilistMediaList],
 ) -> Optional[UserListStatus]:
     """Maps an AniList mediaListEntry to a generic UserListStatus."""
-    if not anilist_list_entry:
-        return None
+    if anilist_list_entry:
+        return UserListStatus(
+            status=anilist_list_entry["status"],
+            progress=anilist_list_entry["progress"],
+            score=anilist_list_entry["score"],
+            repeat=anilist_list_entry["repeat"],
+            notes=anilist_list_entry["notes"],
+            start_date=datetime(
+                anilist_list_entry["startDate"]["year"],
+                anilist_list_entry["startDate"]["month"],
+                anilist_list_entry["startDate"]["day"],
+            ),
+            completed_at=datetime(
+                anilist_list_entry["completedAt"]["year"],
+                anilist_list_entry["completedAt"]["month"],
+                anilist_list_entry["completedAt"]["day"],
+            ),
+            created_at=anilist_list_entry["createdAt"],
+        )
+    else:
+        if not anilist_media["mediaListEntry"]:
+            return
+        return UserListStatus(
+            id=anilist_media["mediaListEntry"]["id"],
+            status=anilist_media["mediaListEntry"]["status"],
+            progress=anilist_media["mediaListEntry"]["progress"],
+        )
 
-    score = anilist_list_entry.get("score")
 
-    return UserListStatus(
-        status=anilist_list_entry.get("status"),
-        progress=anilist_list_entry.get("progress"),
-        score=score
-        if score is not None
-        else None,  # AniList score is 0-10, matches our generic model
-    )
-
-
-def _to_generic_media_item(data: AnilistBaseMediaDataSchema) -> MediaItem:
+def _to_generic_media_item(
+    data: AnilistBaseMediaDataSchema, media_list: AnilistMediaList | None = None
+) -> MediaItem:
     """Maps a single AniList media schema to a generic MediaItem."""
     return MediaItem(
         id=data["id"],
         id_mal=data.get("idMal"),
         type=data.get("type", "ANIME"),
-        title=_to_generic_media_title(data.get("title")),
-        status=data.get("status"),
+        title=_to_generic_media_title(data["title"]),
+        status=data["status"],
         format=data.get("format"),
-        cover_image=_to_generic_media_image(data.get("coverImage")),
+        cover_image=_to_generic_media_image(data["coverImage"]),
         banner_image=data.get("bannerImage"),
-        trailer=_to_generic_media_trailer(data.get("trailer")),
+        trailer=_to_generic_media_trailer(data["trailer"]),
         description=data.get("description"),
         episodes=data.get("episodes"),
         duration=data.get("duration"),
@@ -134,7 +160,7 @@ def _to_generic_media_item(data: AnilistBaseMediaDataSchema) -> MediaItem:
         popularity=data.get("popularity"),
         favourites=data.get("favourites"),
         next_airing=_to_generic_airing_schedule(data.get("nextAiringEpisode")),
-        user_list_status=_to_generic_user_status(data.get("mediaListEntry")),
+        user_status=_to_generic_user_status(data, media_list),
     )
 
 
@@ -148,86 +174,71 @@ def _to_generic_page_info(data: AnilistPageInfo) -> PageInfo:
     )
 
 
-def to_generic_search_result(api_response: dict) -> Optional[MediaSearchResult]:
+def to_generic_search_result(
+    data: AnilistDataSchema, user_media_list: List[AnilistMediaList] | None = None
+) -> Optional[MediaSearchResult]:
     """
     Top-level mapper to convert a raw AniList search/list API response
     into a generic MediaSearchResult object.
     """
-    if not api_response or "data" not in api_response:
-        logger.warning("Mapping failed: API response is missing 'data' key.")
-        return None
+    page_data = data["data"]["Page"]
 
-    page_data = api_response["data"].get("Page")
-    if not page_data:
-        logger.warning("Mapping failed: API response 'data' is missing 'Page' key.")
-        return None
-
-    raw_media_list = page_data.get("media", [])
-    media_items: List[MediaItem] = [
-        _to_generic_media_item(item) for item in raw_media_list if item
-    ]
-    page_info = _to_generic_page_info(page_data.get("pageInfo", {}))
+    raw_media_list = page_data["media"]
+    if user_media_list:
+        media_items: List[MediaItem] = [
+            _to_generic_media_item(item, user_media_list_item)
+            for item, user_media_list_item in zip(raw_media_list, user_media_list)
+        ]
+    else:
+        media_items: List[MediaItem] = [
+            _to_generic_media_item(item) for item in raw_media_list
+        ]
+    page_info = _to_generic_page_info(page_data["pageInfo"])
 
     return MediaSearchResult(page_info=page_info, media=media_items)
 
 
-def to_generic_user_list_result(api_response: dict) -> Optional[MediaSearchResult]:
+def to_generic_user_list_result(data: AnilistMediaLists) -> Optional[MediaSearchResult]:
     """
     Mapper for user list queries where media data is nested inside a 'mediaList' key.
     """
-    if not api_response or "data" not in api_response:
-        return None
-    page_data = api_response["data"].get("Page")
-    if not page_data:
-        return None
+    page_data = data["data"]["Page"]
 
     # Extract media objects from the 'mediaList' array
-    media_list_items = page_data.get("mediaList", [])
-    raw_media_list = [
-        item.get("media") for item in media_list_items if item.get("media")
-    ]
+    media_list_items = page_data["mediaList"]
+    raw_media_list = [item["media"] for item in media_list_items]
 
     # Now that we have a standard list of media, we can reuse the main search result mapper
-    page_data["media"] = raw_media_list
-    return to_generic_search_result({"data": {"Page": page_data}})
+    return to_generic_search_result(
+        {"data": {"Page": {"media": raw_media_list}}},  # pyright:ignore
+        media_list_items,
+    )
 
 
-def to_generic_user_profile(api_response: dict) -> Optional[UserProfile]:
+def to_generic_user_profile(data: AnilistViewerData) -> Optional[UserProfile]:
     """Maps a raw AniList viewer response to a generic UserProfile."""
-    if not api_response or "data" not in api_response:
-        return None
 
-    viewer_data: Optional[AnilistUser_] = api_response["data"].get("Viewer")
-    if not viewer_data:
-        return None
+    viewer_data: Optional[AnilistCurrentlyLoggedInUser] = data["data"]["Viewer"]
 
     return UserProfile(
         id=viewer_data["id"],
         name=viewer_data["name"],
-        avatar_url=viewer_data.get("avatar", {}).get("large"),
-        banner_url=viewer_data.get("bannerImage"),
+        avatar_url=viewer_data["avatar"]["large"],
+        banner_url=viewer_data["bannerImage"],
     )
 
 
-def to_generic_relations(api_response: dict) -> Optional[List[MediaItem]]:
+# TODO: complete this
+def to_generic_relations(data: dict) -> Optional[List[MediaItem]]:
     """Maps the 'relations' part of an API response."""
-    if not api_response or "data" not in api_response:
-        return None
-    nodes = (
-        api_response.get("data", {})
-        .get("Media", {})
-        .get("relations", {})
-        .get("nodes", [])
-    )
+    nodes = data["data"].get("Media", {}).get("relations", {}).get("nodes", [])
     return [_to_generic_media_item(node) for node in nodes if node]
 
 
-def to_generic_recommendations(api_response: dict) -> Optional[List[MediaItem]]:
+def to_generic_recommendations(data: dict) -> Optional[List[MediaItem]]:
     """Maps the 'recommendations' part of an API response."""
-    if not api_response or "data" not in api_response:
-        return None
     recs = (
-        api_response.get("data", {})
+        data.get("data", {})
         .get("Media", {})
         .get("recommendations", {})
         .get("nodes", [])

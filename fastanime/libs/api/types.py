@@ -21,8 +21,8 @@ UserListStatusType = Literal[
 class MediaImage:
     """A generic representation of media imagery URLs."""
 
+    large: str
     medium: Optional[str] = None
-    large: Optional[str] = None
     extra_large: Optional[str] = None
 
 
@@ -48,16 +48,18 @@ class MediaTrailer:
 class AiringSchedule:
     """A generic representation of the next airing episode."""
 
-    airing_at: datetime
     episode: int
+    airing_at: datetime | None = None
 
 
 @dataclass(frozen=True)
 class Studio:
     """A generic representation of an animation studio."""
 
-    id: int
-    name: str
+    id: int | None = None
+    name: str | None = None
+    favourites: int | None = None
+    is_animation_studio: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -72,9 +74,16 @@ class MediaTag:
 class UserListStatus:
     """Generic representation of a user's list status for a media item."""
 
-    status: Optional[UserListStatusType] = None
+    id: int | None = None
+
+    status: Optional[str] = None
     progress: Optional[int] = None
-    score: Optional[float] = None  # Standardized to a 0-10 scale
+    score: Optional[float] = None
+    repeat: Optional[int] = None
+    notes: Optional[str] = None
+    start_date: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -88,10 +97,10 @@ class MediaItem:
     id_mal: Optional[int] = None
     type: MediaType = "ANIME"
     title: MediaTitle = field(default_factory=MediaTitle)
-    status: Optional[MediaStatus] = None
+    status: Optional[str] = None
     format: Optional[str] = None  # e.g., TV, MOVIE, OVA
 
-    cover_image: MediaImage = field(default_factory=MediaImage)
+    cover_image: Optional[MediaImage] = None
     banner_image: Optional[str] = None
     trailer: Optional[MediaTrailer] = None
 
@@ -103,12 +112,14 @@ class MediaItem:
     studios: List[Studio] = field(default_factory=list)
     synonyms: List[str] = field(default_factory=list)
 
-    average_score: Optional[float] = None  # Standardized to a 0-10 scale
+    average_score: Optional[float] = None
     popularity: Optional[int] = None
     favourites: Optional[int] = None
 
     next_airing: Optional[AiringSchedule] = None
-    user_list_status: Optional[UserListStatus] = None
+
+    # user related
+    user_status: Optional[UserListStatus] = None
 
 
 @dataclass(frozen=True)

@@ -1,17 +1,16 @@
-from __future__ import annotations
-
 import logging
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import Optional
 
-from ....core.utils.graphql import execute_graphql_mutation, execute_graphql_query
+from httpx import Client
+
+from ....core.config import AnilistConfig
+from ....core.utils.graphql import (
+    execute_graphql,
+    execute_graphql_query_with_get_request,
+)
 from ..base import ApiSearchParams, BaseApiClient, UpdateListEntryParams, UserListParams
 from ..types import MediaSearchResult, UserProfile
 from . import gql, mapper
-
-if TYPE_CHECKING:
-    from httpx import Client
-
-    from ....core.config import AnilistConfig
 
 logger = logging.getLogger(__name__)
 ANILIST_ENDPOINT = "https://graphql.anilist.co"
@@ -37,18 +36,18 @@ class AniListApi(BaseApiClient):
     def get_viewer_profile(self) -> Optional[UserProfile]:
         if not self.token:
             return None
-        raw_data = execute_graphql_query(
+        response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_LOGGED_IN_USER, {}
         )
-        return mapper.to_generic_user_profile(raw_data) if raw_data else None
+        return mapper.to_generic_user_profile(response.json())
 
     def search_media(self, params: ApiSearchParams) -> Optional[MediaSearchResult]:
         variables = {k: v for k, v in params.__dict__.items() if v is not None}
         variables["perPage"] = params.per_page
-        raw_data = execute_graphql_query(
+        response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.SEARCH_MEDIA, variables
         )
-        return mapper.to_generic_search_result(raw_data) if raw_data else None
+        return mapper.to_generic_search_result(response.json())
 
     def fetch_user_list(self, params: UserListParams) -> Optional[MediaSearchResult]:
         if not self.user_profile:
@@ -60,10 +59,10 @@ class AniListApi(BaseApiClient):
             "page": params.page,
             "perPage": params.per_page,
         }
-        raw_data = execute_graphql_query(
-            ANILIST_ENDPOINT, self.http_client, gql.GET_USER_LIST, variables
+        response = execute_graphql(
+            ANILIST_ENDPOINT, self.http_client, gql.GET_USER_MEDIA_LIST, variables
         )
-        return mapper.to_generic_user_list_result(raw_data) if raw_data else None
+        return mapper.to_generic_user_list_result(response.json()) if response else None
 
     def update_list_entry(self, params: UpdateListEntryParams) -> bool:
         if not self.token:
@@ -76,20 +75,22 @@ class AniListApi(BaseApiClient):
             "scoreRaw": score_raw,
         }
         variables = {k: v for k, v in variables.items() if v is not None}
-        response = execute_graphql_mutation(
+        response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.SAVE_MEDIA_LIST_ENTRY, variables
         )
-        return response is not None and "errors" not in response
+        return response.json() is not None and "errors" not in response.json()
 
     def delete_list_entry(self, media_id: int) -> bool:
         if not self.token:
             return False
-        entry_data = execute_graphql_query(
+        response = execute_graphql(
             ANILIST_ENDPOINT,
             self.http_client,
             gql.GET_MEDIA_LIST_ITEM,
             {"mediaId": media_id},
         )
+        entry_data = response.json()
+
         list_id = (
             entry_data.get("data", {}).get("MediaList", {}).get("id")
             if entry_data
@@ -97,16 +98,39 @@ class AniListApi(BaseApiClient):
         )
         if not list_id:
             return False
-        response = execute_graphql_mutation(
+        response = execute_graphql(
             ANILIST_ENDPOINT,
             self.http_client,
             gql.DELETE_MEDIA_LIST_ENTRY,
             {"id": list_id},
         )
         return (
-            response.get("data", {})
+            response.json()
+            .get("data", {})
             .get("DeleteMediaListEntry", {})
             .get("deleted", False)
             if response
             else False
+        )
+
+
+if __name__ == "__main__":
+    from httpx import Client
+
+    from ....core.config import AnilistConfig
+    from ....core.constants import APP_ASCII_ART
+    from ..params import ApiSearchParams
+
+    anilist = AniListApi(AnilistConfig(), Client())
+    print(APP_ASCII_ART)
+
+    # search
+    query = input("What anime would you like to search for: ")
+    search_results = anilist.search_media(ApiSearchParams(query=query))
+    if not search_results:
+        print("Nothing was finding matching: ", query)
+        exit()
+    for result in search_results.media:
+        print(
+            f"Title: {result.title.english or result.title.romaji} Episodes: {result.episodes}"
         )

@@ -1,7 +1,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-from .....core.utils.graphql import execute_graphql_query
+from .....core.utils.graphql import execute_graphql_query_with_get_request
 from ..base import BaseAnimeProvider
 from ..utils.debug import debug_provider
 from .constants import (
@@ -27,7 +27,7 @@ class AllAnime(BaseAnimeProvider):
 
     @debug_provider
     def search(self, params):
-        response = execute_graphql_query(
+        response = execute_graphql_query_with_get_request(
             API_GRAPHQL_ENDPOINT,
             self.client,
             SEARCH_GQL,
@@ -47,7 +47,7 @@ class AllAnime(BaseAnimeProvider):
 
     @debug_provider
     def get(self, params):
-        response = execute_graphql_query(
+        response = execute_graphql_query_with_get_request(
             API_GRAPHQL_ENDPOINT,
             self.client,
             ANIME_GQL,
@@ -57,7 +57,7 @@ class AllAnime(BaseAnimeProvider):
 
     @debug_provider
     def episode_streams(self, params):
-        episode_response = execute_graphql_query(
+        episode_response = execute_graphql_query_with_get_request(
             API_GRAPHQL_ENDPOINT,
             self.client,
             EPISODE_GQL,

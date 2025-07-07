@@ -19,7 +19,7 @@ class AnilistImage(TypedDict):
     large: str
 
 
-class AnilistUser_(TypedDict):
+class AnilistCurrentlyLoggedInUser(TypedDict):
     id: int
     name: str
     bannerImage: str | None
@@ -28,7 +28,7 @@ class AnilistUser_(TypedDict):
 
 
 class AnilistViewer(TypedDict):
-    Viewer: AnilistUser_
+    Viewer: AnilistCurrentlyLoggedInUser
 
 
 class AnilistViewerData(TypedDict):
@@ -84,7 +84,7 @@ class AnilistMediaNextAiringEpisode(TypedDict):
 
 class AnilistReview(TypedDict):
     summary: str
-    user: AnilistUser_
+    user: AnilistCurrentlyLoggedInUser
 
 
 class AnilistReviewNodes(TypedDict):
@@ -216,7 +216,6 @@ class AnilistPages(TypedDict):
 
 class AnilistDataSchema(TypedDict):
     data: AnilistPages
-    Error: str
 
 
 class AnilistNotification(TypedDict):
