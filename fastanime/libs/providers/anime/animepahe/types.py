@@ -2,7 +2,7 @@ from typing import Literal, TypedDict
 
 
 class AnimePaheSearchResult(TypedDict):
-    id: int
+    id: str
     title: str
     type: str
     episodes: int
@@ -25,9 +25,9 @@ class AnimePaheSearchPage(TypedDict):
 
 
 class Episode(TypedDict):
-    id: int
+    id: str
     anime_id: int
-    episode: int
+    episode: float
     episode2: int
     edition: str
     title: str
@@ -52,10 +52,52 @@ class AnimePaheAnimePage(TypedDict):
     data: list[Episode]
 
 
-class Server:
-    type: str
-    data_src = "https://kwik.si/e/PImJ0u7Y3M0G"
-    data_fansub: str
-    data_resolution: Literal["360", "720", "1080"]
-    data_audio: Literal["eng", "jpn"]
-    data_av1: str
+class AnimePaheEpisodeInfo(TypedDict):
+    title: str
+    episode: float
+    id: str
+    translation_type: Literal["eng", "jpn"]
+    duration: str
+    poster: str
+
+
+class AvailableEpisodesDetail(TypedDict):
+    sub: list[str]
+    dub: list[str]
+    raw: list[str]
+
+
+class AnimePaheAnime(TypedDict):
+    id: str
+    title: str
+    year: int
+    season: str
+    poster: str
+    score: int
+    availableEpisodesDetail: AvailableEpisodesDetail
+    episodesInfo: list[AnimePaheEpisodeInfo]
+
+
+class PageInfo(TypedDict):
+    total: int
+    perPage: int
+    currentPage: int
+
+
+class AnimePaheSearchResults(TypedDict):
+    pageInfo: PageInfo
+    results: list[AnimePaheSearchResult]
+
+
+class AnimePaheStreamLink(TypedDict):
+    quality: str
+    translation_type: Literal["sub", "dub"]
+    link: str
+
+
+class AnimePaheServer(TypedDict):
+    server: Literal["kwik"]
+    links: list[AnimePaheStreamLink]
+    episode_title: str
+    subtitles: list
+    headers: dict
