@@ -5,6 +5,16 @@ from ...types import Server
 from ..types import AllAnimeEpisode, AllAnimeSource
 from ..utils import one_digit_symmetric_xor
 from .ak import AkExtractor
+from .dropbox import SakExtractor
+from .filemoon import FmHlsExtractor, OkExtractor
+from .gogoanime import Lufmp4Extractor
+from .mp4_upload import Mp4Extractor
+from .sharepoint import Smp4Extractor
+from .streamsb import SsHlsExtractor
+from .vid_mp4 import VidMp4Extractor
+from .we_transfer import KirExtractor
+from .wixmp import DefaultExtractor
+from .yt_mp4 import YtExtractor
 
 logger = getLogger(__name__)
 
@@ -17,15 +27,21 @@ class BaseExtractor(ABC):
 
 
 AVAILABLE_SOURCES = {
-    "Sak": AkExtractor,
-    "S-mp4": AkExtractor,
-    "Luf-mp4": AkExtractor,
-    "Default": AkExtractor,
-    "Yt-mp4": AkExtractor,
-    "Kir": AkExtractor,
-    "Mp4": AkExtractor,
+    "Sak": SakExtractor,
+    "S-mp4": Smp4Extractor,
+    "Luf-mp4": Lufmp4Extractor,
+    "Default": DefaultExtractor,
+    "Yt-mp4": YtExtractor,
+    "Kir": KirExtractor,
+    "Mp4": Mp4Extractor,
 }
-OTHER_SOURCES = {"Ak": AkExtractor, "Vid-mp4": "", "Ok": "", "Ss-Hls": "", "Fm-Hls": ""}
+OTHER_SOURCES = {
+    "Ak": AkExtractor,
+    "Vid-mp4": VidMp4Extractor,
+    "Ok": OkExtractor,
+    "Ss-Hls": SsHlsExtractor,
+    "Fm-Hls": FmHlsExtractor,
+}
 
 
 def extract_server(

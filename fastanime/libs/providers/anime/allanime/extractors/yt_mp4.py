@@ -1,17 +1,22 @@
+from ...types import EpisodeStream, Server
+from ..constants import API_BASE_URL
+from ..types import AllAnimeEpisode, AllAnimeSource
 from .extractor import BaseExtractor
 
-                return {
-                    "server": "Yt",
-                    "episode_title": f"{anime_title}; Episode {episode_number}",
-                    "headers": {"Referer": f"https://{API_BASE_URL}/"},
-                    "subtitles": [],
-                    "links": [
-                        {
-                            "link": url,
-                            "quality": "1080",
-                        }
-                    ],
-                }
 
 class YtExtractor(BaseExtractor):
-    pass
+    @classmethod
+    def extract(
+        cls,
+        url,
+        client,
+        episode_number: str,
+        episode: AllAnimeEpisode,
+        source: AllAnimeSource,
+    ) -> Server:
+        return Server(
+            name="Yt",
+            links=[EpisodeStream(link=url, quality="1080")],
+            episode_title=episode["notes"],
+            headers={"Referer": f"https://{API_BASE_URL}/"},
+        )

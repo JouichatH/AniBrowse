@@ -1,21 +1,33 @@
+from ...types import EpisodeStream, Server
+from ..constants import API_BASE_URL
+from ..types import AllAnimeEpisode, AllAnimeSource
 from .extractor import BaseExtractor
 
 
-                # TODO: requires some serious work i think : )
-                response = self.session.get(
-                    url,
-                    timeout=10,
-                )
-                response.raise_for_status()
-                embed_html = response.text.replace(" ", "").replace("\n", "")
-                logger.debug("Found streams from vid-mp4")
-                return {
-                    "server": "Vid-mp4",
-                    "headers": {"Referer": f"https://{API_BASE_URL}/"},
-                    "subtitles": [],
-                    "episode_title": (allanime_episode["notes"] or f"{anime_title}")
-                    + f"; Episode {episode_number}",
-                    "links": give_random_quality(response.json()["links"]),
-                }
+# TODO: requires some serious work i think : )
 class VidMp4Extractor(BaseExtractor):
-    pass
+    @classmethod
+    def extract(
+        cls,
+        url,
+        client,
+        episode_number: str,
+        episode: AllAnimeEpisode,
+        source: AllAnimeSource,
+    ) -> Server:
+        response = client.get(
+            f"https://{API_BASE_URL}{url.replace('clock', 'clock.json')}",
+            timeout=10,
+        )
+        embed_html = response.text.replace(" ", "").replace("\n", "")
+        response.raise_for_status()
+        streams = response.json()
+
+        return Server(
+            name="Vid-mp4",
+            links=[
+                EpisodeStream(link=link, quality="1080") for link in streams["links"]
+            ],
+            episode_title=episode["notes"],
+            headers={"Referer": f"https://{API_BASE_URL}/"},
+        )

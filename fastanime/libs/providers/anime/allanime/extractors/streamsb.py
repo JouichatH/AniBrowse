@@ -1,21 +1,33 @@
+from ...types import EpisodeStream, Server
+from ..constants import API_BASE_URL
+from ..types import AllAnimeEpisode, AllAnimeSource
 from .extractor import BaseExtractor
 
-                # TODO: requires some serious work i think : )
-                response = self.session.get(
-                    url,
-                    timeout=10,
-                )
-                response.raise_for_status()
-                embed_html = response.text.replace(" ", "").replace("\n", "")
-                logger.debug("Found streams from Ss-Hls")
-                return {
-                    "server": "StreamSb",
-                    "headers": {"Referer": f"https://{API_BASE_URL}/"},
-                    "subtitles": [],
-                    "episode_title": (allanime_episode["notes"] or f"{anime_title}")
-                    + f"; Episode {episode_number}",
-                    "links": give_random_quality(response.json()["links"]),
-                }
 
 class SsHlsExtractor(BaseExtractor):
-    pass
+    @classmethod
+    def extract(
+        cls,
+        url,
+        client,
+        episode_number: str,
+        episode: AllAnimeEpisode,
+        source: AllAnimeSource,
+    ) -> Server:
+        # TODO: requires some serious work i think : )
+        response = client.get(
+            url,
+            timeout=10,
+        )
+        response.raise_for_status()
+        embed_html = response.text.replace(" ", "").replace("\n", "")
+        streams = response.json()["links"]
+
+        return Server(
+            name="StreamSb",
+            links=[
+                EpisodeStream(link=link, quality="1080") for link in streams["links"]
+            ],
+            episode_title=episode["notes"],
+            headers={"Referer": f"https://{API_BASE_URL}/"},
+        )
