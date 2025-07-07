@@ -41,14 +41,6 @@ except ModuleNotFoundError:
     FZF_DEFAULT_OPTS = DEFAULTS / "fzf-opts"
 
 
-APP_ASCII_ART = """\
-███████╗░█████╗░░██████╗████████╗░█████╗░███╗░░██╗██╗███╗░░░███╗███████╗
-██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗████╗░██║██║████╗░████║██╔════╝
-█████╗░░███████║╚█████╗░░░░██║░░░███████║██╔██╗██║██║██╔████╔██║█████╗░░
-██╔══╝░░██╔══██║░╚═══██╗░░░██║░░░██╔══██║██║╚████║██║██║╚██╔╝██║██╔══╝░░
-██║░░░░░██║░░██║██████╔╝░░░██║░░░██║░░██║██║░╚███║██║██║░╚═╝░██║███████╗
-╚═╝░░░░░╚═╝░░╚═╝╚═════╝░░░░╚═╝░░░╚═╝░░╚═╝╚═╝░░╚══╝╚═╝╚═╝░░░░░╚═╝╚══════╝
-"""
 USER_NAME = os.environ.get("USERNAME", "Anime Fan")
 
 try:
@@ -62,9 +54,11 @@ except ModuleNotFoundError:
             folder = Path.home()
         APP_DATA_DIR = Path(folder) / APP_NAME
     if PLATFORM == "darwin":
-        APP_DATA_DIR = Path("~/Library/Application Support") / APP_NAME
+        APP_DATA_DIR = Path(Path.home() / "Library" / "Application Support" / APP_NAME)
 
-    APP_DATA_DIR = Path(os.environ.get("XDG_CONFIG_HOME", "~/.config")) / APP_NAME
+    APP_DATA_DIR = (
+        Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / APP_NAME
+    )
 
 if PLATFORM == "win32":
     APP_CACHE_DIR = APP_DATA_DIR / "cache"
@@ -75,10 +69,10 @@ elif PLATFORM == "darwin":
     USER_VIDEOS_DIR = Path.home() / "Movies" / APP_NAME
 
 else:
-    xdg_cache_home = Path(os.environ.get("XDG_CACHE_HOME", "~/.cache"))
+    xdg_cache_home = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
     APP_CACHE_DIR = xdg_cache_home / APP_NAME
 
-    xdg_videos_dir = Path(os.environ.get("XDG_VIDEOS_DIR", "~/Videos"))
+    xdg_videos_dir = Path(os.environ.get("XDG_VIDEOS_DIR", Path.home() / "Videos"))
     USER_VIDEOS_DIR = xdg_videos_dir / APP_NAME
 
 APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -91,3 +85,13 @@ USER_CONFIG_PATH = APP_DATA_DIR / "config.ini"
 LOG_FILE_PATH = APP_CACHE_DIR / "fastanime.log"
 
 ICON_PATH = ICONS_DIR / ("logo.ico" if PLATFORM == "Win32" else "logo.png")
+
+
+APP_ASCII_ART = """\
+███████╗░█████╗░░██████╗████████╗░█████╗░███╗░░██╗██╗███╗░░░███╗███████╗
+██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗████╗░██║██║████╗░████║██╔════╝
+█████╗░░███████║╚█████╗░░░░██║░░░███████║██╔██╗██║██║██╔████╔██║█████╗░░
+██╔══╝░░██╔══██║░╚═══██╗░░░██║░░░██╔══██║██║╚████║██║██║╚██╔╝██║██╔══╝░░
+██║░░░░░██║░░██║██████╔╝░░░██║░░░██║░░██║██║░╚███║██║██║░╚═╝░██║███████╗
+╚═╝░░░░░╚═╝░░╚═╝╚═════╝░░░░╚═╝░░░╚═╝░░╚═╝╚═╝░░╚══╝╚═╝╚═╝░░░░░╚═╝╚══════╝
+"""

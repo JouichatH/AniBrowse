@@ -24,6 +24,9 @@ def debug_provider(provider_function):
 
 
 def test_anime_provider(AnimeProvider: Type[BaseAnimeProvider]):
+    import shutil
+    import subprocess
+
     from httpx import Client
     from yt_dlp.utils.networking import random_user_agent
 
@@ -61,4 +64,23 @@ def test_anime_provider(AnimeProvider: Type[BaseAnimeProvider]):
 
     if not episode_streams:
         return
-    print(list(episode_streams))
+    episode_streams = list(episode_streams)
+    for i, stream in enumerate(episode_streams):
+        print(f"{i + 1}: {stream.name}")
+    stream = episode_streams[int(input("Select your preferred server: ")) - 1]
+    if executable := shutil.which("mpv"):
+        cmd = executable
+    elif executable := shutil.which("xdg-open"):
+        cmd = executable
+    elif executable := shutil.which("open"):
+        cmd = executable
+    else:
+        return
+
+    print(
+        "Now streaming: ",
+        anime.title,
+        "Episode: ",
+        stream.episode_title if stream.episode_title else episode_number,
+    )
+    subprocess.run([cmd, stream.links[0].link])

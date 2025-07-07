@@ -1,3 +1,6 @@
 #!/usr/bin/env sh
-CLI_DIR="$(dirname "$(realpath "$0")")"
-exec uv run --directory "$CLI_DIR/../" fastanime "$@"
+provider_type=$1
+provider_name=$2
+[ -z "$provider_type" ] && echo "Please specify provider type" && exit
+[ -z "$provider_name" ] && echo "Please specify provider type" && exit
+uv run python -m fastanime.libs.providers.${provider_type}.${provider_name}.provider
