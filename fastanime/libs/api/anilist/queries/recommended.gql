@@ -1,0 +1,63 @@
+query ($mediaRecommendationId: Int, $page: Int) {
+  Page(perPage: 50, page: $page) {
+    recommendations(mediaRecommendationId: $mediaRecommendationId) {
+      media {
+        id
+        idMal
+        mediaListEntry {
+          status
+          id
+          progress
+        }
+        title {
+          english
+          romaji
+          native
+        }
+        coverImage {
+          medium
+          large
+        }
+        mediaListEntry {
+          status
+          id
+          progress
+        }
+        description
+        episodes
+        trailer {
+          site
+          id
+        }
+        genres
+        synonyms
+        averageScore
+        popularity
+        streamingEpisodes {
+          title
+          thumbnail
+        }
+        favourites
+        tags {
+          name
+        }
+        startDate {
+          year
+          month
+          day
+        }
+        endDate {
+          year
+          month
+          day
+        }
+        status
+        nextAiringEpisode {
+          timeUntilAiring
+          airingAt
+          episode
+        }
+      }
+    }
+  }
+}

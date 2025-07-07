@@ -1,0 +1,68 @@
+query ($type: MediaType, $page: Int, $perPage: Int) {
+  Page(perPage: $perPage, page: $page) {
+    media(
+      sort: UPDATED_AT_DESC
+      type: $type
+      averageScore_greater: 50
+      genre_not_in: ["hentai"]
+      status: RELEASING
+    ) {
+      id
+      idMal
+      title {
+        romaji
+        english
+      }
+      coverImage {
+        medium
+        large
+      }
+      trailer {
+        site
+        id
+      }
+      mediaListEntry {
+        status
+        id
+        progress
+      }
+      popularity
+      streamingEpisodes {
+        title
+        thumbnail
+      }
+
+      favourites
+      averageScore
+      description
+      genres
+      synonyms
+      episodes
+      studios {
+        nodes {
+          name
+          isAnimationStudio
+        }
+      }
+      tags {
+        name
+      }
+      startDate {
+        year
+        month
+        day
+      }
+      endDate {
+        year
+        month
+        day
+      }
+      status
+      nextAiringEpisode {
+        timeUntilAiring
+        airingAt
+        episode
+      }
+    }
+  }
+}
