@@ -50,14 +50,20 @@
 
       # DevShell for development
       devShells.default = pkgs.mkShell {
+        LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.libxcrypt-legacy ];
         buildInputs = [
           fastanimeEnv
           pythonPackages.hatchling
           pkgs.mpv
-          pkgs.libmpv
           pkgs.fzf
           pkgs.rofi
+          pkgs.uv
+          pkgs.pyright
         ];
+        shellHook = ''
+          uv venv -q
+          source ./.venv/bin/activate
+        '';
       };
     });
 }
