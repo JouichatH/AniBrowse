@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
-from .config.model import OtherConfig
+from ..core.config.model import OtherConfig
 
 TYPE_MAP = {
     str: click.STRING,

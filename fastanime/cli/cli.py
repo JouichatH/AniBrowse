@@ -3,9 +3,8 @@ from click.core import ParameterSource
 
 from .. import __version__
 from ..core.config import AppConfig
-from ..core.constants import APP_NAME
+from ..core.constants import APP_NAME, USER_CONFIG_PATH
 from .config import ConfigLoader
-from .constants import USER_CONFIG_PATH
 from .options import options_from_model
 from .utils.lazyloader import LazyGroup
 from .utils.logging import setup_logging

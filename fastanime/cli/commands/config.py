@@ -13,6 +13,9 @@ from ...core.config import AppConfig
   # NB: If it opens vim or vi exit with `:q`
   fastanime config
 \b
+  # Start the interactive configuration wizard
+  fastanime config --interactive
+\b
   # get the path of the config file
   fastanime config --path
 \b
@@ -42,10 +45,17 @@ from ...core.config import AppConfig
     help="Persist all the config options passed to fastanime to your config file",
     is_flag=True,
 )
+@click.option(
+    "--interactive",
+    "-i",
+    is_flag=True,
+    help="Start the interactive configuration wizard.",
+)
 @click.pass_obj
-def config(user_config: AppConfig, path, view, desktop_entry, update):
+def config(user_config: AppConfig, path, view, desktop_entry, update, interactive):
+    from ...core.constants import USER_CONFIG_PATH
     from ..config.generate import generate_config_ini_from_app_model
-    from ..constants import USER_CONFIG_PATH
+    from ..config.interactive_editor import InteractiveConfigEditor
 
     if path:
         print(USER_CONFIG_PATH)
@@ -53,6 +63,12 @@ def config(user_config: AppConfig, path, view, desktop_entry, update):
         print(generate_config_ini_from_app_model(user_config))
     elif desktop_entry:
         _generate_desktop_entry()
+    elif interactive:
+        editor = InteractiveConfigEditor(current_config=user_config)
+        new_config = editor.run()
+        with open(USER_CONFIG_PATH, "w", encoding="utf-8") as file:
+            file.write(generate_config_ini_from_app_model(new_config))
+        click.echo(f"Configuration saved successfully to {USER_CONFIG_PATH}")
     elif update:
         with open(USER_CONFIG_PATH, "w", encoding="utf-8") as file:
             file.write(generate_config_ini_from_app_model(user_config))
@@ -75,7 +91,7 @@ def _generate_desktop_entry():
     from rich.prompt import Confirm
 
     from ... import __version__
-    from ..constants import APP_NAME, ICON_PATH, PLATFORM
+    from ...core.constants import APP_NAME, ICON_PATH, PLATFORM
 
     FASTANIME_EXECUTABLE = shutil.which("fastanime")
     if FASTANIME_EXECUTABLE:

@@ -2,7 +2,7 @@ import logging
 
 from rich.traceback import install as rich_install
 
-from ..constants import LOG_FILE_PATH
+from ...core.constants import LOG_FILE_PATH
 
 
 def setup_logging(log: bool, log_file: bool, rich_traceback: bool) -> None:

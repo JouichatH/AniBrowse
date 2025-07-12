@@ -2,12 +2,14 @@ import configparser
 from pathlib import Path
 
 import click
+from InquirerPy import inquirer
 from pydantic import ValidationError
 
 from ...core.config import AppConfig
+from ...core.constants import USER_CONFIG_PATH
 from ...core.exceptions import ConfigError
-from ..constants import USER_CONFIG_PATH
 from .generate import generate_config_ini_from_app_model
+from .interactive_editor import InteractiveConfigEditor
 
 
 class ConfigLoader:
@@ -35,23 +37,39 @@ class ConfigLoader:
             dict_type=dict,
         )
 
-    def _create_default_if_not_exists(self) -> None:
-        """
-        Creates a default config file from the config model if it doesn't exist.
-        This is the only time we write to the user's config directory.
-        """
-        if not self.config_path.exists():
-            config_ini_content = generate_config_ini_from_app_model(
-                AppConfig().model_validate({})
+    def _handle_first_run(self) -> AppConfig:
+        """Handles the configuration process when no config file is found."""
+        click.echo(
+            "[bold yellow]Welcome to FastAnime![/bold yellow] No configuration file found."
+        )
+        choice = inquirer.select(
+            message="How would you like to proceed?",
+            choices=[
+                "Use default settings (Recommended for new users)",
+                "Configure settings interactively",
+            ],
+            default="Use default settings (Recommended for new users)",
+        ).execute()
+
+        if "interactively" in choice:
+            editor = InteractiveConfigEditor(AppConfig())
+            app_config = editor.run()
+        else:
+            app_config = AppConfig()
+
+        config_ini_content = generate_config_ini_from_app_model(app_config)
+        try:
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            self.config_path.write_text(config_ini_content, encoding="utf-8")
+            click.echo(
+                f"Configuration file created at: [green]{self.config_path}[/green]"
             )
-            try:
-                self.config_path.parent.mkdir(parents=True, exist_ok=True)
-                self.config_path.write_text(config_ini_content, encoding="utf-8")
-                click.echo(f"Created default configuration file at: {self.config_path}")
-            except Exception as e:
-                raise ConfigError(
-                    f"Could not create default configuration file at {self.config_path!s}. Please check permissions. Error: {e}",
-                )
+        except Exception as e:
+            raise ConfigError(
+                f"Could not create configuration file at {self.config_path!s}. Please check permissions. Error: {e}",
+            )
+
+        return app_config
 
     def load(self) -> AppConfig:
         """
@@ -63,7 +81,8 @@ class ConfigLoader:
         Raises:
             click.ClickException: If the configuration file contains validation errors.
         """
-        self._create_default_if_not_exists()
+        if not self.config_path.exists():
+            return self._handle_first_run()
 
         try:
             self.parser.read(self.config_path, encoding="utf-8")
