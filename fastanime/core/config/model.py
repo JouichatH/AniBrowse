@@ -106,6 +106,14 @@ class MpvConfig(OtherConfig):
     )
 
 
+class VlcConfig(OtherConfig):
+    """Configuration specific to the vlc player integration."""
+
+    args: str = Field(
+        default="", description="Comma-separated arguments to pass to the Vlc player."
+    )
+
+
 class AnilistConfig(OtherConfig):
     """Configuration for interacting with the AniList API."""
 

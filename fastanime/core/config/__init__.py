@@ -6,12 +6,14 @@ from .model import (
     MpvConfig,
     RofiConfig,
     StreamConfig,
+    VlcConfig,
 )
 
 __all__ = [
     "AppConfig",
     "FzfConfig",
     "RofiConfig",
+    "VlcConfig",
     "MpvConfig",
     "AnilistConfig",
     "StreamConfig",
