@@ -24,6 +24,8 @@ class MpvPlayer(BasePlayer):
     def play(self, params):
         if TORRENT_REGEX.match(params.url) and detect.is_running_in_termux():
             raise FastAnimeError("Unable to play torrents on termux")
+        elif params.syncplay and detect.is_running_in_termux():
+            raise FastAnimeError("Unable to play torrents on termux")
         elif detect.is_running_in_termux():
             return self._play_on_mobile(params)
         else:
@@ -69,6 +71,8 @@ class MpvPlayer(BasePlayer):
 
         if TORRENT_REGEX.search(params.url):
             return self._stream_on_desktop_with_webtorrent_cli(params)
+        elif params.syncplay:
+            return self._stream_on_desktop_with_syncplay(params)
         elif self.config.use_python_mpv:
             return self._stream_on_desktop_with_python_mpv(params)
         else:
@@ -118,6 +122,21 @@ class MpvPlayer(BasePlayer):
             args.extend(mpv_args)
 
         subprocess.run(args)
+        return PlayerResult()
+
+    # TODO: Get people with real friends to do this lol
+    def _stream_on_desktop_with_syncplay(self, params: PlayerParams) -> PlayerResult:
+        SYNCPLAY_EXECUTABLE = shutil.which("syncplay")
+        if not SYNCPLAY_EXECUTABLE:
+            raise FastAnimeError(
+                "Please install syncplay to be able to stream with your friends"
+            )
+        args = [SYNCPLAY_EXECUTABLE, params.url]
+        if mpv_args := self._create_mpv_cli_options(params):
+            args.append("--")
+            args.extend(mpv_args)
+        subprocess.run(args)
+
         return PlayerResult()
 
     def _create_mpv_cli_options(self, params: PlayerParams) -> list[str]:
