@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, ClassVar, Dict
 
-from httpx import Client
-
 from .params import AnimeParams, EpisodeStreamsParams, SearchParams
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    from httpx import Client
 
     from .types import Anime, SearchResults, Server
 
@@ -21,7 +21,7 @@ class BaseAnimeProvider(ABC):
                 f"Subclasses of BaseAnimeProvider must define a 'HEADERS' class attribute."
             )
 
-    def __init__(self, client: Client) -> None:
+    def __init__(self, client: "Client") -> None:
         self.client = client
 
     @abstractmethod
