@@ -74,6 +74,6 @@ class Server(BaseAnimeProviderModel):
     name: str
     links: list[EpisodeStream]
     episode_title: str | None = None
-    headers: dict | None = None
-    subtitles: list[Subtitle] | None = None
-    audio: list["str"] | None = None
+    headers: dict[str, str] = dict()
+    subtitles: list[Subtitle] = []
+    audio: list[str] = []

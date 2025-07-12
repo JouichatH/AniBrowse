@@ -1,7 +1,3 @@
-from typing import TYPE_CHECKING
-
-# from .vlc.player import VlcPlayer  # When you create it
-# from .syncplay.player import SyncplayPlayer # When you create it
 from ...core.config import AppConfig
 from .base import BasePlayer
 
@@ -31,7 +27,7 @@ class PlayerFactory:
             )
 
         if player_name == "mpv":
-            from .mpv import MpvPlayer
+            from .mpv.player import MpvPlayer
 
             return MpvPlayer(config.mpv)
         raise NotImplementedError(
