@@ -6,12 +6,11 @@ PLAYERS = ["mpv", "vlc", "syncplay"]
 
 class PlayerFactory:
     @staticmethod
-    def create(player_name: str, config: AppConfig) -> BasePlayer:
+    def create(config: AppConfig) -> BasePlayer:
         """
         Factory method to create a player instance based on its name.
 
         Args:
-            player_name: The name of the player (e.g., 'mpv', 'vlc').
             config: The full application configuration object.
 
         Returns:
@@ -20,6 +19,7 @@ class PlayerFactory:
         Raises:
             ValueError: If the player_name is not supported.
         """
+        player_name = config.stream.player
 
         if player_name not in PLAYERS:
             raise ValueError(

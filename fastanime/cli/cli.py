@@ -11,6 +11,7 @@ from .utils.logging import setup_logging
 
 commands = {
     "config": ".config",
+    "search": ".search",
 }
 
 
