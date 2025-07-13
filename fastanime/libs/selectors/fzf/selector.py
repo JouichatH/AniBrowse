@@ -16,15 +16,15 @@ class FzfSelector(BaseSelector):
         if not self.executable:
             raise FileNotFoundError("fzf executable not found in PATH.")
 
-        _HEADER_COLOR = config.header_color.split(",")
+        os.environ["FZF_DEFAULT_OPTS"] = self.config.opts
+
+        self.header_color = config.header_color.split(",")
         self.header = "\n".join(
             [
-                f"\033[38;2;{_HEADER_COLOR[0]};{_HEADER_COLOR[1]};{_HEADER_COLOR[2]};m{line}\033[0m"
+                f"\033[38;2;{self.header_color[0]};{self.header_color[1]};{self.header_color[2]};m{line}\033[0m"
                 for line in config.header_ascii_art.replace("\t", "").split("\n")
             ]
         )
-        os.environ["FZF_DEFAULT_OPTS"] = self.config.opts
-        # You can prepare default opts here from the config
 
     def choose(self, prompt, choices, *, preview=None, header=None):
         fzf_input = "\n".join(choices)
