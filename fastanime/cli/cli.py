@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 commands = {
     "config": ".config",
     "search": ".search",
+    "download": ".download",
 }
 
 

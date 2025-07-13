@@ -1,10 +1,11 @@
 from typing import TYPE_CHECKING
 
 import click
-from fastanime.core.exceptions import FastAnimeError
 
 from ...core.config import AppConfig
+from ...core.exceptions import FastAnimeError
 from ..utils.completion_functions import anime_titles_shell_complete
+from . import examples
 
 if TYPE_CHECKING:
     from typing import TypedDict
@@ -24,29 +25,7 @@ if TYPE_CHECKING:
 @click.command(
     help="This subcommand directly interacts with the provider to enable basic streaming. Useful for binging anime.",
     short_help="Binge anime",
-    epilog="""
-\b
-\b\bExamples:
-  # basic form where you will still be prompted for the episode number
-  # multiple titles can be specified with the -t option
-  fastanime search -t <anime-title> -t <anime-title>
-\b
-  # binge all episodes with this command
-  fastanime search -t <anime-title> -r ':'
-\b
-  # watch latest episode
-  fastanime search -t <anime-title> -r '-1'
-\b
-  # binge a specific episode range with this command
-  # be sure to observe the range Syntax
-  fastanime search -t <anime-title> -r '<start>:<stop>'
-\b
-  fastanime search -t <anime-title> -r '<start>:<stop>:<step>'
-\b
-  fastanime search -t <anime-title> -r '<start>:'
-\b
-  fastanime search -t <anime-title> -r ':<end>'
-""",
+    epilog=examples.search,
 )
 @click.option(
     "--anime-title",

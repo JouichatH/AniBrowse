@@ -146,6 +146,19 @@ class JikanConfig(OtherConfig):
     pass
 
 
+class DownloadsConfig(OtherConfig):
+    """Configuration for download related options"""
+
+    downloader: Literal["auto", "default", "yt-dlp"] = Field(
+        default="auto", description="The downloader to use"
+    )
+
+    downloads_dir: Path = Field(
+        default_factory=lambda: USER_VIDEOS_DIR,
+        description="The default directory to save downloaded anime.",
+    )
+
+
 class GeneralConfig(BaseModel):
     """Configuration for general application behavior and integrations."""
 
@@ -181,10 +194,6 @@ class GeneralConfig(BaseModel):
     manga_viewer: Literal["feh", "icat"] = Field(
         default="feh",
         description="The external application to use for viewing manga pages.",
-    )
-    downloads_dir: Path = Field(
-        default_factory=lambda: USER_VIDEOS_DIR,
-        description="The default directory to save downloaded anime.",
     )
     check_for_updates: bool = Field(
         default=True,
@@ -298,6 +307,9 @@ class AppConfig(BaseModel):
     stream: StreamConfig = Field(
         default_factory=StreamConfig,
         description="Settings related to video streaming and playback.",
+    )
+    downloads: DownloadsConfig = Field(
+        default_factory=DownloadsConfig, description="Settings related to downloading"
     )
     anilist: AnilistConfig = Field(
         default_factory=AnilistConfig,
