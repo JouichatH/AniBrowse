@@ -63,6 +63,9 @@ else:
     xdg_videos_dir = Path(os.environ.get("XDG_VIDEOS_DIR", Path.home() / "Videos"))
     USER_VIDEOS_DIR = xdg_videos_dir / APP_NAME
 
+USER_APPLICATIONS = Path.home() / ".local" / "share" / "applications"
+
+# USER_APPLICATIONS.mkdir(parents=True,exist_ok=True)
 APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
 APP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 USER_VIDEOS_DIR.mkdir(parents=True, exist_ok=True)

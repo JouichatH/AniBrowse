@@ -105,7 +105,6 @@ def _generate_desktop_entry():
     """
     Generates a desktop entry for FastAnime.
     """
-    import os
     import shutil
     import sys
     from pathlib import Path
@@ -115,11 +114,11 @@ def _generate_desktop_entry():
     from rich.prompt import Confirm
 
     from ... import __version__
-    from ...core.constants import APP_NAME, ICON_PATH, PLATFORM
+    from ...core.constants import ICON_PATH, PLATFORM, PROJECT_NAME, USER_APPLICATIONS
 
-    FASTANIME_EXECUTABLE = shutil.which("fastanime")
-    if FASTANIME_EXECUTABLE:
-        cmds = f"{FASTANIME_EXECUTABLE} --rofi anilist"
+    EXECUTABLE = shutil.which("fastanime")
+    if EXECUTABLE:
+        cmds = f"{EXECUTABLE} --rofi anilist"
     else:
         cmds = f"{sys.executable} -m fastanime --rofi anilist"
 
@@ -136,7 +135,7 @@ def _generate_desktop_entry():
         desktop_entry = dedent(
             f"""
             [Desktop Entry]
-            Name={APP_NAME}
+            Name={PROJECT_NAME}
             Type=Application
             version={__version__}
             Path={Path().home()}
@@ -147,9 +146,8 @@ def _generate_desktop_entry():
             Categories=Entertainment
         """
         )
-        base = os.path.expanduser("~/.local/share/applications")
-        desktop_entry_path = os.path.join(base, f"{APP_NAME}.desktop")
-        if os.path.exists(desktop_entry_path):
+        desktop_entry_path = USER_APPLICATIONS / f"{PROJECT_NAME}.desktop"
+        if desktop_entry_path.exists():
             if not Confirm.ask(
                 f"The file already exists {desktop_entry_path}; or would you like to rewrite it",
                 default=False,
