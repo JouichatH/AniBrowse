@@ -5,7 +5,9 @@ from rich.traceback import install as rich_install
 from ...core.constants import LOG_FILE_PATH
 
 
-def setup_logging(log: bool, log_file: bool, rich_traceback: bool) -> None:
+def setup_logging(
+    log: bool | None, log_file: bool | None, rich_traceback: bool | None
+) -> None:
     """Configures the application's logging based on CLI flags."""
     if rich_traceback:
         rich_install(show_locals=True)

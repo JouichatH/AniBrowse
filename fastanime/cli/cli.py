@@ -1,13 +1,30 @@
+from typing import TYPE_CHECKING
+
 import click
 from click.core import ParameterSource
 
 from .. import __version__
 from ..core.config import AppConfig
-from ..core.constants import APP_NAME, USER_CONFIG_PATH
+from ..core.constants import PROJECT_NAME, USER_CONFIG_PATH
 from .config import ConfigLoader
 from .options import options_from_model
+from .utils.exceptions import setup_exceptions_handler
 from .utils.lazyloader import LazyGroup
 from .utils.logging import setup_logging
+
+if TYPE_CHECKING:
+    from typing import TypedDict
+
+    from typing_extensions import Unpack
+
+    class Options(TypedDict):
+        no_config: bool | None
+        trace: bool | None
+        log_to_file: bool | None
+        dev: bool | None
+        log: bool | None
+        rich_traceback: bool | None
+
 
 commands = {
     "config": ".config",
@@ -15,28 +32,61 @@ commands = {
 }
 
 
-@click.version_option(__version__, "--version")
-@click.option("--no-config", is_flag=True, help="Don't load the user config file.")
 @click.group(
     cls=LazyGroup,
     root="fastanime.cli.commands",
     lazy_subcommands=commands,
-    context_settings=dict(auto_envvar_prefix=APP_NAME),
+    context_settings=dict(auto_envvar_prefix=PROJECT_NAME),
+)
+@click.version_option(__version__, "--version")
+@click.option(
+    "--no-config",
+    is_flag=True,
+    help="Don't load the user config file.",
+    envvar=f"{PROJECT_NAME}_NO_CONFIG",
+)
+@click.option(
+    "--trace",
+    is_flag=True,
+    help="Controls Whether to display tracebacks or not",
+    envvar=f"{PROJECT_NAME}_TRACE",
+)
+@click.option(
+    "--dev",
+    is_flag=True,
+    help="Controls Whether the app is in dev mode",
+    envvar=f"{PROJECT_NAME}_DEV",
+)
+@click.option(
+    "--log", is_flag=True, help="Controls Whether to log", envvar=f"{PROJECT_NAME}_LOG"
+)
+@click.option(
+    "--log-to-file",
+    is_flag=True,
+    help="Controls Whether to log to a file",
+    envvar=f"{PROJECT_NAME}_LOG_TO_FILE",
+)
+@click.option(
+    "--rich-traceback",
+    is_flag=True,
+    help="Controls Whether to display a rich traceback",
+    envvar=f"{PROJECT_NAME}_LOG_TO_FILE",
 )
 @options_from_model(AppConfig)
 @click.pass_context
-def cli(ctx: click.Context, no_config: bool, **kwargs):
+def cli(ctx: click.Context, **options: "Unpack[Options]"):
     """
     The main entry point for the FastAnime CLI.
     """
     setup_logging(
-        kwargs.get("log", False),
-        kwargs.get("log_file", False),
-        kwargs.get("rich_traceback", False),
+        options["log"],
+        options["log_to_file"],
+        options["rich_traceback"],
     )
+    setup_exceptions_handler(options["trace"], options["dev"])
 
     loader = ConfigLoader(config_path=USER_CONFIG_PATH)
-    config = AppConfig.model_validate({}) if no_config else loader.load()
+    config = AppConfig.model_validate({}) if options["no_config"] else loader.load()
 
     # update app config with command line parameters
     for param_name, param_value in ctx.params.items():

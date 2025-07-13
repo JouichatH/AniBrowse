@@ -5,6 +5,7 @@ from pathlib import Path
 
 PLATFORM = sys.platform
 APP_NAME = os.environ.get("FASTANIME_APP_NAME", "fastanime")
+PROJECT_NAME = "FASTANIME"
 
 try:
     APP_DIR = Path(str(resources.files("fastanime")))
