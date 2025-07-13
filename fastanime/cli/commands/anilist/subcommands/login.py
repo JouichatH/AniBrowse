@@ -1,19 +1,17 @@
-from __future__ import annotations
-
 import click
 from rich import print
 from rich.prompt import Confirm, Prompt
 
-from .....cli.auth.manager import CredentialsManager
+from ....auth.manager import AuthManager  # Using the manager
 
 
 @click.command(help="Login to your AniList account to enable progress tracking.")
 @click.option("--status", "-s", is_flag=True, help="Check current login status.")
 @click.option("--logout", "-l", is_flag=True, help="Log out and erase credentials.")
 @click.pass_context
-def login(ctx: click.Context, status: bool, logout: bool):
+def auth(ctx: click.Context, status: bool, logout: bool):
     """Handles user authentication and credential management."""
-    manager = CredentialsManager()
+    manager = AuthManager()
 
     if status:
         user_data = manager.load_user_profile()
@@ -26,7 +24,8 @@ def login(ctx: click.Context, status: bool, logout: bool):
 
     if logout:
         if Confirm.ask(
-            "[bold red]Are you sure you want to log out and erase your token?[/]"
+            "[bold red]Are you sure you want to log out and erase your token?[/]",
+            default=False,
         ):
             manager.clear_user_profile()
             print("You have been logged out.")
@@ -35,6 +34,7 @@ def login(ctx: click.Context, status: bool, logout: bool):
     # --- Start Login Flow ---
     from ....libs.api.factory import create_api_client
 
+    # Create a temporary client just for the login process
     api_client = create_api_client("anilist", ctx.obj)
 
     click.launch(
@@ -48,10 +48,12 @@ def login(ctx: click.Context, status: bool, logout: bool):
         print("[bold red]Login cancelled.[/]")
         return
 
+    # Use the API client to validate the token and get profile info
     profile = api_client.authenticate(token.strip())
 
     if profile:
-        manager.save_user_profile(profile, token)
+        # If successful, use the manager to save the credentials
+        manager.save_user_profile(profile, token.strip())
         print(f"[bold green]Successfully logged in as {profile.name}! ✨[/]")
     else:
-        print("[bold red]Login failed. The token may be invalid or expired.[/]")
+        print("[bold red]Login failed. The token may be invalid or expired.[/bold red]")
