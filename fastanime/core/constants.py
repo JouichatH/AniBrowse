@@ -8,39 +8,26 @@ APP_NAME = os.environ.get("FASTANIME_APP_NAME", "fastanime")
 PROJECT_NAME = "FASTANIME"
 
 try:
-    APP_DIR = Path(str(resources.files("fastanime")))
-
-    ASSETS_DIR = APP_DIR / "assets"
-    DEFAULTS = ASSETS_DIR / "defaults"
-    ICONS_DIR = ASSETS_DIR / "icons"
-
-    # rofi files
-    ROFI_THEME_MAIN = DEFAULTS / "rofi" / "main.rasi"
-    ROFI_THEME_INPUT = DEFAULTS / "rofi" / "input.rasi"
-    ROFI_THEME_CONFIRM = DEFAULTS / "rofi" / "confirm.rasi"
-    ROFI_THEME_PREVIEW = DEFAULTS / "rofi" / "preview.rasi"
-
-    # fzf
-    FZF_DEFAULT_OPTS = DEFAULTS / "fzf-opts"
-
+    APP_DIR = Path(str(resources.files(PROJECT_NAME.lower())))
 
 except ModuleNotFoundError:
     from pathlib import Path
 
     APP_DIR = Path(__file__).resolve().parent.parent
-    ASSETS_DIR = APP_DIR / "assets"
-    DEFAULTS = ASSETS_DIR / "defaults"
-    ICONS_DIR = ASSETS_DIR / "icons"
 
-    # rofi files
-    ROFI_THEME_MAIN = DEFAULTS / "rofi" / "main.rasi"
-    ROFI_THEME_INPUT = DEFAULTS / "rofi" / "input.rasi"
-    ROFI_THEME_CONFIRM = DEFAULTS / "rofi" / "confirm.rasi"
-    ROFI_THEME_PREVIEW = DEFAULTS / "rofi" / "preview.rasi"
+ASSETS_DIR = APP_DIR / "assets"
+DEFAULTS = ASSETS_DIR / "defaults"
+ICONS_DIR = ASSETS_DIR / "icons"
 
-    # fzf
-    FZF_DEFAULT_OPTS = DEFAULTS / "fzf-opts"
+# rofi files
+_ROFI_THEMES_DIR = DEFAULTS / "rofi-themes"
+ROFI_THEME_MAIN = _ROFI_THEMES_DIR / "main.rasi"
+ROFI_THEME_INPUT = _ROFI_THEMES_DIR / "input.rasi"
+ROFI_THEME_CONFIRM = _ROFI_THEMES_DIR / "confirm.rasi"
+ROFI_THEME_PREVIEW = _ROFI_THEMES_DIR / "preview.rasi"
 
+# fzf
+FZF_DEFAULT_OPTS = DEFAULTS / "fzf-opts"
 
 USER_NAME = os.environ.get("USERNAME", "Anime Fan")
 

@@ -13,10 +13,28 @@ class RofiSelector(BaseSelector):
             raise FileNotFoundError("rofi executable not found in PATH.")
 
     def choose(self, prompt, choices, *, preview=None, header=None):
-        # This maps directly to your existing `run` method
-        # ... (logic from your `Rofi.run` method) ...
-        # It should use self.config.theme_main, etc.
-        pass
+        rofi_input = "\n".join(choices)
+
+        args = [
+            self.executable,
+            "-no-config",
+            "-theme",
+            self.config.theme_main,
+            "-p",
+            prompt,
+            "-i",
+            "-dmenu",
+        ]
+        result = subprocess.run(
+            args,
+            input=rofi_input,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+
+        if result:
+            choice = result.stdout.strip()
+            return choice
 
     def confirm(self, prompt, *, default=False):
         # Maps directly to your existing `confirm` method

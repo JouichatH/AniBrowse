@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import textwrap
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, get_args, get_origin

@@ -34,6 +34,12 @@ from ...core.config import AppConfig
     "--view", "-v", help="View the current contents of your config", is_flag=True
 )
 @click.option(
+    "--view-json",
+    "-vj",
+    help="View the current contents of your config in json format",
+    is_flag=True,
+)
+@click.option(
     "--desktop-entry",
     "-d",
     help="Configure the desktop entry of fastanime",
@@ -52,7 +58,9 @@ from ...core.config import AppConfig
     help="Start the interactive configuration wizard.",
 )
 @click.pass_obj
-def config(user_config: AppConfig, path, view, desktop_entry, update, interactive):
+def config(
+    user_config: AppConfig, path, view, view_json, desktop_entry, update, interactive
+):
     from ...core.constants import USER_CONFIG_PATH
     from ..config.generate import generate_config_ini_from_app_model
     from ..config.interactive_editor import InteractiveConfigEditor
@@ -60,7 +68,23 @@ def config(user_config: AppConfig, path, view, desktop_entry, update, interactiv
     if path:
         print(USER_CONFIG_PATH)
     elif view:
-        print(generate_config_ini_from_app_model(user_config))
+        from rich.console import Console
+        from rich.syntax import Syntax
+
+        console = Console()
+        config_ini = generate_config_ini_from_app_model(user_config)
+        syntax = Syntax(
+            config_ini,
+            "ini",
+            theme=user_config.general.pygment_style,
+            line_numbers=True,
+            word_wrap=True,
+        )
+        console.print(syntax)
+    elif view_json:
+        import json
+
+        print(json.dumps(user_config.model_dump(mode="json")))
     elif desktop_entry:
         _generate_desktop_entry()
     elif interactive:

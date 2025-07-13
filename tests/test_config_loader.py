@@ -2,7 +2,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from fastanime.cli.config.loader import ConfigLoader
 from fastanime.cli.config.model import AppConfig, GeneralConfig
 from fastanime.core.exceptions import ConfigError
@@ -76,7 +75,6 @@ theme_input = /path/to/input.rasi
 args = --fullscreen
 pre_args =
 disable_popen = false
-force_window = no
 use_python_mpv = true
 """
 

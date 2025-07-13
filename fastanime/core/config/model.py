@@ -97,9 +97,6 @@ class MpvConfig(OtherConfig):
         default=True,
         description="Disable using subprocess.Popen for MPV, which can be unstable on some systems.",
     )
-    force_window: str = Field(
-        default="immediate", description="Value for MPV's --force-window option."
-    )
     use_python_mpv: bool = Field(
         default=False,
         description="Use the python-mpv library for enhanced player control.",
@@ -152,6 +149,9 @@ class JikanConfig(OtherConfig):
 class GeneralConfig(BaseModel):
     """Configuration for general application behavior and integrations."""
 
+    pygment_style: str = Field(
+        default="github-dark", description="The pygment style to use"
+    )
     api_client: Literal["anilist", "jikan"] = Field(
         default="anilist",
         description="The media database API to use (e.g., 'anilist', 'jikan').",
