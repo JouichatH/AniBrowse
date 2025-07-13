@@ -3,9 +3,8 @@ from typing import TYPE_CHECKING
 import click
 from click.core import ParameterSource
 
-from .. import __version__
 from ..core.config import AppConfig
-from ..core.constants import PROJECT_NAME, USER_CONFIG_PATH
+from ..core.constants import PROJECT_NAME, USER_CONFIG_PATH, __version__
 from .config import ConfigLoader
 from .options import options_from_model
 from .utils.exceptions import setup_exceptions_handler
@@ -24,6 +23,7 @@ if TYPE_CHECKING:
         dev: bool | None
         log: bool | None
         rich_traceback: bool | None
+        rich_traceback_theme: str
 
 
 commands = {
@@ -39,38 +39,22 @@ commands = {
     context_settings=dict(auto_envvar_prefix=PROJECT_NAME),
 )
 @click.version_option(__version__, "--version")
+@click.option("--no-config", is_flag=True, help="Don't load the user config file.")
 @click.option(
-    "--no-config",
-    is_flag=True,
-    help="Don't load the user config file.",
-    envvar=f"{PROJECT_NAME}_NO_CONFIG",
+    "--trace", is_flag=True, help="Controls Whether to display tracebacks or not"
 )
-@click.option(
-    "--trace",
-    is_flag=True,
-    help="Controls Whether to display tracebacks or not",
-    envvar=f"{PROJECT_NAME}_TRACE",
-)
-@click.option(
-    "--dev",
-    is_flag=True,
-    help="Controls Whether the app is in dev mode",
-    envvar=f"{PROJECT_NAME}_DEV",
-)
-@click.option(
-    "--log", is_flag=True, help="Controls Whether to log", envvar=f"{PROJECT_NAME}_LOG"
-)
-@click.option(
-    "--log-to-file",
-    is_flag=True,
-    help="Controls Whether to log to a file",
-    envvar=f"{PROJECT_NAME}_LOG_TO_FILE",
-)
+@click.option("--dev", is_flag=True, help="Controls Whether the app is in dev mode")
+@click.option("--log", is_flag=True, help="Controls Whether to log")
+@click.option("--log-to-file", is_flag=True, help="Controls Whether to log to a file")
 @click.option(
     "--rich-traceback",
     is_flag=True,
     help="Controls Whether to display a rich traceback",
-    envvar=f"{PROJECT_NAME}_LOG_TO_FILE",
+)
+@click.option(
+    "--rich-traceback-theme",
+    default="github-dark",
+    help="Controls Whether to display a rich traceback",
 )
 @options_from_model(AppConfig)
 @click.pass_context
@@ -78,12 +62,13 @@ def cli(ctx: click.Context, **options: "Unpack[Options]"):
     """
     The main entry point for the FastAnime CLI.
     """
-    setup_logging(
-        options["log"],
-        options["log_to_file"],
+    setup_logging(options["log"], options["log_to_file"])
+    setup_exceptions_handler(
+        options["trace"],
+        options["dev"],
         options["rich_traceback"],
+        options["rich_traceback_theme"],
     )
-    setup_exceptions_handler(options["trace"], options["dev"])
 
     loader = ConfigLoader(config_path=USER_CONFIG_PATH)
     config = AppConfig.model_validate({}) if options["no_config"] else loader.load()

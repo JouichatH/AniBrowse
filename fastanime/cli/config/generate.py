@@ -2,7 +2,7 @@ import textwrap
 from pathlib import Path
 
 from ...core.config import AppConfig
-from ...core.constants import APP_ASCII_ART
+from ...core.constants import APP_ASCII_ART, DISCORD_INVITE, PROJECT_NAME, REPO_HOME
 
 # The header for the config file.
 config_asci = "\n".join([f"# {line}" for line in APP_ASCII_ART.split()])
@@ -15,6 +15,19 @@ CONFIG_HEADER = f"""
 # This file was auto-generated from the application's configuration model.
 # You can modify these values to customize the behavior of FastAnime.
 # For path-based options, you can use '~' for your home directory.
+""".lstrip()
+
+CONFIG_FOOTER = f"""
+# ==============================================================================
+#
+# HOPE YOU ENJOY {PROJECT_NAME} AND BE SURE TO STAR THE PROJECT ON GITHUB
+# {REPO_HOME}
+#
+# Also join the discord server
+# where the anime tech community lives :)
+# {DISCORD_INVITE}
+#
+# ==============================================================================
 """.lstrip()
 
 
@@ -61,4 +74,5 @@ def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
 
             config_ini_content.append(f"{field_name} = {value_str}")
 
+    config_ini_content.extend(["\n", CONFIG_FOOTER])
     return "\n".join(config_ini_content)

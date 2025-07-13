@@ -113,8 +113,13 @@ def _generate_desktop_entry():
     from rich import print
     from rich.prompt import Confirm
 
-    from ... import __version__
-    from ...core.constants import ICON_PATH, PLATFORM, PROJECT_NAME, USER_APPLICATIONS
+    from ...core.constants import (
+        ICON_PATH,
+        PLATFORM,
+        PROJECT_NAME,
+        USER_APPLICATIONS,
+        __version__,
+    )
 
     EXECUTABLE = shutil.which("fastanime")
     if EXECUTABLE:

@@ -1,11 +1,19 @@
 import os
 import sys
-from importlib import resources
+from importlib import metadata, resources
 from pathlib import Path
 
 PLATFORM = sys.platform
 APP_NAME = os.environ.get("FASTANIME_APP_NAME", "fastanime")
 PROJECT_NAME = "FASTANIME"
+
+__version__ = metadata.version(PROJECT_NAME)
+
+AUTHOR = "Benexl"
+GIT_REPO = "github.com"
+GIT_PROTOCOL = "https://"
+REPO_HOME = f"https://{GIT_REPO}/{AUTHOR}/FastAnime"
+DISCORD_INVITE = "https://discord.gg/C4rhMA4mmK"
 
 try:
     APP_DIR = Path(str(resources.files(PROJECT_NAME.lower())))

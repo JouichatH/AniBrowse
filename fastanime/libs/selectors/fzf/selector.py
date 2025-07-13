@@ -4,6 +4,7 @@ import shutil
 import subprocess
 
 from ....core.config import FzfConfig
+from ....core.exceptions import FastAnimeError
 from ..base import BaseSelector
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ class FzfSelector(BaseSelector):
         self.config = config
         self.executable = shutil.which("fzf")
         if not self.executable:
-            raise FileNotFoundError("fzf executable not found in PATH.")
+            raise FastAnimeError("Please install fzf to use the fzf selector")
 
         os.environ["FZF_DEFAULT_OPTS"] = self.config.opts
 
@@ -29,15 +30,19 @@ class FzfSelector(BaseSelector):
     def choose(self, prompt, choices, *, preview=None, header=None):
         fzf_input = "\n".join(choices)
 
-        # Build command from base options and specific arguments
-        commands = []
-        commands.extend(["--prompt", f"{prompt.title()}: "])
-        commands.extend(["--header", self.header, "--header-first"])
+        commands = [
+            self.executable,
+            "--prompt",
+            f"{prompt.title()}: ",
+            "--header",
+            self.header,
+            "--header-first",
+        ]
         if preview:
             commands.extend(["--preview", preview])
 
         result = subprocess.run(
-            [self.executable, *commands],
+            commands,
             input=fzf_input,
             stdout=subprocess.PIPE,
             text=True,
@@ -54,11 +59,18 @@ class FzfSelector(BaseSelector):
 
     def ask(self, prompt, *, default=None):
         # Use FZF's --print-query to capture user input
-        commands = []
-        commands.extend(["--prompt", f"{prompt}: ", "--print-query"])
+        commands = [
+            self.executable,
+            "--prompt",
+            f"{prompt.title()}: ",
+            "--header",
+            self.header,
+            "--header-first",
+            "--print-query",
+        ]
 
         result = subprocess.run(
-            [self.executable, *commands],
+            commands,
             input="",
             stdout=subprocess.PIPE,
             text=True,
