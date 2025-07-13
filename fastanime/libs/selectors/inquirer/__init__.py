@@ -1,3 +1,3 @@
 from .selector import InquirerSelector
 
-__all__["InquirerSelector"]
+__all__ = ["InquirerSelector"]
