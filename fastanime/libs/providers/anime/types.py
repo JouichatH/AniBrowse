@@ -55,6 +55,7 @@ class Anime(BaseAnimeProviderModel):
 
 
 class EpisodeStream(BaseAnimeProviderModel):
+    episode: str
     link: str
     title: str | None = None
     quality: Literal["360", "480", "720", "1080"] = "720"
