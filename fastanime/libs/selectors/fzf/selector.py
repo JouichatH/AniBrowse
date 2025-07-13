@@ -1,4 +1,5 @@
 import logging
+import os
 import shutil
 import subprocess
 
@@ -15,11 +16,8 @@ class FzfSelector(BaseSelector):
         if not self.executable:
             raise FileNotFoundError("fzf executable not found in PATH.")
 
+        os.environ["FZF_DEFAULT_OPTS"] = self.config.opts
         # You can prepare default opts here from the config
-        if config.opts:
-            self.default_opts = self.config.opts.splitlines()
-        else:
-            self.default_opts = []
 
     def choose(self, prompt, choices, *, preview=None, header=None):
         fzf_input = "\n".join(choices)
@@ -43,11 +41,9 @@ class FzfSelector(BaseSelector):
         return result.stdout.strip()
 
     def confirm(self, prompt, *, default=False):
-        # FZF is not great for confirmation, but we can make it work
         choices = ["Yes", "No"]
         default_choice = "Yes" if default else "No"
-        # A simple fzf call can simulate this
-        result = self.choose(choices, prompt, header=f"Default: {default_choice}")
+        result = self.choose(prompt, choices, header=f"Default: {default_choice}")
         return result == "Yes"
 
     def ask(self, prompt, *, default=None):
