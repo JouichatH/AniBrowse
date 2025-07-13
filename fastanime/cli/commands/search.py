@@ -191,7 +191,7 @@ def stream_anime(
         PlayerParams(
             url=stream_link,
             title=f"{anime.title}; Episode {episode}",
-            subtitles=server.subtitles,  # type:ignore
+            subtitles=[sub.url for sub in server.subtitles],
             headers=server.headers,
         )
     )

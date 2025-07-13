@@ -71,7 +71,7 @@ class VlcPlayer(BasePlayer):
         args = [self.executable, params.url]
         if params.subtitles:
             for sub in params.subtitles:
-                args.extend(["--sub-file", sub.url])
+                args.extend(["--sub-file", sub])
                 break
         if params.title:
             args.extend(["--video-title", params.title])

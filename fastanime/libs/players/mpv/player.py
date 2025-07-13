@@ -147,7 +147,7 @@ class MpvPlayer(BasePlayer):
 
         if params.subtitles:
             for sub in params.subtitles:
-                mpv_args.append(f"--sub-file={sub.url}")
+                mpv_args.append(f"--sub-file={sub}")
 
         if params.start_time:
             mpv_args.append(f"--start={params.start_time}")
