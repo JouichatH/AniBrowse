@@ -1,100 +1,205 @@
-from __future__ import annotations
-
+import importlib.util
 import logging
-from typing import TYPE_CHECKING, Optional
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING, Callable, List
 
-from pydantic import BaseModel, Field
+import click
+
+from ...core.config import AppConfig
+from ...core.constants import USER_CONFIG_PATH
+from ..config import ConfigLoader
+from .state import ControlFlow, State
 
 if TYPE_CHECKING:
-    from ...core.config import AppConfig
     from ...libs.api.base import BaseApiClient
-    from ...libs.api.types import Anime, SearchResult, Server, UserProfile
     from ...libs.players.base import BasePlayer
-    from ...libs.selector.base import BaseSelector
+    from ...libs.providers.anime.base import BaseAnimeProvider
+    from ...libs.selectors.base import BaseSelector
 
 logger = logging.getLogger(__name__)
 
-
-# --- Nested State Models (Unchanged) ---
-class AnilistState(BaseModel):
-    results_data: Optional[dict] = None
-    selected_anime: Optional[dict] = (
-        None  # Using dict for AnilistBaseMediaDataSchema for now
-    )
+# A type alias for the signature all menu functions must follow.
+MenuFunction = Callable[["Context", State], "State | ControlFlow"]
 
 
-class ProviderState(BaseModel):
-    selected_search_result: Optional[SearchResult] = None
-    anime_details: Optional[Anime] = None
-    current_episode: Optional[str] = None
-    current_server: Optional[Server] = None
+@dataclass(frozen=True)
+class Context:
+    """
+    A mutable container for long-lived, shared services and configurations.
+    This object is passed to every menu state, providing access to essential
+    application components like API clients and UI selectors.
+    """
 
-    class Config:
-        arbitrary_types_allowed = True
-
-
-class NavigationState(BaseModel):
-    current_page: int = 1
-    history_stack_class_names: list[str] = Field(default_factory=list)
-
-
-class TrackingState(BaseModel):
-    progress_mode: str = "prompt"
+    config: AppConfig
+    provider: BaseAnimeProvider
+    selector: BaseSelector
+    player: BasePlayer
+    media_api: BaseApiClient
 
 
-class SessionState(BaseModel):
-    anilist: AnilistState = Field(default_factory=AnilistState)
-    provider: ProviderState = Field(default_factory=ProviderState)
-    navigation: NavigationState = Field(default_factory=NavigationState)
-    tracking: TrackingState = Field(default_factory=TrackingState)
+@dataclass(frozen=True)
+class Menu:
+    """Represents a registered menu, linking a name to an executable function."""
 
-    class Config:
-        arbitrary_types_allowed = True
+    name: str
+    execute: MenuFunction
 
 
 class Session:
-    def __init__(self, config: AppConfig) -> None:
-        self.config: AppConfig = config
-        self.state: SessionState = SessionState()
-        self.is_running: bool = True
-        self.user_profile: Optional[UserProfile] = None
-        self._initialize_components()
+    """
+    The orchestrator for the interactive UI state machine.
 
-    def _initialize_components(self) -> None:
-        from ...cli.auth.manager import CredentialsManager
+    This class manages the state history, holds the application context,
+    runs the main event loop, and provides the decorator for registering menus.
+    """
+
+    def __init__(self):
+        self._context: Context | None = None
+        self._history: List[State] = []
+        self._menus: dict[str, Menu] = {}
+
+    def _load_context(self, config: AppConfig):
+        """Initializes all shared services based on the provided configuration."""
         from ...libs.api.factory import create_api_client
         from ...libs.players import create_player
-        from ...libs.selector import create_selector
+        from ...libs.providers.anime.provider import create_provider
+        from ...libs.selectors import create_selector
 
-        logger.debug("Initializing session components...")
-        self.selector: BaseSelector = create_selector(self.config)
-        self.provider: BaseAnimeProvider = create_provider(self.config.general.provider)
-        self.player: BasePlayer = create_player(self.config.stream.player, self.config)
+        self._context = Context(
+            config=config,
+            provider=create_provider(config.general.provider),
+            selector=create_selector(config),
+            player=create_player(config),
+            media_api=create_api_client(config.general.api_client, config),
+        )
+        logger.info("Application context reloaded.")
 
-        # Instantiate and use the API factory
-        self.api_client: BaseApiClient = create_api_client("anilist", self.config)
+    def _edit_config(self):
+        """Handles the logic for editing the config file and reloading the context."""
+        click.edit(filename=str(USER_CONFIG_PATH))
+        loader = ConfigLoader()
+        new_config = loader.load()
+        self._load_context(new_config)
+        click.echo("[bold green]Configuration reloaded.[/bold green]")
 
-        # Load credentials and authenticate the API client
-        manager = CredentialsManager()
-        user_data = manager.load_user_profile()
-        if user_data and (token := user_data.get("token")):
-            self.user_profile = self.api_client.authenticate(token)
-            if not self.user_profile:
-                logger.warning(
-                    "Loaded token is invalid or expired. User is not logged in."
+    def run(self, config: AppConfig, resume_path: Path | None = None):
+        """
+        Starts and manages the main interactive session loop.
+
+        Args:
+            config: The initial application configuration.
+            resume_path: Optional path to a saved session file to resume from.
+        """
+        self._load_context(config)
+
+        if resume_path:
+            self.resume(resume_path)
+        elif not self._history:
+            # Start with the main menu if history is empty
+            self._history.append(State(menu_name="MAIN"))
+
+        while self._history:
+            current_state = self._history[-1]
+            menu_to_run = self._menus.get(current_state.menu_name)
+
+            if not menu_to_run or not self._context:
+                logger.error(
+                    f"Menu '{current_state.menu_name}' not found or context not loaded."
                 )
+                break
 
-    def change_provider(self, provider_name: str) -> None:
-        from ...libs.anime.provider import create_provider
+            # Execute the menu function, which returns the next step.
+            next_step = menu_to_run.execute(self._context, current_state)
 
-        self.config.general.provider = provider_name
-        self.provider = create_provider(provider_name)
+            if isinstance(next_step, State):
+                # A new state was returned, push it to history for the next loop.
+                self._history.append(next_step)
+            elif isinstance(next_step, ControlFlow):
+                # A control command was issued.
+                if next_step == ControlFlow.EXIT:
+                    break  # Exit the loop
+                elif next_step == ControlFlow.BACK:
+                    if len(self._history) > 1:
+                        self._history.pop()  # Go back one state
+                elif next_step == ControlFlow.RELOAD_CONFIG:
+                    self._edit_config()
+                # For CONTINUE, we do nothing, allowing the loop to re-run the current state.
+            else:
+                logger.error(
+                    f"Menu '{current_state.menu_name}' returned invalid type: {type(next_step)}"
+                )
+                break
 
-    def change_player(self, player_name: str) -> None:
-        from ...libs.players import create_player
+        click.echo("Exiting interactive session.")
 
-        self.config.stream.player = player_name
-        self.player = create_player(player_name, self.config)
+    def save(self, file_path: Path):
+        """Serializes the session history to a JSON file."""
+        history_dicts = [state.model_dump(mode="json") for state in self._history]
+        try:
+            file_path.write_text(str(history_dicts))
+            logger.info(f"Session saved to {file_path}")
+        except IOError as e:
+            logger.error(f"Failed to save session: {e}")
 
-    def stop(self) -> None:
-        self.is_running = False
+    def resume(self, file_path: Path):
+        """Loads a session history from a JSON file."""
+        if not file_path.exists():
+            logger.warning(f"Resume file not found: {file_path}")
+            return
+        try:
+            history_dicts = file_path.read_text()
+            self._history = [State.model_validate(d) for d in history_dicts]
+            logger.info(f"Session resumed from {file_path}")
+        except Exception as e:
+            logger.error(f"Failed to resume session: {e}")
+            self._history = []  # Reset history on failure
+
+    @property
+    def menu(self) -> Callable[[MenuFunction], MenuFunction]:
+        """A decorator to register a function as a menu."""
+
+        def decorator(func: MenuFunction) -> MenuFunction:
+            menu_name = func.__name__.upper()
+            if menu_name in self._menus:
+                logger.warning(f"Menu '{menu_name}' is being redefined.")
+            self._menus[menu_name] = Menu(name=menu_name, execute=func)
+            return func
+
+        return decorator
+
+    def load_menus_from_folder(self, package_path: Path):
+        """
+        Dynamically imports all Python modules from a folder to register their menus.
+
+        Args:
+            package_path: The filesystem path to the 'menus' package directory.
+        """
+        package_name = package_path.name
+        logger.debug(f"Loading menus from '{package_path}'...")
+
+        for filename in os.listdir(package_path):
+            if filename.endswith(".py") and not filename.startswith("__"):
+                module_name = filename[:-3]
+                full_module_name = (
+                    f"fastanime.cli.interactive.{package_name}.{module_name}"
+                )
+                file_path = package_path / filename
+
+                try:
+                    spec = importlib.util.spec_from_file_location(
+                        full_module_name, file_path
+                    )
+                    if spec and spec.loader:
+                        module = importlib.util.module_from_spec(spec)
+                        # The act of executing the module runs the @session.menu decorators
+                        spec.loader.exec_module(module)
+                except Exception as e:
+                    logger.error(
+                        f"Failed to load menu module '{full_module_name}': {e}"
+                    )
+
+
+# Create a single, global instance of the Session to be imported by menu modules.
+session = Session()
