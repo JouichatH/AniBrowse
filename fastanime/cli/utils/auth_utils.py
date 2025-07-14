@@ -114,3 +114,55 @@ def prompt_for_authentication(
     )
 
     return feedback.confirm("Continue without authentication?", default=False)
+
+
+def show_authentication_instructions(feedback: FeedbackManager, icons_enabled: bool = True) -> None:
+    """
+    Show detailed instructions for authenticating with AniList.
+    """
+    icon = "🔐 " if icons_enabled else ""
+    
+    feedback.info(
+        f"{icon}AniList Authentication Required",
+        "To access personalized features, you need to authenticate with your AniList account"
+    )
+    
+    instructions = [
+        "1. Go to the interactive menu: 'Authentication' option",
+        "2. Select 'Login to AniList'",
+        "3. Follow the OAuth flow in your browser",
+        "4. Copy and paste the token when prompted",
+        "",
+        "Alternatively, use the CLI command:",
+        "fastanime anilist auth"
+    ]
+    
+    for instruction in instructions:
+        if instruction:
+            feedback.info("", instruction)
+        else:
+            feedback.info("", "")
+
+
+def get_authentication_prompt_message(operation_name: str, icons_enabled: bool = True) -> str:
+    """
+    Get a formatted message prompting for authentication for a specific operation.
+    """
+    icon = "🔒 " if icons_enabled else ""
+    return f"{icon}Authentication required to {operation_name}. Please log in to continue."
+
+
+def format_login_success_message(user_name: str, icons_enabled: bool = True) -> str:
+    """
+    Format a success message for successful login.
+    """
+    icon = "🎉 " if icons_enabled else ""
+    return f"{icon}Successfully logged in as {user_name}!"
+
+
+def format_logout_success_message(icons_enabled: bool = True) -> str:
+    """
+    Format a success message for successful logout.
+    """
+    icon = "👋 " if icons_enabled else ""
+    return f"{icon}Successfully logged out!"

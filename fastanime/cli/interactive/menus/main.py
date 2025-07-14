@@ -60,9 +60,11 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
         ),
         # --- Local Watch History ---
         f"{'📖 ' if icons else ''}Local Watch History": lambda: ("WATCH_HISTORY", None),
+        # --- Authentication and Account Management ---
+        f"{'🔐 ' if icons else ''}Authentication": lambda: ("AUTH", None),
         # --- Control Flow and Utility Options ---
         f"{'🔧 ' if icons else ''}Session Management": lambda: ("SESSION_MANAGEMENT", None),
-        f"{'�📝 ' if icons else ''}Edit Config": lambda: ("RELOAD_CONFIG", None),
+        f"{'📝 ' if icons else ''}Edit Config": lambda: ("RELOAD_CONFIG", None),
         f"{'❌ ' if icons else ''}Exit": lambda: ("EXIT", None),
     }
 
@@ -86,6 +88,10 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
         return ControlFlow.RELOAD_CONFIG
     if next_menu_name == "SESSION_MANAGEMENT":
         return State(menu_name="SESSION_MANAGEMENT")
+    if next_menu_name == "AUTH":
+        return State(menu_name="AUTH")
+    if next_menu_name == "WATCH_HISTORY":
+        return State(menu_name="WATCH_HISTORY")
     if next_menu_name == "CONTINUE":
         return ControlFlow.CONTINUE
 

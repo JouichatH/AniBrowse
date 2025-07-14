@@ -66,6 +66,20 @@ class FeedbackManager:
         icon = "❓ " if self.icons_enabled else ""
         return Confirm.ask(f"[bold]{icon}{message}[/bold]", default=default)
 
+    def prompt(self, message: str, details: Optional[str] = None, default: Optional[str] = None) -> str:
+        """Prompt user for text input with optional details and default value."""
+        from rich.prompt import Prompt
+        
+        icon = "📝 " if self.icons_enabled else ""
+        
+        if details:
+            self.info(f"{icon}{message}", details)
+        
+        return Prompt.ask(
+            f"[bold]{icon}{message}[/bold]",
+            default=default or ""
+        )
+
     def notify_operation_result(
         self,
         operation_name: str,
