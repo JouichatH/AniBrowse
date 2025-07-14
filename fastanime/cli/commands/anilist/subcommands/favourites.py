@@ -1,4 +1,9 @@
+from typing import TYPE_CHECKING
+
 import click
+
+if TYPE_CHECKING:
+    from fastanime.core.config import AppConfig
 
 
 @click.command(
@@ -12,26 +17,22 @@ import click
     help="Only print out the results dont open anilist menu",
 )
 @click.pass_obj
-def favourites(config, dump_json):
-    from ....anilist import AniList
+def favourites(config: "AppConfig", dump_json: bool):
+    from fastanime.libs.api.params import ApiSearchParams
+    from ..helpers import handle_media_search_command
 
-    anime_data = AniList.get_most_favourite()
-    if anime_data[0]:
-        if dump_json:
-            import json
+    def create_search_params(config):
+        return ApiSearchParams(
+            per_page=config.anilist.per_page or 15,
+            sort=["FAVOURITES_DESC"]
+        )
 
-            print(json.dumps(anime_data[1]))
-        else:
-            from ...interfaces.anilist_interfaces import anilist_results_menu
-            from ...utils.tools import FastAnimeRuntimeState
-
-            fastanime_runtime_state = FastAnimeRuntimeState()
-
-            fastanime_runtime_state.current_page = 1
-            fastanime_runtime_state.current_data_loader = AniList.get_most_favourite
-            fastanime_runtime_state.anilist_results_data = anime_data[1]
-            anilist_results_menu(config, fastanime_runtime_state)
-    else:
-        from sys import exit
+    handle_media_search_command(
+        config=config,
+        dump_json=dump_json,
+        task_name="Fetching most favourited anime...",
+        search_params_factory=create_search_params,
+        empty_message="No favourited anime found"
+    )
 
         exit(1)

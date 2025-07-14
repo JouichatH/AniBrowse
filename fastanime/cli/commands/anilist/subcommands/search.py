@@ -1,6 +1,8 @@
+from typing import TYPE_CHECKING
+
 import click
 
-from ...utils.completion_functions import anime_titles_shell_complete
+from fastanime.cli.utils.completion_functions import anime_titles_shell_complete
 from .data import (
     genres_available,
     media_formats_available,
@@ -10,6 +12,9 @@ from .data import (
     tags_available_list,
     years_available,
 )
+
+if TYPE_CHECKING:
+    from fastanime.core.config import AppConfig
 
 
 @click.command(
@@ -76,60 +81,68 @@ from .data import (
 )
 @click.pass_obj
 def search(
-    config,
-    title,
-    dump_json,
-    season,
-    status,
-    sort,
-    genres,
-    tags,
-    media_format,
-    year,
-    on_list,
+    config: "AppConfig",
+    title: str,
+    dump_json: bool,
+    season: str,
+    status: tuple,
+    sort: str,
+    genres: tuple,
+    tags: tuple,
+    media_format: tuple,
+    year: str,
+    on_list: bool,
 ):
-    from ....anilist import AniList
+    import json
+    from rich.progress import Progress
 
-    success, search_results = AniList.search(
-        query=title,
-        sort=sort,
-        status_in=list(status),
-        genre_in=list(genres),
-        season=season,
-        tag_in=list(tags),
-        seasonYear=year,
-        format_in=list(media_format),
-        on_list=on_list,
-    )
-    if success:
+    from fastanime.core.exceptions import FastAnimeError
+    from fastanime.libs.api.factory import create_api_client
+    from fastanime.libs.api.params import ApiSearchParams
+    from fastanime.cli.utils.feedback import create_feedback_manager
+
+    feedback = create_feedback_manager(config.general.icons)
+    
+    try:
+        # Create API client
+        api_client = create_api_client(config.general.api_client, config)
+        
+        # Build search parameters
+        search_params = ApiSearchParams(
+            query=title,
+            per_page=config.anilist.per_page or 50,
+            sort=[sort] if sort else None,
+            status_in=list(status) if status else None,
+            genre_in=list(genres) if genres else None,
+            tag_in=list(tags) if tags else None,
+            format_in=list(media_format) if media_format else None,
+            season=season,
+            seasonYear=int(year) if year else None,
+            on_list=on_list
+        )
+        
+        # Search for anime
+        with Progress() as progress:
+            progress.add_task("Searching anime...", total=None)
+            search_result = api_client.search_media(search_params)
+        
+        if not search_result or not search_result.media:
+            raise FastAnimeError("No anime found matching your search criteria")
+        
         if dump_json:
-            import json
-
-            print(json.dumps(search_results))
+            # Use Pydantic's built-in serialization
+            print(json.dumps(search_result.model_dump(), indent=2))
         else:
-            from ...interfaces.anilist_interfaces import anilist_results_menu
-            from ...utils.tools import FastAnimeRuntimeState
-
-            fastanime_runtime_state = FastAnimeRuntimeState()
-
-            fastanime_runtime_state.current_page = 1
-            fastanime_runtime_state.current_data_loader = (
-                lambda page=1, **kwargs: AniList.search(
-                    query=title,
-                    sort=sort,
-                    status_in=list(status),
-                    genre_in=list(genres),
-                    season=season,
-                    tag_in=list(tags),
-                    seasonYear=year,
-                    format_in=list(media_format),
-                    on_list=on_list,
-                    page=page,
-                )
-            )
-            fastanime_runtime_state.anilist_results_data = search_results
-            anilist_results_menu(config, fastanime_runtime_state)
-    else:
-        from sys import exit
-
-        exit(1)
+            # Launch interactive session for browsing results
+            from fastanime.cli.interactive.session import session
+            
+            feedback.info(f"Found {len(search_result.media)} anime matching your search. Launching interactive mode...")
+            session.load_menus_from_folder()
+            session.run(config)
+            
+    except FastAnimeError as e:
+        feedback.error("Search failed", str(e))
+        raise click.Abort()
+    except Exception as e:
+        feedback.error("Unexpected error occurred", str(e))
+        raise click.Abort()

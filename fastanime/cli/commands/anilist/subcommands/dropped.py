@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import click
 
 if TYPE_CHECKING:
-    from fastanime.cli.config import Config
+    from fastanime.core.config import AppConfig
 
 
 @click.command(help="View anime you dropped")
@@ -14,15 +14,15 @@ if TYPE_CHECKING:
     help="Only print out the results dont open anilist menu",
 )
 @click.pass_obj
-def dropped(config: "Config", dump_json):
-    from sys import exit
+def dropped(config: "AppConfig", dump_json: bool):
+    from ..helpers import handle_user_list_command
 
-    from ....anilist import AniList
-
-    if not config.user:
-        print("Not authenticated")
-        print("Please run: fastanime anilist loggin")
-        exit(1)
+    handle_user_list_command(
+        config=config,
+        dump_json=dump_json,
+        status="DROPPED",
+        list_name="dropped"
+    )
     anime_list = AniList.get_anime_list("DROPPED")
     if not anime_list:
         exit(1)

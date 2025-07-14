@@ -1,4 +1,9 @@
+from typing import TYPE_CHECKING
+
 import click
+
+if TYPE_CHECKING:
+    from fastanime.core.config import AppConfig
 
 
 @click.command(
@@ -12,26 +17,20 @@ import click
     help="Only print out the results dont open anilist menu",
 )
 @click.pass_obj
-def trending(config, dump_json):
-    from ....anilist import AniList
+def trending(config: "AppConfig", dump_json: bool):
+    from fastanime.libs.api.params import ApiSearchParams
+    from ..helpers import handle_media_search_command
 
-    success, data = AniList.get_trending()
-    if success:
-        if dump_json:
-            import json
+    def create_search_params(config):
+        return ApiSearchParams(
+            per_page=config.anilist.per_page or 15,
+            sort=["TRENDING_DESC"]
+        )
 
-            print(json.dumps(data))
-        else:
-            from ...interfaces.anilist_interfaces import anilist_results_menu
-            from ...utils.tools import FastAnimeRuntimeState
-
-            fastanime_runtime_state = FastAnimeRuntimeState()
-
-            fastanime_runtime_state.current_page = 1
-            fastanime_runtime_state.current_data_loader = AniList.get_trending
-            fastanime_runtime_state.anilist_results_data = data
-            anilist_results_menu(config, fastanime_runtime_state)
-    else:
-        from sys import exit
-
-        exit(1)
+    handle_media_search_command(
+        config=config,
+        dump_json=dump_json,
+        task_name="Fetching trending anime...",
+        search_params_factory=create_search_params,
+        empty_message="No trending anime found"
+    )

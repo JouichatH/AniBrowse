@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import click
 
 if TYPE_CHECKING:
-    from ...config import Config
+    from fastanime.core.config import AppConfig
 
 
 @click.command(help="View anime you are rewatching")
@@ -14,7 +14,15 @@ if TYPE_CHECKING:
     help="Only print out the results dont open anilist menu",
 )
 @click.pass_obj
-def rewatching(config: "Config", dump_json):
+def rewatching(config: "AppConfig", dump_json: bool):
+    from ..helpers import handle_user_list_command
+
+    handle_user_list_command(
+        config=config,
+        dump_json=dump_json,
+        status="REPEATING",
+        list_name="rewatching"
+    )
     from sys import exit
 
     from ....anilist import AniList

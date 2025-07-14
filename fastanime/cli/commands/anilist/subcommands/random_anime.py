@@ -1,4 +1,9 @@
+from typing import TYPE_CHECKING
+
 import click
+
+if TYPE_CHECKING:
+    from fastanime.core.config import AppConfig
 
 
 @click.command(
@@ -12,28 +17,51 @@ import click
     help="Only print out the results dont open anilist menu",
 )
 @click.pass_obj
-def random_anime(config, dump_json):
+def random_anime(config: "AppConfig", dump_json: bool):
+    import json
     import random
+    from rich.progress import Progress
 
-    from ....anilist import AniList
+    from fastanime.core.exceptions import FastAnimeError
+    from fastanime.libs.api.factory import create_api_client
+    from fastanime.libs.api.params import ApiSearchParams
+    from fastanime.cli.utils.feedback import create_feedback_manager
 
-    random_anime = range(1, 100000)
-
-    random_anime = random.sample(random_anime, k=50)
-
-    anime_data = AniList.search(id_in=list(random_anime))
-
-    if anime_data[0]:
+    feedback = create_feedback_manager(config.general.icons)
+    
+    try:
+        # Create API client
+        api_client = create_api_client(config.general.api_client, config)
+        
+        # Generate random IDs
+        random_ids = random.sample(range(1, 100000), k=50)
+        
+        # Search for random anime
+        with Progress() as progress:
+            progress.add_task("Fetching random anime...", total=None)
+            search_params = ApiSearchParams(
+                id_in=random_ids,
+                per_page=50
+            )
+            search_result = api_client.search_media(search_params)
+        
+        if not search_result or not search_result.media:
+            raise FastAnimeError("No random anime found")
+        
         if dump_json:
-            import json
-
-            print(json.dumps(anime_data[1]))
+            # Use Pydantic's built-in serialization
+            print(json.dumps(search_result.model_dump(), indent=2))
         else:
-            from ...interfaces.anilist_interfaces import anilist_results_menu
-            from ...utils.tools import FastAnimeRuntimeState
-
-            fastanime_runtime_state = FastAnimeRuntimeState()
-            fastanime_runtime_state.anilist_results_data = anime_data[1]
-            anilist_results_menu(config, fastanime_runtime_state)
-    else:
-        exit(1)
+            # Launch interactive session for browsing results
+            from fastanime.cli.interactive.session import session
+            
+            feedback.info(f"Found {len(search_result.media)} random anime. Launching interactive mode...")
+            session.load_menus_from_folder()
+            session.run(config)
+            
+    except FastAnimeError as e:
+        feedback.error("Failed to fetch random anime", str(e))
+        raise click.Abort()
+    except Exception as e:
+        feedback.error("Unexpected error occurred", str(e))
+        raise click.Abort()
