@@ -78,11 +78,43 @@ class Session:
 
     def _edit_config(self):
         """Handles the logic for editing the config file and reloading the context."""
-        click.edit(filename=str(USER_CONFIG_PATH))
-        loader = ConfigLoader()
-        new_config = loader.load()
-        self._load_context(new_config)
-        click.echo("[bold green]Configuration reloaded.[/bold green]")
+        from ..utils.feedback import create_feedback_manager
+
+        feedback = create_feedback_manager(
+            True
+        )  # Always use icons for session feedback
+
+        # Confirm before opening editor
+        if not feedback.confirm("Open configuration file in editor?", default=True):
+            return
+
+        try:
+            click.edit(filename=str(USER_CONFIG_PATH))
+
+            def reload_config():
+                loader = ConfigLoader()
+                new_config = loader.load()
+                self._load_context(new_config)
+                return new_config
+
+            from ..utils.feedback import execute_with_feedback
+
+            success, _ = execute_with_feedback(
+                reload_config,
+                feedback,
+                "reload configuration",
+                loading_msg="Reloading configuration",
+                success_msg="Configuration reloaded successfully",
+                error_msg="Failed to reload configuration",
+                show_loading=False,
+            )
+
+            if success:
+                feedback.pause_for_user("Press Enter to continue")
+
+        except Exception as e:
+            feedback.error("Failed to edit configuration", str(e))
+            feedback.pause_for_user("Press Enter to continue")
 
     def run(self, config: AppConfig, resume_path: Path | None = None):
         """

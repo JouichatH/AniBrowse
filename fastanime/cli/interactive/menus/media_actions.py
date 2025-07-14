@@ -6,6 +6,7 @@ from rich.console import Console
 from ....libs.api.params import UpdateListEntryParams
 from ....libs.api.types import MediaItem
 from ....libs.players.params import PlayerParams
+from ...utils.feedback import create_feedback_manager, execute_with_feedback
 from ..session import Context, session
 from ..state import ControlFlow, ProviderState, State
 
@@ -55,17 +56,29 @@ def _stream(ctx: Context, state: State) -> MenuAction:
 
 def _watch_trailer(ctx: Context, state: State) -> MenuAction:
     def action():
+        feedback = create_feedback_manager(ctx.config.general.icons)
         anime = state.media_api.anime
         if not anime:
             return ControlFlow.CONTINUE
         if not anime.trailer or not anime.trailer.id:
-            print("[bold yellow]No trailer available for this anime.[/bold yellow]")
+            feedback.warning(
+                "No trailer available for this anime",
+                "This anime doesn't have a trailer link in the database",
+            )
         else:
             trailer_url = f"https://www.youtube.com/watch?v={anime.trailer.id}"
-            print(
-                f"Playing trailer for '{anime.title.english or anime.title.romaji}'..."
+
+            def play_trailer():
+                ctx.player.play(PlayerParams(url=trailer_url, title=""))
+
+            execute_with_feedback(
+                play_trailer,
+                feedback,
+                "play trailer",
+                loading_msg=f"Playing trailer for '{anime.title.english or anime.title.romaji}'",
+                success_msg="Trailer started successfully",
+                show_loading=False,
             )
-            ctx.player.play(PlayerParams(url=trailer_url, title=""))
         return ControlFlow.CONTINUE
 
     return action
@@ -73,16 +86,18 @@ def _watch_trailer(ctx: Context, state: State) -> MenuAction:
 
 def _add_to_list(ctx: Context, state: State) -> MenuAction:
     def action():
+        feedback = create_feedback_manager(ctx.config.general.icons)
         anime = state.media_api.anime
         if not anime:
             return ControlFlow.CONTINUE
         choices = ["CURRENT", "PLANNING", "COMPLETED", "DROPPED", "PAUSED", "REPEATING"]
         status = ctx.selector.choose("Select list status:", choices=choices)
         if status:
-            _update_user_list(
+            _update_user_list_with_feedback(
                 ctx,
                 anime,
                 UpdateListEntryParams(media_id=anime.id, status=status),
+                feedback,
             )
         return ControlFlow.CONTINUE
 
@@ -91,6 +106,7 @@ def _add_to_list(ctx: Context, state: State) -> MenuAction:
 
 def _score_anime(ctx: Context, state: State) -> MenuAction:
     def action():
+        feedback = create_feedback_manager(ctx.config.general.icons)
         anime = state.media_api.anime
         if not anime:
             return ControlFlow.CONTINUE
@@ -99,12 +115,15 @@ def _score_anime(ctx: Context, state: State) -> MenuAction:
             score = float(score_str) if score_str else 0.0
             if not 0.0 <= score <= 10.0:
                 raise ValueError("Score out of range.")
-            _update_user_list(
-                ctx, anime, UpdateListEntryParams(media_id=anime.id, score=score)
+            _update_user_list_with_feedback(
+                ctx,
+                anime,
+                UpdateListEntryParams(media_id=anime.id, score=score),
+                feedback,
             )
         except (ValueError, TypeError):
-            print(
-                "[bold red]Invalid score. Please enter a number between 0 and 10.[/bold red]"
+            feedback.error(
+                "Invalid score entered", "Please enter a number between 0.0 and 10.0"
             )
         return ControlFlow.CONTINUE
 
@@ -155,3 +174,30 @@ def _update_user_list(ctx: Context, anime: MediaItem, params: UpdateListEntryPar
         )
     else:
         click.echo("[bold red]Failed to update list entry.[/bold red]")
+
+
+def _update_user_list_with_feedback(
+    ctx: Context, anime: MediaItem, params: UpdateListEntryParams, feedback
+):
+    """Helper to call the API to update a user's list with comprehensive feedback."""
+    # Check authentication (commented code from original)
+    # if not ctx.media_api.user_profile:
+    #     feedback.warning(
+    #         "You must be logged in to modify your list",
+    #         "Please authenticate with AniList to manage your anime lists"
+    #     )
+    #     return
+
+    def update_operation():
+        return ctx.media_api.update_list_entry(params)
+
+    anime_title = anime.title.english or anime.title.romaji
+    success, result = execute_with_feedback(
+        update_operation,
+        feedback,
+        "update anime list",
+        loading_msg=f"Updating '{anime_title}' on your list",
+        success_msg=f"Successfully updated '{anime_title}' on your list!",
+        error_msg="Failed to update list entry",
+        show_loading=False,
+    )

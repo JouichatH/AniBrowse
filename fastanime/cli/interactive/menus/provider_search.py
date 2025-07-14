@@ -6,6 +6,7 @@ from rich.progress import Progress
 from thefuzz import fuzz
 
 from ....libs.providers.anime.params import SearchParams
+from ...utils.feedback import create_feedback_manager, execute_with_feedback
 from ..session import Context, session
 from ..state import ControlFlow, ProviderState, State
 
@@ -20,9 +21,10 @@ def provider_search(ctx: Context, state: State) -> State | ControlFlow:
     This state allows the user to confirm the correct provider entry before
     proceeding to list episodes.
     """
+    feedback = create_feedback_manager(ctx.config.general.icons)
     anilist_anime = state.media_api.anime
     if not anilist_anime:
-        click.echo("[bold red]Error: No AniList anime to search for.[/bold red]")
+        feedback.error("No AniList anime to search for", "Please select an anime first")
         return ControlFlow.BACK
 
     provider = ctx.provider
@@ -33,28 +35,37 @@ def provider_search(ctx: Context, state: State) -> State | ControlFlow:
 
     anilist_title = anilist_anime.title.english or anilist_anime.title.romaji
     if not anilist_title:
-        console.print(
-            "[bold red]Error: Selected anime has no searchable title.[/bold red]"
+        feedback.error(
+            "Selected anime has no searchable title",
+            "This anime entry is missing required title information",
         )
         return ControlFlow.BACK
 
     # --- Perform Search on Provider ---
-    with Progress(transient=True) as progress:
-        progress.add_task(
-            f"[cyan]Searching for '{anilist_title}' on {provider.__class__.__name__}...",
-            total=None,
-        )
-        provider_search_results = provider.search(
+    def search_provider():
+        return provider.search(
             SearchParams(
                 query=anilist_title, translation_type=config.stream.translation_type
             )
         )
 
-    if not provider_search_results or not provider_search_results.results:
-        console.print(
-            f"[bold yellow]Could not find '{anilist_title}' on {provider.__class__.__name__}.[/bold yellow]"
+    success, provider_search_results = execute_with_feedback(
+        search_provider,
+        feedback,
+        "search provider",
+        loading_msg=f"Searching for '{anilist_title}' on {provider.__class__.__name__}",
+        success_msg=f"Found results on {provider.__class__.__name__}",
+    )
+
+    if (
+        not success
+        or not provider_search_results
+        or not provider_search_results.results
+    ):
+        feedback.warning(
+            f"Could not find '{anilist_title}' on {provider.__class__.__name__}",
+            "Try another provider from the config or go back to search again",
         )
-        console.print("Try another provider from the config or go back.")
         return ControlFlow.BACK
 
     # --- Map results for selection ---
