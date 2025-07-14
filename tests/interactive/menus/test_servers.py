@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch, MagicMock
 
 from fastanime.cli.interactive.menus.servers import servers
 from fastanime.cli.interactive.state import ControlFlow, State, MediaApiState, ProviderState
-from fastanime.libs.providers.anime.types import Anime, Server, StreamLink
+from fastanime.libs.providers.anime.types import Anime, Server, EpisodeStream
 from fastanime.libs.players.types import PlayerResult
 
 
@@ -50,16 +50,14 @@ class TestServersMenu:
         mock_servers = [
             Server(
                 name="Server 1",
-                url="https://example.com/server1",
                 links=[
-                    StreamLink(url="https://example.com/stream1.m3u8", quality=1080, format="m3u8")
+                    EpisodeStream(link="https://example.com/stream1.m3u8", quality="1080", format="m3u8")
                 ]
             ),
             Server(
                 name="Server 2", 
-                url="https://example.com/server2",
                 links=[
-                    StreamLink(url="https://example.com/stream2.m3u8", quality=720, format="m3u8")
+                    EpisodeStream(link="https://example.com/stream2.m3u8", quality="720", format="m3u8")
                 ]
             )
         ]
@@ -116,8 +114,7 @@ class TestServersMenu:
         mock_servers = [
             Server(
                 name="Server 1",
-                url="https://example.com/server1",
-                links=[StreamLink(url="https://example.com/stream1.m3u8", quality=1080, format="m3u8")]
+                links=[EpisodeStream(link="https://example.com/stream1.m3u8", quality="1080", format="m3u8")]
             )
         ]
         
@@ -147,8 +144,7 @@ class TestServersMenu:
         mock_servers = [
             Server(
                 name="Server 1",
-                url="https://example.com/server1",
-                links=[StreamLink(url="https://example.com/stream1.m3u8", quality=1080, format="m3u8")]
+                links=[EpisodeStream(link="https://example.com/stream1.m3u8", quality="1080", format="m3u8")]
             )
         ]
         
@@ -178,8 +174,7 @@ class TestServersMenu:
         mock_servers = [
             Server(
                 name="TOP",  # Matches config server preference
-                url="https://example.com/server1",
-                links=[StreamLink(url="https://example.com/stream1.m3u8", quality=1080, format="m3u8")]
+                links=[EpisodeStream(link="https://example.com/stream1.m3u8", quality="1080", format="m3u8")]
             )
         ]
         
@@ -214,11 +209,10 @@ class TestServersMenu:
         mock_servers = [
             Server(
                 name="Server 1",
-                url="https://example.com/server1",
                 links=[
-                    StreamLink(url="https://example.com/stream_720.m3u8", quality=720, format="m3u8"),
-                    StreamLink(url="https://example.com/stream_1080.m3u8", quality=1080, format="m3u8"),
-                    StreamLink(url="https://example.com/stream_480.m3u8", quality=480, format="m3u8")
+                    EpisodeStream(link="https://example.com/stream_720.m3u8", quality="720", format="m3u8"),
+                    EpisodeStream(link="https://example.com/stream_1080.m3u8", quality="1080", format="m3u8"),
+                    EpisodeStream(link="https://example.com/stream_480.m3u8", quality="480", format="m3u8")
                 ]
             )
         ]
@@ -255,8 +249,7 @@ class TestServersMenu:
         mock_servers = [
             Server(
                 name="Server 1",
-                url="https://example.com/server1",
-                links=[StreamLink(url="https://example.com/stream1.m3u8", quality=1080, format="m3u8")]
+                links=[EpisodeStream(link="https://example.com/stream1.m3u8", quality="1080", format="m3u8")]
             )
         ]
         
@@ -289,7 +282,6 @@ class TestServersMenu:
         mock_servers = [
             Server(
                 name="Server 1",
-                url="https://example.com/server1",
                 links=[]  # No streaming links
             )
         ]
@@ -331,9 +323,9 @@ class TestServersMenuHelperFunctions:
         from fastanime.cli.interactive.menus.servers import _filter_by_quality
         
         links = [
-            StreamLink(url="https://example.com/480.m3u8", quality=480, format="m3u8"),
-            StreamLink(url="https://example.com/720.m3u8", quality=720, format="m3u8"),
-            StreamLink(url="https://example.com/1080.m3u8", quality=1080, format="m3u8")
+            EpisodeStream(link="https://example.com/480.m3u8", quality="480", format="m3u8"),
+            EpisodeStream(link="https://example.com/720.m3u8", quality="720", format="m3u8"),
+            EpisodeStream(link="https://example.com/1080.m3u8", quality="1080", format="m3u8")
         ]
         
         result = _filter_by_quality(links, "720")
@@ -346,8 +338,8 @@ class TestServersMenuHelperFunctions:
         from fastanime.cli.interactive.menus.servers import _filter_by_quality
         
         links = [
-            StreamLink(url="https://example.com/480.m3u8", quality=480, format="m3u8"),
-            StreamLink(url="https://example.com/720.m3u8", quality=720, format="m3u8")
+            EpisodeStream(link="https://example.com/480.m3u8", quality="480", format="m3u8"),
+            EpisodeStream(link="https://example.com/720.m3u8", quality="720", format="m3u8")
         ]
         
         result = _filter_by_quality(links, "1080")  # Quality not available
@@ -371,10 +363,9 @@ class TestServersMenuHelperFunctions:
         
         server = Server(
             name="Test Server",
-            url="https://example.com/server",
             links=[
-                StreamLink(url="https://example.com/720.m3u8", quality=720, format="m3u8"),
-                StreamLink(url="https://example.com/1080.m3u8", quality=1080, format="m3u8")
+                EpisodeStream(link="https://example.com/720.m3u8", quality="720", format="m3u8"),
+                EpisodeStream(link="https://example.com/1080.m3u8", quality="1080", format="m3u8")
             ]
         )
         
@@ -391,8 +382,7 @@ class TestServersMenuHelperFunctions:
         
         server = Server(
             name="Test Server",
-            url="https://example.com/server",
-            links=[StreamLink(url="https://example.com/720.m3u8", quality=720, format="m3u8")]
+            links=[EpisodeStream(link="https://example.com/720.m3u8", quality="720", format="m3u8")]
         )
         
         mock_config.general.icons = False

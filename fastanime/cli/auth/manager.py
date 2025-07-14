@@ -1,12 +1,10 @@
 import json
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from ...core.constants import USER_DATA_PATH
 from ...core.exceptions import ConfigError
-
-if TYPE_CHECKING:
-    from ...libs.api.types import UserProfile
+from ...libs.api.types import UserProfile
 
 logger = logging.getLogger(__name__)
 

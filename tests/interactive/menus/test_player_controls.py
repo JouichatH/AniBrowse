@@ -9,7 +9,7 @@ import threading
 from fastanime.cli.interactive.menus.player_controls import player_controls
 from fastanime.cli.interactive.state import ControlFlow, State, MediaApiState, ProviderState
 from fastanime.libs.players.types import PlayerResult
-from fastanime.libs.providers.anime.types import Server, StreamLink
+from fastanime.libs.providers.anime.types import Server, EpisodeStream
 from fastanime.libs.api.types import MediaItem
 
 

@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 
 from fastanime.cli.interactive.menus.episodes import episodes
 from fastanime.cli.interactive.state import ControlFlow, State, MediaApiState, ProviderState
-from fastanime.libs.providers.anime.types import Anime, Episodes
+from fastanime.libs.providers.anime.types import Anime, AnimeEpisodes
 
 
 class TestEpisodesMenu:
@@ -43,7 +43,7 @@ class TestEpisodesMenu:
             url="https://example.com/anime",
             id="test-anime",
             poster="https://example.com/poster.jpg",
-            episodes=Episodes(sub=[], dub=["1", "2", "3"])  # No sub episodes
+            episodes=AnimeEpisodes(sub=[], dub=["1", "2", "3"])  # No sub episodes
         )
         
         state_no_sub = State(

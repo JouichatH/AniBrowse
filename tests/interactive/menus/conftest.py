@@ -54,11 +54,12 @@ def mock_provider():
     """Create a mock anime provider."""
     provider = Mock()
     provider.search_anime.return_value = SearchResults(
-        anime=[
-            Anime(
-                name="Test Anime 1",
-                url="https://example.com/anime1",
+        page_info=PageInfo(),
+        results=[
+            SearchResult(
                 id="anime1",
+                title="Test Anime 1",
+                episodes=AnimeEpisodes(sub=["1", "2", "3"]),
                 poster="https://example.com/poster1.jpg"
             )
         ]
