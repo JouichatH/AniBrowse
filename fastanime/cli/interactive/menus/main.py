@@ -6,6 +6,7 @@ from rich.console import Console
 from ....libs.api.params import ApiSearchParams, UserListParams
 from ....libs.api.types import MediaSearchResult, MediaStatus, UserListStatusType
 from ...utils.feedback import create_feedback_manager, execute_with_feedback
+from ...utils.auth_utils import format_auth_menu_header, check_authentication_required
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State
 
@@ -65,7 +66,7 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     choice_str = ctx.selector.choose(
         prompt="Select Category",
         choices=list(options.keys()),
-        header="FastAnime Main Menu",
+        header=format_auth_menu_header(ctx.media_api, "FastAnime Main Menu", icons),
     )
 
     if not choice_str:
@@ -180,13 +181,11 @@ def _create_user_list_action(ctx: Context, status: UserListStatusType) -> MenuAc
     def action():
         feedback = create_feedback_manager(ctx.config.general.icons)
 
-        # Check authentication (commented code from original)
-        # if not ctx.media_api.user_profile:
-        #     feedback.warning(
-        #         f"Please log in to view your '{status.title()}' list",
-        #         "You need to authenticate with AniList to access your personal lists"
-        #     )
-        #     return "CONTINUE", None
+        # Check authentication
+        if not check_authentication_required(
+            ctx.media_api, feedback, f"view your {status.lower()} list"
+        ):
+            return "CONTINUE", None
 
         def fetch_data():
             return ctx.media_api.fetch_user_list(

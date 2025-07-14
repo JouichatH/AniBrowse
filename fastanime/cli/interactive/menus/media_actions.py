@@ -7,6 +7,7 @@ from ....libs.api.params import UpdateListEntryParams
 from ....libs.api.types import MediaItem
 from ....libs.players.params import PlayerParams
 from ...utils.feedback import create_feedback_manager, execute_with_feedback
+from ...utils.auth_utils import check_authentication_required, get_auth_status_indicator
 from ..session import Context, session
 from ..state import ControlFlow, ProviderState, State
 
@@ -21,6 +22,14 @@ def media_actions(ctx: Context, state: State) -> State | ControlFlow:
     """
     icons = ctx.config.general.icons
 
+    # Get authentication status for display
+    auth_status, user_profile = get_auth_status_indicator(ctx.media_api, icons)
+
+    # Create header with auth status
+    anime = state.media_api.anime
+    anime_title = anime.title.english or anime.title.romaji if anime else "Unknown"
+    header = f"Actions for: {anime_title}\n{auth_status}"
+
     # TODO: Add 'Recommendations' and 'Relations' here later.
     options: Dict[str, MenuAction] = {
         f"{'▶️ ' if icons else ''}Stream": _stream(ctx, state),
@@ -33,7 +42,7 @@ def media_actions(ctx: Context, state: State) -> State | ControlFlow:
 
     # --- Prompt and Execute ---
     choice_str = ctx.selector.choose(
-        prompt="Select Action", choices=list(options.keys())
+        prompt="Select Action", choices=list(options.keys()), header=header
     )
 
     if choice_str and choice_str in options:
@@ -90,13 +99,21 @@ def _add_to_list(ctx: Context, state: State) -> MenuAction:
         anime = state.media_api.anime
         if not anime:
             return ControlFlow.CONTINUE
+
+        # Check authentication before proceeding
+        if not check_authentication_required(
+            ctx.media_api, feedback, "add anime to your list"
+        ):
+            return ControlFlow.CONTINUE
+
         choices = ["CURRENT", "PLANNING", "COMPLETED", "DROPPED", "PAUSED", "REPEATING"]
         status = ctx.selector.choose("Select list status:", choices=choices)
         if status:
+            # status is now guaranteed to be one of the valid choices
             _update_user_list_with_feedback(
                 ctx,
                 anime,
-                UpdateListEntryParams(media_id=anime.id, status=status),
+                UpdateListEntryParams(media_id=anime.id, status=status),  # type: ignore
                 feedback,
             )
         return ControlFlow.CONTINUE
@@ -110,6 +127,11 @@ def _score_anime(ctx: Context, state: State) -> MenuAction:
         anime = state.media_api.anime
         if not anime:
             return ControlFlow.CONTINUE
+
+        # Check authentication before proceeding
+        if not check_authentication_required(ctx.media_api, feedback, "score anime"):
+            return ControlFlow.CONTINUE
+
         score_str = ctx.selector.ask("Enter score (0.0 - 10.0):")
         try:
             score = float(score_str) if score_str else 0.0
@@ -180,13 +202,8 @@ def _update_user_list_with_feedback(
     ctx: Context, anime: MediaItem, params: UpdateListEntryParams, feedback
 ):
     """Helper to call the API to update a user's list with comprehensive feedback."""
-    # Check authentication (commented code from original)
-    # if not ctx.media_api.user_profile:
-    #     feedback.warning(
-    #         "You must be logged in to modify your list",
-    #         "Please authenticate with AniList to manage your anime lists"
-    #     )
-    #     return
+    # Authentication check is handled by the calling functions now
+    # This function assumes authentication has already been verified
 
     def update_operation():
         return ctx.media_api.update_list_entry(params)

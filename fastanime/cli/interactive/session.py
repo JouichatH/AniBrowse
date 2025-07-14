@@ -67,14 +67,42 @@ class Session:
         from ...libs.providers.anime.provider import create_provider
         from ...libs.selectors import create_selector
 
+        # Create API client
+        media_api = create_api_client(config.general.api_client, config)
+
+        # Attempt to load saved user authentication
+        self._load_saved_authentication(media_api)
+
         self._context = Context(
             config=config,
             provider=create_provider(config.general.provider),
             selector=create_selector(config),
             player=create_player(config),
-            media_api=create_api_client(config.general.api_client, config),
+            media_api=media_api,
         )
         logger.info("Application context reloaded.")
+
+    def _load_saved_authentication(self, media_api):
+        """Attempt to load saved user authentication."""
+        try:
+            from ..auth.manager import AuthManager
+
+            auth_manager = AuthManager()
+            user_data = auth_manager.load_user_profile()
+
+            if user_data and user_data.get("token"):
+                # Try to authenticate with the saved token
+                profile = media_api.authenticate(user_data["token"])
+                if profile:
+                    logger.info(f"Successfully authenticated as {profile.name}")
+                else:
+                    logger.warning("Saved authentication token is invalid or expired")
+            else:
+                logger.debug("No saved authentication found")
+
+        except Exception as e:
+            logger.error(f"Failed to load saved authentication: {e}")
+            # Continue without authentication rather than failing completely
 
     def _edit_config(self):
         """Handles the logic for editing the config file and reloading the context."""

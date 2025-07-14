@@ -1,6 +1,7 @@
 from rich.console import Console
 
 from ....libs.api.types import MediaItem
+from ...utils.auth_utils import get_auth_status_indicator
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State
 
@@ -47,11 +48,16 @@ def results(ctx: Context, state: State) -> State | ControlFlow:
         choices.append("Previous Page")
     choices.append("Back")
 
+    # Create header with auth status
+    auth_status, _ = get_auth_status_indicator(ctx.media_api, ctx.config.general.icons)
+    header = f"Search Results ({len(anime_items)} anime)\n{auth_status}"
+
     # --- Prompt User ---
     choice_str = ctx.selector.choose(
         prompt="Select Anime",
         choices=choices,
         preview=preview_command,
+        header=header,
     )
 
     if not choice_str:
