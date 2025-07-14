@@ -9,6 +9,7 @@ from ...libs.api.types import (
     MediaStatus,
     UserListStatusType,
 )
+from ...libs.api.params import ApiSearchParams, UserListParams  # Add this import
 from ...libs.players.types import PlayerResult
 from ...libs.providers.anime.types import Anime, SearchResults, Server
 
@@ -76,6 +77,10 @@ class MediaApiState(BaseModel):
     user_media_status: Optional[UserListStatusType] = None
     media_status: Optional[MediaStatus] = None
     anime: Optional[MediaItem] = None
+    
+    # Add pagination support: store original search parameters to enable page navigation
+    original_api_params: Optional[ApiSearchParams] = None
+    original_user_list_params: Optional[UserListParams] = None
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 

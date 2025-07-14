@@ -10,7 +10,7 @@ from ...utils.auth_utils import format_auth_menu_header, check_authentication_re
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State
 
-MenuAction = Callable[[], Tuple[str, MediaSearchResult | None]]
+MenuAction = Callable[[], Tuple[str, MediaSearchResult | None, ApiSearchParams | None, UserListParams | None]]
 
 
 @session.menu
@@ -59,13 +59,13 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
             ctx, "REPEATING"
         ),
         # --- Local Watch History ---
-        f"{'📖 ' if icons else ''}Local Watch History": lambda: ("WATCH_HISTORY", None),
+        f"{'📖 ' if icons else ''}Local Watch History": lambda: ("WATCH_HISTORY", None, None, None),
         # --- Authentication and Account Management ---
-        f"{'🔐 ' if icons else ''}Authentication": lambda: ("AUTH", None),
+        f"{'🔐 ' if icons else ''}Authentication": lambda: ("AUTH", None, None, None),
         # --- Control Flow and Utility Options ---
-        f"{'🔧 ' if icons else ''}Session Management": lambda: ("SESSION_MANAGEMENT", None),
-        f"{'📝 ' if icons else ''}Edit Config": lambda: ("RELOAD_CONFIG", None),
-        f"{'❌ ' if icons else ''}Exit": lambda: ("EXIT", None),
+        f"{'🔧 ' if icons else ''}Session Management": lambda: ("SESSION_MANAGEMENT", None, None, None),
+        f"{'📝 ' if icons else ''}Edit Config": lambda: ("RELOAD_CONFIG", None, None, None),
+        f"{'❌ ' if icons else ''}Exit": lambda: ("EXIT", None, None, None),
     }
 
     choice_str = ctx.selector.choose(
@@ -80,7 +80,7 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     # --- Action Handling ---
     selected_action = options[choice_str]
 
-    next_menu_name, result_data = selected_action()
+    next_menu_name, result_data, api_params, user_list_params = selected_action()
 
     if next_menu_name == "EXIT":
         return ControlFlow.EXIT
@@ -105,7 +105,11 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     # On success, transition to the RESULTS menu state.
     return State(
         menu_name="RESULTS",
-        media_api=MediaApiState(search_results=result_data),
+        media_api=MediaApiState(
+            search_results=result_data,
+            original_api_params=api_params,
+            original_user_list_params=user_list_params,
+        ),
     )
 
 
@@ -117,12 +121,13 @@ def _create_media_list_action(
     def action():
         feedback = create_feedback_manager(ctx.config.general.icons)
 
+        # Create the search parameters
+        search_params = ApiSearchParams(
+            sort=sort, per_page=ctx.config.anilist.per_page, status=status
+        )
+
         def fetch_data():
-            return ctx.media_api.search_media(
-                ApiSearchParams(
-                    sort=sort, per_page=ctx.config.anilist.per_page, status=status
-                )
-            )
+            return ctx.media_api.search_media(search_params)
 
         success, result = execute_with_feedback(
             fetch_data,
@@ -132,7 +137,8 @@ def _create_media_list_action(
             success_msg="Anime list loaded successfully",
         )
 
-        return "RESULTS" if success else "CONTINUE", result
+        # Return the search parameters along with the result for pagination
+        return ("RESULTS", result, search_params, None) if success else ("CONTINUE", None, None, None)
 
     return action
 
@@ -141,13 +147,14 @@ def _create_random_media_list(ctx: Context) -> MenuAction:
     def action():
         feedback = create_feedback_manager(ctx.config.general.icons)
 
+        # Create the search parameters
+        search_params = ApiSearchParams(
+            id_in=random.sample(range(1, 160000), k=50),
+            per_page=ctx.config.anilist.per_page,
+        )
+
         def fetch_data():
-            return ctx.media_api.search_media(
-                ApiSearchParams(
-                    id_in=random.sample(range(1, 160000), k=50),
-                    per_page=ctx.config.anilist.per_page,
-                )
-            )
+            return ctx.media_api.search_media(search_params)
 
         success, result = execute_with_feedback(
             fetch_data,
@@ -157,7 +164,8 @@ def _create_random_media_list(ctx: Context) -> MenuAction:
             success_msg="Random anime loaded successfully",
         )
 
-        return "RESULTS" if success else "CONTINUE", result
+        # Return the search parameters along with the result for pagination
+        return ("RESULTS", result, search_params, None) if success else ("CONTINUE", None, None, None)
 
     return action
 
@@ -168,10 +176,13 @@ def _create_search_media_list(ctx: Context) -> MenuAction:
 
         query = ctx.selector.ask("Search for Anime")
         if not query:
-            return "CONTINUE", None
+            return "CONTINUE", None, None, None
+
+        # Create the search parameters
+        search_params = ApiSearchParams(query=query)
 
         def fetch_data():
-            return ctx.media_api.search_media(ApiSearchParams(query=query))
+            return ctx.media_api.search_media(search_params)
 
         success, result = execute_with_feedback(
             fetch_data,
@@ -181,7 +192,8 @@ def _create_search_media_list(ctx: Context) -> MenuAction:
             success_msg=f"Search results for '{query}' loaded successfully",
         )
 
-        return "RESULTS" if success else "CONTINUE", result
+        # Return the search parameters along with the result for pagination
+        return ("RESULTS", result, search_params, None) if success else ("CONTINUE", None, None, None)
 
     return action
 
@@ -196,12 +208,13 @@ def _create_user_list_action(ctx: Context, status: UserListStatusType) -> MenuAc
         if not check_authentication_required(
             ctx.media_api, feedback, f"view your {status.lower()} list"
         ):
-            return "CONTINUE", None
+            return "CONTINUE", None, None, None
+
+        # Create the user list parameters
+        user_list_params = UserListParams(status=status, per_page=ctx.config.anilist.per_page)
 
         def fetch_data():
-            return ctx.media_api.fetch_user_list(
-                UserListParams(status=status, per_page=ctx.config.anilist.per_page)
-            )
+            return ctx.media_api.fetch_user_list(user_list_params)
 
         success, result = execute_with_feedback(
             fetch_data,
@@ -211,6 +224,7 @@ def _create_user_list_action(ctx: Context, status: UserListStatusType) -> MenuAc
             success_msg=f"Your {status.lower()} list loaded successfully",
         )
 
-        return "RESULTS" if success else "CONTINUE", result
+        # Return the user list parameters along with the result for pagination
+        return ("RESULTS", result, None, user_list_params) if success else ("CONTINUE", None, None, None)
 
     return action
