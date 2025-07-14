@@ -12,6 +12,7 @@ from ..types import (
     MediaTag,
     MediaTitle,
     PageInfo,
+    StreamingEpisode,
     Studio,
     UserListStatus,
     UserProfile,
@@ -81,8 +82,10 @@ def _to_generic_media_item(data: dict) -> MediaItem:
         studios=[
             Studio(id=s["mal_id"], name=s["name"]) for s in data.get("studios", [])
         ],
+        # Jikan doesn't provide streaming episodes
+        streaming_episodes=[],
         # Jikan doesn't provide user list status in its search results.
-        user_list_status=None,
+        user_status=None,
     )
 
 

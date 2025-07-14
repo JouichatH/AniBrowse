@@ -79,11 +79,16 @@ def episodes(ctx: Context, state: State) -> State | ControlFlow:
     if not chosen_episode:
         choices = [*sorted(available_episodes, key=float), "Back"]
 
-        # TODO: Implement FZF/Rofi preview for episode thumbnails if available
-        # preview_command = get_episode_preview(...)
+        # Get episode preview command if preview is enabled
+        preview_command = None
+        if ctx.config.general.preview != "none":
+            from ...utils.previews import get_episode_preview
+            preview_command = get_episode_preview(available_episodes, anilist_anime, ctx.config)
 
         chosen_episode_str = ctx.selector.choose(
-            prompt="Select Episode", choices=choices
+            prompt="Select Episode", 
+            choices=choices,
+            preview=preview_command
         )
 
         if not chosen_episode_str or chosen_episode_str == "Back":

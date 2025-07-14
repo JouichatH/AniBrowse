@@ -71,6 +71,14 @@ class MediaTag:
 
 
 @dataclass(frozen=True)
+class StreamingEpisode:
+    """A generic representation of a streaming episode."""
+
+    title: str
+    thumbnail: Optional[str] = None
+
+
+@dataclass(frozen=True)
 class UserListStatus:
     """Generic representation of a user's list status for a media item."""
 
@@ -117,6 +125,9 @@ class MediaItem:
     favourites: Optional[int] = None
 
     next_airing: Optional[AiringSchedule] = None
+
+    # streaming episodes
+    streaming_episodes: List[StreamingEpisode] = field(default_factory=list)
 
     # user related
     user_status: Optional[UserListStatus] = None

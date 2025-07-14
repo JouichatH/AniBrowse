@@ -11,6 +11,7 @@ from ..types import (
     MediaTitle,
     MediaTrailer,
     PageInfo,
+    StreamingEpisode,
     Studio,
     UserListStatus,
     UserProfile,
@@ -29,6 +30,7 @@ from .types import (
     AnilistPageInfo,
     AnilistStudioNodes,
     AnilistViewerData,
+    StreamingEpisode as AnilistStreamingEpisode,
 )
 
 logger = logging.getLogger(__name__)
@@ -101,6 +103,18 @@ def _to_generic_tags(anilist_tags: list[AnilistMediaTag]) -> List[MediaTag]:
     ]
 
 
+def _to_generic_streaming_episodes(anilist_episodes: list[AnilistStreamingEpisode]) -> List[StreamingEpisode]:
+    """Maps a list of AniList streaming episodes to generic StreamingEpisode objects."""
+    return [
+        StreamingEpisode(
+            title=episode["title"],
+            thumbnail=episode.get("thumbnail")
+        )
+        for episode in anilist_episodes
+        if episode.get("title")
+    ]
+
+
 def _to_generic_user_status(
     anilist_media: AnilistBaseMediaDataSchema,
     anilist_list_entry: Optional[AnilistMediaList],
@@ -160,6 +174,7 @@ def _to_generic_media_item(
         popularity=data.get("popularity"),
         favourites=data.get("favourites"),
         next_airing=_to_generic_airing_schedule(data.get("nextAiringEpisode")),
+        streaming_episodes=_to_generic_streaming_episodes(data.get("streamingEpisodes", [])),
         user_status=_to_generic_user_status(data, media_list),
     )
 
