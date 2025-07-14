@@ -1,4 +1,3 @@
-import click
 from rich.console import Console
 
 from ....libs.api.types import MediaItem
@@ -65,14 +64,7 @@ def results(ctx: Context, state: State) -> State | ControlFlow:
     if choice_str == "Next Page" or choice_str == "Previous Page":
         page_delta = 1 if choice_str == "Next Page" else -1
 
-        # We need to re-run the previous state's data loader with a new page.
-        # This is a bit tricky. We'll need to store the loader function in the session.
-        # For now, let's assume a simplified re-search. A better way will be to store the
-        # search params in the State. Let's add that.
-
-        # Let's placeholder this for now, as it requires modifying the state object
-        # to carry over the original search parameters.
-        click.echo(f"Pagination logic needs to be fully implemented.")
+        # TODO: implement next page logic
         return ControlFlow.CONTINUE
 
     # If an anime was selected, transition to the MEDIA_ACTIONS state
