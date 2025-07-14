@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch, MagicMock
 
 from fastanime.cli.interactive.menus.main import main
 from fastanime.cli.interactive.state import ControlFlow, State, MediaApiState
-from fastanime.libs.api.types import MediaSearchResult
+from fastanime.libs.api.types import MediaSearchResult, PageInfo as ApiPageInfo
 
 
 class TestMainMenu:
@@ -48,7 +48,15 @@ class TestMainMenu:
         mock_context.selector.choose.return_value = trending_choice
         
         # Mock successful API call
-        mock_search_result = MediaSearchResult(media=[], page_info=Mock())
+        mock_search_result = MediaSearchResult(
+            media=[], 
+            page_info=ApiPageInfo(
+                total=0,
+                current_page=1,
+                has_next_page=False,
+                per_page=15
+            )
+        )
         mock_context.media_api.search_media.return_value = mock_search_result
         
         with patch('fastanime.cli.interactive.menus.main.execute_with_feedback') as mock_execute:
@@ -63,13 +71,21 @@ class TestMainMenu:
 
     def test_main_menu_search_selection(self, mock_context, empty_state):
         """Test selecting search from main menu."""
-        search_choice = next(choice for choice in self._get_menu_choices(mock_context) 
+        search_choice = next(choice for choice in self._get_menu_choices(mock_context)
                            if "Search" in choice)
         mock_context.selector.choose.return_value = search_choice
         mock_context.selector.ask.return_value = "test query"
         
         # Mock successful API call
-        mock_search_result = MediaSearchResult(media=[], page_info=Mock())
+        mock_search_result = MediaSearchResult(
+            media=[], 
+            page_info=ApiPageInfo(
+                total=0,
+                current_page=1,
+                has_next_page=False,
+                per_page=15
+            )
+        )
         
         with patch('fastanime.cli.interactive.menus.main.execute_with_feedback') as mock_execute:
             mock_execute.return_value = (True, mock_search_result)
@@ -102,7 +118,15 @@ class TestMainMenu:
         # Ensure user is authenticated
         mock_context.media_api.is_authenticated.return_value = True
         
-        mock_search_result = MediaSearchResult(media=[], page_info=Mock())
+        mock_search_result = MediaSearchResult(
+            media=[], 
+            page_info=ApiPageInfo(
+                total=0,
+                current_page=1,
+                has_next_page=False,
+                per_page=15
+            )
+        )
         
         with patch('fastanime.cli.interactive.menus.main.execute_with_feedback') as mock_execute:
             mock_execute.return_value = (True, mock_search_result)
@@ -199,11 +223,19 @@ class TestMainMenu:
 
     def test_main_menu_random_selection(self, mock_context, empty_state):
         """Test selecting random anime from main menu."""
-        random_choice = next(choice for choice in self._get_menu_choices(mock_context) 
+        random_choice = next(choice for choice in self._get_menu_choices(mock_context)
                            if "Random" in choice)
         mock_context.selector.choose.return_value = random_choice
         
-        mock_search_result = MediaSearchResult(media=[], page_info=Mock())
+        mock_search_result = MediaSearchResult(
+            media=[], 
+            page_info=ApiPageInfo(
+                total=0,
+                current_page=1,
+                has_next_page=False,
+                per_page=15
+            )
+        )
         
         with patch('fastanime.cli.interactive.menus.main.execute_with_feedback') as mock_execute:
             mock_execute.return_value = (True, mock_search_result)
@@ -255,7 +287,15 @@ class TestMainMenuHelperFunctions:
         
         action = _create_media_list_action(mock_context, "TRENDING_DESC")
         
-        mock_search_result = MediaSearchResult(media=[], page_info=Mock())
+        mock_search_result = MediaSearchResult(
+            media=[], 
+            page_info=ApiPageInfo(
+                total=0,
+                current_page=1,
+                has_next_page=False,
+                per_page=15
+            )
+        )
         
         with patch('fastanime.cli.interactive.menus.main.execute_with_feedback') as mock_execute:
             mock_execute.return_value = (True, mock_search_result)
@@ -289,7 +329,15 @@ class TestMainMenuHelperFunctions:
         
         action = _create_user_list_action(mock_context, "CURRENT")
         
-        mock_search_result = MediaSearchResult(media=[], page_info=Mock())
+        mock_search_result = MediaSearchResult(
+            media=[], 
+            page_info=ApiPageInfo(
+                total=0,
+                current_page=1,
+                has_next_page=False,
+                per_page=15
+            )
+        )
         
         with patch('fastanime.cli.interactive.menus.main.check_authentication_required') as mock_auth:
             mock_auth.return_value = True
@@ -327,7 +375,15 @@ class TestMainMenuHelperFunctions:
         action = _create_search_media_list(mock_context)
         
         mock_context.selector.ask.return_value = "test query"
-        mock_search_result = MediaSearchResult(media=[], page_info=Mock())
+        mock_search_result = MediaSearchResult(
+            media=[], 
+            page_info=ApiPageInfo(
+                total=0,
+                current_page=1,
+                has_next_page=False,
+                per_page=15
+            )
+        )
         
         with patch('fastanime.cli.interactive.menus.main.execute_with_feedback') as mock_execute:
             mock_execute.return_value = (True, mock_search_result)
@@ -360,7 +416,15 @@ class TestMainMenuHelperFunctions:
         
         action = _create_random_media_list(mock_context)
         
-        mock_search_result = MediaSearchResult(media=[], page_info=Mock())
+        mock_search_result = MediaSearchResult(
+            media=[], 
+            page_info=ApiPageInfo(
+                total=0,
+                current_page=1,
+                has_next_page=False,
+                per_page=15
+            )
+        )
         
         with patch('fastanime.cli.interactive.menus.main.execute_with_feedback') as mock_execute:
             mock_execute.return_value = (True, mock_search_result)

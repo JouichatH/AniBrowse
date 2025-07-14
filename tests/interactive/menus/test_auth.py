@@ -182,72 +182,102 @@ class TestAuthMenuHelperFunctions:
     def test_display_auth_status_authenticated(self, mock_context):
         """Test displaying auth status when authenticated."""
         from fastanime.cli.interactive.menus.auth import _display_auth_status
-        
+
         console = Mock()
         user_profile = UserProfile(
             id=12345,
             name="TestUser",
-            avatar="https://example.com/avatar.jpg"
+            avatar_url="https://example.com/avatar.jpg"
         )
-        
+
         _display_auth_status(console, user_profile, True)
-        
+
         # Should print panel with user info
         console.print.assert_called()
-        # Check that panel was created with user information
-        panel_call = console.print.call_args_list[0][0][0]
-        assert "TestUser" in str(panel_call)
+        # Check that panel was created and the user's name appears in the content
+        call_args = console.print.call_args_list[0][0][0]  # Get the Panel object
+        assert "TestUser" in call_args.renderable
+        assert "12345" in call_args.renderable
 
     def test_display_auth_status_not_authenticated(self, mock_context):
         """Test displaying auth status when not authenticated."""
         from fastanime.cli.interactive.menus.auth import _display_auth_status
-        
+
         console = Mock()
-        
+
         _display_auth_status(console, None, True)
-        
+
         # Should print panel with login info
         console.print.assert_called()
         # Check that panel was created with login information
-        panel_call = console.print.call_args_list[0][0][0]
-        assert "Log in to access" in str(panel_call)
+        call_args = console.print.call_args_list[0][0][0]  # Get the Panel object
+        assert "Log in to access" in call_args.renderable
 
-    def test_handle_login_flow_selection(self, mock_context):
-        """Test handling login with flow selection."""
+    def test_handle_login_success(self, mock_context):
+        """Test successful login process."""
         from fastanime.cli.interactive.menus.auth import _handle_login
-        
+
         auth_manager = Mock()
         feedback = Mock()
+
+        # Mock successful confirmation for browser opening
+        feedback.confirm.return_value = True
         
-        # Mock selector to choose OAuth flow
-        mock_context.selector.choose.return_value = "🔗 OAuth Browser Flow"
+        # Mock token input
+        mock_context.selector.ask.return_value = "valid_token"
         
-        with patch('fastanime.cli.interactive.menus.auth._handle_oauth_flow') as mock_oauth:
-            mock_oauth.return_value = ControlFlow.CONTINUE
+        # Mock successful authentication
+        mock_profile = UserProfile(id=123, name="TestUser")
+        mock_context.media_api.authenticate.return_value = mock_profile
+
+        with patch('fastanime.cli.interactive.menus.auth.execute_with_feedback') as mock_execute:
+            mock_execute.return_value = (True, mock_profile)
             
             result = _handle_login(mock_context, auth_manager, feedback, True)
-            
-            # Should call OAuth flow handler
-            mock_oauth.assert_called_once()
+
+            # Should return CONTINUE on success 
             assert result == ControlFlow.CONTINUE
 
-    def test_handle_login_token_selection(self, mock_context):
-        """Test handling login with token input."""
+    def test_handle_login_empty_token(self, mock_context):
+        """Test login with empty token."""
         from fastanime.cli.interactive.menus.auth import _handle_login
-        
+
         auth_manager = Mock()
         feedback = Mock()
+
+        # Mock confirmation for browser opening
+        feedback.confirm.return_value = True
         
-        # Mock selector to choose token input
-        mock_context.selector.choose.return_value = "🔑 Enter Access Token"
+        # Mock empty token input
+        mock_context.selector.ask.return_value = ""
+
+        result = _handle_login(mock_context, auth_manager, feedback, True)
+
+        # Should return CONTINUE when no token provided
+        assert result == ControlFlow.CONTINUE
+
+    def test_handle_login_failed_auth(self, mock_context):
+        """Test login with failed authentication."""
+        from fastanime.cli.interactive.menus.auth import _handle_login
+
+        auth_manager = Mock()
+        feedback = Mock()
+
+        # Mock successful confirmation for browser opening
+        feedback.confirm.return_value = True
         
-        with patch('fastanime.cli.interactive.menus.auth._handle_token_input') as mock_token:
-            mock_token.return_value = ControlFlow.CONTINUE
+        # Mock token input
+        mock_context.selector.ask.return_value = "invalid_token"
+        
+        # Mock failed authentication
+        mock_context.media_api.authenticate.return_value = None
+
+        with patch('fastanime.cli.interactive.menus.auth.execute_with_feedback') as mock_execute:
+            mock_execute.return_value = (False, None)
             
             result = _handle_login(mock_context, auth_manager, feedback, True)
-            
-            # Should call token input handler
-            mock_token.assert_called_once()
+
+            # Should return CONTINUE on failed auth
             assert result == ControlFlow.CONTINUE
 
     def test_handle_login_back_selection(self, mock_context):
@@ -306,104 +336,15 @@ class TestAuthMenuHelperFunctions:
         feedback = Mock()
         
         # Mock failed logout
-        auth_manager.logout.return_value = False
         feedback.confirm.return_value = True
         
-        result = _handle_logout(mock_context, auth_manager, feedback, True)
-        
-        # Should try logout but continue on failure
-        auth_manager.logout.assert_called_once()
-        feedback.error.assert_called_once()
-        assert result == ControlFlow.CONTINUE
-
-    def test_handle_oauth_flow_success(self, mock_context):
-        """Test successful OAuth flow."""
-        from fastanime.cli.interactive.menus.auth import _handle_oauth_flow
-        
-        auth_manager = Mock()
-        feedback = Mock()
-        
-        # Mock successful OAuth
-        auth_manager.start_oauth_flow.return_value = ("auth_url", "device_code")
-        auth_manager.poll_for_token.return_value = True
-        
-        with patch('fastanime.cli.interactive.menus.auth.webbrowser.open') as mock_browser:
-            result = _handle_oauth_flow(mock_context, auth_manager, feedback, True)
+        with patch('fastanime.cli.interactive.menus.auth.execute_with_feedback') as mock_execute:
+            mock_execute.return_value = (False, None)
             
-            # Should open browser and reload config
-            mock_browser.assert_called_once()
-            auth_manager.start_oauth_flow.assert_called_once()
-            auth_manager.poll_for_token.assert_called_once()
+            result = _handle_logout(mock_context, auth_manager, feedback, True)
+            
+            # Should return RELOAD_CONFIG even on failure because execute_with_feedback handles the error
             assert result == ControlFlow.RELOAD_CONFIG
-
-    def test_handle_oauth_flow_failure(self, mock_context):
-        """Test failed OAuth flow."""
-        from fastanime.cli.interactive.menus.auth import _handle_oauth_flow
-        
-        auth_manager = Mock()
-        feedback = Mock()
-        
-        # Mock failed OAuth
-        auth_manager.start_oauth_flow.return_value = ("auth_url", "device_code")
-        auth_manager.poll_for_token.return_value = False
-        
-        with patch('fastanime.cli.interactive.menus.auth.webbrowser.open'):
-            result = _handle_oauth_flow(mock_context, auth_manager, feedback, True)
-            
-            # Should continue on failure
-            feedback.error.assert_called_once()
-            assert result == ControlFlow.CONTINUE
-
-    def test_handle_token_input_success(self, mock_context):
-        """Test successful token input."""
-        from fastanime.cli.interactive.menus.auth import _handle_token_input
-        
-        auth_manager = Mock()
-        feedback = Mock()
-        
-        # Mock token input
-        mock_context.selector.ask.return_value = "valid_token"
-        auth_manager.save_token.return_value = True
-        
-        result = _handle_token_input(mock_context, auth_manager, feedback, True)
-        
-        # Should save token and reload config
-        auth_manager.save_token.assert_called_once_with("valid_token")
-        assert result == ControlFlow.RELOAD_CONFIG
-
-    def test_handle_token_input_empty(self, mock_context):
-        """Test empty token input."""
-        from fastanime.cli.interactive.menus.auth import _handle_token_input
-        
-        auth_manager = Mock()
-        feedback = Mock()
-        
-        # Mock empty token input
-        mock_context.selector.ask.return_value = ""
-        
-        result = _handle_token_input(mock_context, auth_manager, feedback, True)
-        
-        # Should continue without saving
-        auth_manager.save_token.assert_not_called()
-        assert result == ControlFlow.CONTINUE
-
-    def test_handle_token_input_failure(self, mock_context):
-        """Test failed token input."""
-        from fastanime.cli.interactive.menus.auth import _handle_token_input
-        
-        auth_manager = Mock()
-        feedback = Mock()
-        
-        # Mock token input with save failure
-        mock_context.selector.ask.return_value = "invalid_token"
-        auth_manager.save_token.return_value = False
-        
-        result = _handle_token_input(mock_context, auth_manager, feedback, True)
-        
-        # Should continue on save failure
-        auth_manager.save_token.assert_called_once_with("invalid_token")
-        feedback.error.assert_called_once()
-        assert result == ControlFlow.CONTINUE
 
     def test_display_user_profile_details(self, mock_context):
         """Test displaying user profile details."""
@@ -413,7 +354,7 @@ class TestAuthMenuHelperFunctions:
         user_profile = UserProfile(
             id=12345,
             name="TestUser",
-            avatar="https://example.com/avatar.jpg"
+            avatar_url="https://example.com/avatar.jpg"
         )
         
         _display_user_profile_details(console, user_profile, True)

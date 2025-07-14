@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 
 from fastanime.cli.interactive.menus.results import results
 from fastanime.cli.interactive.state import ControlFlow, State, MediaApiState
-from fastanime.libs.api.types import MediaItem, MediaSearchResult, PageInfo
+from fastanime.libs.api.types import MediaItem, MediaSearchResult, PageInfo, MediaTitle, MediaImage, Studio
 
 
 class TestResultsMenu:
@@ -164,7 +164,7 @@ class TestResultsMenu:
         mock_context.config.general.preview = "text"
         mock_context.selector.choose.return_value = "Back"
         
-        with patch('fastanime.cli.interactive.menus.results.get_anime_preview') as mock_preview:
+        with patch('fastanime.cli.utils.previews.get_anime_preview') as mock_preview:
             mock_preview.return_value = "preview_command"
             
             result = results(mock_context, state_with_media_api)
@@ -294,19 +294,32 @@ class TestResultsMenuHelperFunctions:
         assert "Test Anime" in result
         assert "?" in result  # Unknown episode count
 
-    def test_handle_pagination_next_page(self, mock_context, state_with_media_api):
+    def test_handle_pagination_next_page(self, mock_context, sample_media_item):
         """Test pagination handler for next page."""
         from fastanime.cli.interactive.menus.results import _handle_pagination
+        from fastanime.libs.api.params import ApiSearchParams
+        
+        # Create a state with has_next_page=True and original API params
+        state_with_next_page = State(
+            menu_name="RESULTS",
+            media_api=MediaApiState(
+                search_results=MediaSearchResult(
+                    media=[sample_media_item], 
+                    page_info=PageInfo(total=25, per_page=15, current_page=1, has_next_page=True)
+                ),
+                original_api_params=ApiSearchParams(sort="TRENDING_DESC")
+            )
+        )
         
         # Mock API search parameters from state
         mock_context.media_api.search_media.return_value = MediaSearchResult(
-            media=[], page_info=PageInfo(total=0, per_page=15, current_page=2, has_next_page=False)
+            media=[], page_info=PageInfo(total=25, per_page=15, current_page=2, has_next_page=False)
         )
         
         with patch('fastanime.cli.interactive.menus.results.execute_with_feedback') as mock_execute:
             mock_execute.return_value = (True, mock_context.media_api.search_media.return_value)
             
-            result = _handle_pagination(mock_context, state_with_media_api, 1)
+            result = _handle_pagination(mock_context, state_with_next_page, 1)
             
             # Should return new state with updated results
             assert isinstance(result, State)
@@ -329,13 +342,13 @@ class TestResultsMenuHelperFunctions:
         from fastanime.cli.interactive.menus.results import _handle_pagination
         from fastanime.libs.api.params import UserListParams
         
-        # State with user list params
+        # State with user list params and has_next_page=True
         state_with_user_list = State(
             menu_name="RESULTS",
             media_api=MediaApiState(
                 search_results=MediaSearchResult(
                     media=[], 
-                    page_info=PageInfo(total=0, per_page=15, current_page=1, has_next_page=False)
+                    page_info=PageInfo(total=0, per_page=15, current_page=1, has_next_page=True)
                 ),
                 original_user_list_params=UserListParams(status="CURRENT", per_page=15)
             )
