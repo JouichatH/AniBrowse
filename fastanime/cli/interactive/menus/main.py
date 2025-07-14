@@ -1,23 +1,14 @@
-# fastanime/cli/interactive/menus/main.py
-
-from __future__ import annotations
-
 import random
-from typing import TYPE_CHECKING, Callable, Dict, Tuple
+from typing import Callable, Dict, Tuple
 
-import click
+from rich.console import Console
 from rich.progress import Progress
 
 from ....libs.api.params import ApiSearchParams, UserListParams
+from ....libs.api.types import MediaSearchResult, MediaStatus, UserListStatusType
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State
 
-if TYPE_CHECKING:
-    from ....libs.api.types import MediaSearchResult
-
-
-# A type alias for the actions this menu can perform.
-# It returns a tuple: (NextMenuNameOrControlFlow, Optional[DataPayload])
 MenuAction = Callable[[], Tuple[str, MediaSearchResult | None]]
 
 
@@ -28,66 +19,32 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     Displays top-level categories for the user to browse and select.
     """
     icons = ctx.config.general.icons
-    api_client = ctx.media_api
-    per_page = ctx.config.anilist.per_page
+    console = Console()
+    console.clear()
 
-    # The lambdas now correctly use the versatile search_media for most actions.
     options: Dict[str, MenuAction] = {
         # --- Search-based Actions ---
-        f"{'🔥 ' if icons else ''}Trending": lambda: (
-            "RESULTS",
-            api_client.search_media(
-                ApiSearchParams(sort="TRENDING_DESC", per_page=per_page)
-            ),
+        f"{'🔥 ' if icons else ''}Trending": _create_media_list_action(
+            ctx, "TRENDING_DESC"
         ),
-        f"{'✨ ' if icons else ''}Popular": lambda: (
-            "RESULTS",
-            api_client.search_media(
-                ApiSearchParams(sort="POPULARITY_DESC", per_page=per_page)
-            ),
+        f"{'✨ ' if icons else ''}Popular": _create_media_list_action(
+            ctx, "POPULARITY_DESC"
         ),
-        f"{'💖 ' if icons else ''}Favourites": lambda: (
-            "RESULTS",
-            api_client.search_media(
-                ApiSearchParams(sort="FAVOURITES_DESC", per_page=per_page)
-            ),
+        f"{'💖 ' if icons else ''}Favourites": _create_media_list_action(
+            ctx, "FAVOURITES_DESC"
         ),
-        f"{'💯 ' if icons else ''}Top Scored": lambda: (
-            "RESULTS",
-            api_client.search_media(
-                ApiSearchParams(sort="SCORE_DESC", per_page=per_page)
-            ),
+        f"{'💯 ' if icons else ''}Top Scored": _create_media_list_action(
+            ctx, "SCORE_DESC"
         ),
-        f"{'🎬 ' if icons else ''}Upcoming": lambda: (
-            "RESULTS",
-            api_client.search_media(
-                ApiSearchParams(
-                    status="NOT_YET_RELEASED", sort="POPULARITY_DESC", per_page=per_page
-                )
-            ),
+        f"{'🎬 ' if icons else ''}Upcoming": _create_media_list_action(
+            ctx, "POPULARITY_DESC", "NOT_YET_RELEASED"
         ),
-        f"{'🔔 ' if icons else ''}Recently Updated": lambda: (
-            "RESULTS",
-            api_client.search_media(
-                ApiSearchParams(
-                    status="RELEASING", sort="UPDATED_AT_DESC", per_page=per_page
-                )
-            ),
+        f"{'🔔 ' if icons else ''}Recently Updated": _create_media_list_action(
+            ctx, "UPDATED_AT_DESC"
         ),
-        f"{'🎲 ' if icons else ''}Random": lambda: (
-            "RESULTS",
-            api_client.search_media(
-                ApiSearchParams(
-                    id_in=random.sample(range(1, 160000), k=50), per_page=per_page
-                )
-            ),
-        ),
-        f"{'🔎 ' if icons else ''}Search": lambda: (
-            "RESULTS",
-            api_client.search_media(
-                ApiSearchParams(query=ctx.selector.ask("Search for Anime"))
-            ),
-        ),
+        # --- special case media list --
+        f"{'🎲 ' if icons else ''}Random": _create_random_media_list(ctx),
+        f"{'🔎 ' if icons else ''}Search": _create_search_media_list(ctx),
         # --- Authenticated User List Actions ---
         f"{'📺 ' if icons else ''}Watching": _create_user_list_action(ctx, "CURRENT"),
         f"{'📑 ' if icons else ''}Planned": _create_user_list_action(ctx, "PLANNING"),
@@ -116,10 +73,7 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     # --- Action Handling ---
     selected_action = options[choice_str]
 
-    with Progress(transient=True) as progress:
-        task = progress.add_task(f"[cyan]Fetching {choice_str.strip()}...", total=None)
-        next_menu_name, result_data = selected_action()
-        progress.update(task, completed=True)
+    next_menu_name, result_data = selected_action()
 
     if next_menu_name == "EXIT":
         return ControlFlow.EXIT
@@ -129,7 +83,7 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
         return ControlFlow.CONTINUE
 
     if not result_data:
-        click.echo(
+        console.print(
             f"[bold red]Error:[/bold red] Failed to fetch data for '{choice_str.strip()}'."
         )
         return ControlFlow.CONTINUE
@@ -141,17 +95,62 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     )
 
 
-def _create_user_list_action(ctx: Context, status: str) -> MenuAction:
+def _create_media_list_action(
+    ctx: Context, sort, status: MediaStatus | None = None
+) -> MenuAction:
+    """A factory to create menu actions for fetching media lists"""
+
+    def action():
+        with Progress(transient=True) as progress:
+            progress.add_task(f"[cyan]Fetching anime...", total=None)
+            return "RESULTS", ctx.media_api.search_media(
+                ApiSearchParams(
+                    sort=sort, per_page=ctx.config.anilist.per_page, status=status
+                )
+            )
+
+    return action
+
+
+def _create_random_media_list(ctx: Context) -> MenuAction:
+    def action():
+        with Progress(transient=True) as progress:
+            progress.add_task(f"[cyan]Fetching random anime...", total=None)
+            return "RESULTS", ctx.media_api.search_media(
+                ApiSearchParams(
+                    id_in=random.sample(range(1, 160000), k=50),
+                    per_page=ctx.config.anilist.per_page,
+                )
+            )
+
+    return action
+
+
+def _create_search_media_list(ctx: Context) -> MenuAction:
+    def action():
+        query = ctx.selector.ask("Search for Anime")
+        if not query:
+            return "CONTINUE", None
+        with Progress(transient=True) as progress:
+            progress.add_task(f"[cyan]Searching for {query}...", total=None)
+            return "RESULTS", ctx.media_api.search_media(ApiSearchParams(query=query))
+
+    return action
+
+
+def _create_user_list_action(ctx: Context, status: UserListStatusType) -> MenuAction:
     """A factory to create menu actions for fetching user lists, handling authentication."""
 
-    def action() -> Tuple[str, MediaSearchResult | None]:
-        if not ctx.media_api.user_profile:
-            click.echo(
-                f"[bold yellow]Please log in to view your '{status.title()}' list.[/]"
+    def action():
+        # if not ctx.media_api.user_profile:
+        #     click.echo(
+        #         f"[bold yellow]Please log in to view your '{status.title()}' list.[/]"
+        #     )
+        #     return "CONTINUE", None
+        with Progress(transient=True) as progress:
+            progress.add_task(f"[cyan]Fetching random anime...", total=None)
+            return "RESULTS", ctx.media_api.fetch_user_list(
+                UserListParams(status=status, per_page=ctx.config.anilist.per_page)
             )
-            return "CONTINUE", None
-        return "RESULTS", ctx.media_api.fetch_user_list(
-            UserListParams(status=status, per_page=ctx.config.anilist.per_page)
-        )
 
     return action

@@ -8,20 +8,20 @@ from typing import TYPE_CHECKING, Callable, List
 import click
 
 from ...core.config import AppConfig
-from ...core.constants import USER_CONFIG_PATH
+from ...core.constants import APP_DIR, USER_CONFIG_PATH
+from ...libs.api.base import BaseApiClient
+from ...libs.players.base import BasePlayer
+from ...libs.providers.anime.base import BaseAnimeProvider
+from ...libs.selectors.base import BaseSelector
 from ..config import ConfigLoader
 from .state import ControlFlow, State
-
-if TYPE_CHECKING:
-    from ...libs.api.base import BaseApiClient
-    from ...libs.players.base import BasePlayer
-    from ...libs.providers.anime.base import BaseAnimeProvider
-    from ...libs.selectors.base import BaseSelector
 
 logger = logging.getLogger(__name__)
 
 # A type alias for the signature all menu functions must follow.
 MenuFunction = Callable[["Context", State], "State | ControlFlow"]
+
+MENUS_DIR = APP_DIR / "cli" / "interactive" / "menus"
 
 
 @dataclass(frozen=True)
@@ -113,10 +113,7 @@ class Session:
             # Execute the menu function, which returns the next step.
             next_step = menu_to_run.execute(self._context, current_state)
 
-            if isinstance(next_step, State):
-                # A new state was returned, push it to history for the next loop.
-                self._history.append(next_step)
-            elif isinstance(next_step, ControlFlow):
+            if isinstance(next_step, ControlFlow):
                 # A control command was issued.
                 if next_step == ControlFlow.EXIT:
                     break  # Exit the loop
@@ -126,6 +123,12 @@ class Session:
                 elif next_step == ControlFlow.RELOAD_CONFIG:
                     self._edit_config()
                 # For CONTINUE, we do nothing, allowing the loop to re-run the current state.
+            elif isinstance(next_step, State):
+                # if the state is main menu we should reset the history
+                if next_step.menu_name == "MAIN":
+                    self._history = [next_step]
+                # A new state was returned, push it to history for the next loop.
+                self._history.append(next_step)
             else:
                 logger.error(
                     f"Menu '{current_state.menu_name}' returned invalid type: {type(next_step)}"
@@ -169,7 +172,7 @@ class Session:
 
         return decorator
 
-    def load_menus_from_folder(self, package_path: Path):
+    def load_menus_from_folder(self, package_path: Path = MENUS_DIR):
         """
         Dynamically imports all Python modules from a folder to register their menus.
 

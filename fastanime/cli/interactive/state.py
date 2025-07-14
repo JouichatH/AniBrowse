@@ -1,12 +1,16 @@
 from enum import Enum, auto
-from typing import Iterator, Optional
+from typing import Iterator, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
-# Import the actual data models from your libs.
-# These will be the data types held within our state models.
-from ....libs.api.types import MediaItem, MediaSearchResult
-from ....libs.providers.anime.types import Anime, SearchResults, Server
+from ...libs.api.types import (
+    MediaItem,
+    MediaSearchResult,
+    MediaStatus,
+    UserListStatusType,
+)
+from ...libs.players.types import PlayerResult
+from ...libs.providers.anime.types import Anime, SearchResults, Server
 
 
 class ControlFlow(Enum):
@@ -47,6 +51,10 @@ class ProviderState(BaseModel):
     search_results: Optional[SearchResults] = None
     anime: Optional[Anime] = None
     episode_streams: Optional[Iterator[Server]] = None
+    episode_number: Optional[str] = None
+    last_player_result: Optional[PlayerResult] = None
+    servers: Optional[List[Server]] = None
+    selected_server: Optional[Server] = None
 
     model_config = ConfigDict(
         frozen=True,
@@ -62,6 +70,11 @@ class MediaApiState(BaseModel):
     """
 
     search_results: Optional[MediaSearchResult] = None
+    search_results_type: Optional[Literal["MEDIA_LIST", "USER_MEDIA_LIST"]] = None
+    sort: Optional[str] = None
+    query: Optional[str] = None
+    user_media_status: Optional[UserListStatusType] = None
+    media_status: Optional[MediaStatus] = None
     anime: Optional[MediaItem] = None
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)

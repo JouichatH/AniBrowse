@@ -43,7 +43,7 @@ class AniListApi(BaseApiClient):
 
     def search_media(self, params: ApiSearchParams) -> Optional[MediaSearchResult]:
         variables = {k: v for k, v in params.__dict__.items() if v is not None}
-        variables["perPage"] = params.per_page
+        variables["perPage"] = self.config.per_page or params.per_page
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.SEARCH_MEDIA, variables
         )
@@ -57,7 +57,7 @@ class AniListApi(BaseApiClient):
             "userId": self.user_profile.id,
             "status": params.status,
             "page": params.page,
-            "perPage": params.per_page,
+            "perPage": self.config.per_page or params.per_page,
         }
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_USER_MEDIA_LIST, variables

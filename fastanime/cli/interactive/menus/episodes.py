@@ -1,12 +1,10 @@
 from typing import TYPE_CHECKING
 
 import click
+from rich.console import Console
 
 from ..session import Context, session
 from ..state import ControlFlow, ProviderState, State
-
-if TYPE_CHECKING:
-    pass
 
 
 @session.menu
@@ -18,9 +16,11 @@ def episodes(ctx: Context, state: State) -> State | ControlFlow:
     provider_anime = state.provider.anime
     anilist_anime = state.media_api.anime
     config = ctx.config
+    console = Console()
+    console.clear()
 
     if not provider_anime or not anilist_anime:
-        click.echo("[bold red]Error: Anime details are missing.[/bold red]")
+        console.print("[bold red]Error: Anime details are missing.[/bold red]")
         return ControlFlow.BACK
 
     # Get the list of episode strings based on the configured translation type
@@ -28,15 +28,14 @@ def episodes(ctx: Context, state: State) -> State | ControlFlow:
         provider_anime.episodes, config.stream.translation_type, []
     )
     if not available_episodes:
-        click.echo(
+        console.print(
             f"[bold yellow]No '{config.stream.translation_type}' episodes found for this anime.[/bold yellow]"
         )
         return ControlFlow.BACK
 
     chosen_episode: str | None = None
 
-    # --- "Continue from History" Logic ---
-    if config.stream.continue_from_watch_history:
+    if config.stream.continue_from_watch_history and False:
         progress = (
             anilist_anime.user_status.progress
             if anilist_anime.user_status and anilist_anime.user_status.progress
@@ -64,7 +63,6 @@ def episodes(ctx: Context, state: State) -> State | ControlFlow:
                     f"[yellow]Could not find episode based on your watch history. Please select manually.[/yellow]"
                 )
 
-    # --- Manual Selection Logic ---
     if not chosen_episode:
         choices = [*sorted(available_episodes, key=float), "Back"]
 
@@ -72,7 +70,7 @@ def episodes(ctx: Context, state: State) -> State | ControlFlow:
         # preview_command = get_episode_preview(...)
 
         chosen_episode_str = ctx.selector.choose(
-            prompt="Select Episode", choices=choices, header=provider_anime.title
+            prompt="Select Episode", choices=choices
         )
 
         if not chosen_episode_str or chosen_episode_str == "Back":
@@ -80,8 +78,6 @@ def episodes(ctx: Context, state: State) -> State | ControlFlow:
 
         chosen_episode = chosen_episode_str
 
-    # --- Transition to Servers Menu ---
-    # Create a new state, updating the provider state with the chosen episode.
     return State(
         menu_name="SERVERS",
         media_api=state.media_api,

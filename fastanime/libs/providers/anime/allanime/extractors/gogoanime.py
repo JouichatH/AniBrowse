@@ -1,6 +1,6 @@
 from ...types import EpisodeStream, Server
 from ..constants import API_BASE_URL
-from ..types import AllAnimeEpisode, AllAnimeSource
+from ..types import AllAnimeEpisode, AllAnimeEpisodeStreams, AllAnimeSource
 from .base import BaseExtractor
 
 
@@ -19,12 +19,15 @@ class Lufmp4Extractor(BaseExtractor):
             timeout=10,
         )
         response.raise_for_status()
-        streams = response.json()
+        streams: AllAnimeEpisodeStreams = response.json()
 
         return Server(
             name="gogoanime",
             links=[
-                EpisodeStream(link=link, quality="1080") for link in streams["links"]
+                EpisodeStream(
+                    link=stream["link"], quality="1080", format=stream["resolutionStr"]
+                )
+                for stream in streams["links"]
             ],
             episode_title=episode["notes"],
             headers={"Referer": f"https://{API_BASE_URL}/"},

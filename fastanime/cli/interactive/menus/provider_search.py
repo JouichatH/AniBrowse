@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 import click
+from rich.console import Console
 from rich.progress import Progress
 from thefuzz import fuzz
 
@@ -27,10 +28,12 @@ def provider_search(ctx: Context, state: State) -> State | ControlFlow:
     provider = ctx.provider
     selector = ctx.selector
     config = ctx.config
+    console = Console()
+    console.clear()
 
     anilist_title = anilist_anime.title.english or anilist_anime.title.romaji
     if not anilist_title:
-        click.echo(
+        console.print(
             "[bold red]Error: Selected anime has no searchable title.[/bold red]"
         )
         return ControlFlow.BACK
@@ -48,10 +51,10 @@ def provider_search(ctx: Context, state: State) -> State | ControlFlow:
         )
 
     if not provider_search_results or not provider_search_results.results:
-        click.echo(
+        console.print(
             f"[bold yellow]Could not find '{anilist_title}' on {provider.__class__.__name__}.[/bold yellow]"
         )
-        click.echo("Try another provider from the config or go back.")
+        console.print("Try another provider from the config or go back.")
         return ControlFlow.BACK
 
     # --- Map results for selection ---
@@ -68,25 +71,20 @@ def provider_search(ctx: Context, state: State) -> State | ControlFlow:
             provider_results_map.keys(),
             key=lambda p_title: fuzz.ratio(p_title.lower(), anilist_title.lower()),
         )
-        click.echo(f"[cyan]Auto-selecting best match:[/] {best_match_title}")
+        console.print(f"[cyan]Auto-selecting best match:[/] {best_match_title}")
         selected_provider_anime = provider_results_map[best_match_title]
     else:
         choices = list(provider_results_map.keys())
         choices.append("Back")
 
         chosen_title = selector.choose(
-            prompt=f"Confirm match for '{anilist_title}'",
-            choices=choices,
-            header="Provider Search Results",
+            prompt=f"Confirm match for '{anilist_title}'", choices=choices
         )
 
         if not chosen_title or chosen_title == "Back":
             return ControlFlow.BACK
 
         selected_provider_anime = provider_results_map[chosen_title]
-
-    if not selected_provider_anime:
-        return ControlFlow.BACK
 
     # --- Fetch Full Anime Details from Provider ---
     with Progress(transient=True) as progress:
@@ -99,14 +97,11 @@ def provider_search(ctx: Context, state: State) -> State | ControlFlow:
         full_provider_anime = provider.get(AnimeParams(id=selected_provider_anime.id))
 
     if not full_provider_anime:
-        click.echo(
+        console.print(
             f"[bold red]Failed to fetch details for '{selected_provider_anime.title}'.[/bold red]"
         )
         return ControlFlow.BACK
 
-    # --- Transition to Episodes Menu ---
-    # Create the next state, populating the 'provider' field for the first time
-    # while carrying over the 'media_api' state.
     return State(
         menu_name="EPISODES",
         media_api=state.media_api,

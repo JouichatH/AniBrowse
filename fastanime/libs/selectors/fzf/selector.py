@@ -3,6 +3,8 @@ import os
 import shutil
 import subprocess
 
+from rich.prompt import Prompt
+
 from ....core.config import FzfConfig
 from ....core.exceptions import FastAnimeError
 from ..base import BaseSelector
@@ -58,7 +60,9 @@ class FzfSelector(BaseSelector):
         return result == "Yes"
 
     def ask(self, prompt, *, default=None):
-        # Use FZF's --print-query to capture user input
+        # cleaner to use rich
+        return Prompt.ask(prompt, default=default)
+        # -- not going to be used --
         commands = [
             self.executable,
             "--prompt",

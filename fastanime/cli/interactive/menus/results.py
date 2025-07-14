@@ -1,18 +1,9 @@
-from typing import TYPE_CHECKING, List
-
 import click
-from rich.progress import Progress
-from yt_dlp.utils import sanitize_filename
+from rich.console import Console
 
-from ...utils.anilist import (
-    anilist_data_helper,  # Assuming this is the new location
-)
-from ...utils.previews import get_anime_preview
+from ....libs.api.types import MediaItem
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State
-
-if TYPE_CHECKING:
-    from ....libs.api.types import MediaItem
 
 
 @session.menu
@@ -22,8 +13,12 @@ def results(ctx: Context, state: State) -> State | ControlFlow:
     Allows the user to select an anime to view its actions or navigate pages.
     """
     search_results = state.media_api.search_results
+    console = Console()
+    console.clear()
     if not search_results or not search_results.media:
-        click.echo("[bold yellow]No anime found for the given criteria.[/bold yellow]")
+        console.print(
+            "[bold yellow]No anime found for the given criteria.[/bold yellow]"
+        )
         return ControlFlow.BACK
 
     # --- Prepare choices and previews ---
@@ -38,6 +33,8 @@ def results(ctx: Context, state: State) -> State | ControlFlow:
     preview_command = None
     if ctx.config.general.preview != "none":
         # This function will start background jobs to cache preview data
+        from ...utils.previews import get_anime_preview
+
         preview_command = get_anime_preview(anime_items, formatted_titles, ctx.config)
 
     # --- Build Navigation and Final Choice List ---
@@ -55,7 +52,6 @@ def results(ctx: Context, state: State) -> State | ControlFlow:
     choice_str = ctx.selector.choose(
         prompt="Select Anime",
         choices=choices,
-        header="AniList Results",
         preview=preview_command,
     )
 
@@ -119,5 +115,4 @@ def _format_anime_choice(anime: MediaItem, config) -> str:
             icon = "🔹" if config.general.icons else "!"
             display_title += f" {icon}{unwatched} new{icon}"
 
-    # Sanitize for use as a potential filename/cache key
-    return sanitize_filename(display_title, restricted=True)
+    return display_title

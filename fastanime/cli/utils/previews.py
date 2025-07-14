@@ -1,11 +1,11 @@
 import concurrent.futures
 import logging
-import textwrap
+import os
+import shutil
 from hashlib import sha256
 from io import StringIO
-from pathlib import Path
 from threading import Thread
-from typing import TYPE_CHECKING, List
+from typing import List
 
 import httpx
 from rich.console import Console
@@ -13,11 +13,9 @@ from rich.panel import Panel
 from rich.text import Text
 
 from ...core.config import AppConfig
-from ...core.constants import APP_DIR, PLATFORM
-from .scripts import bash_functions
-
-if TYPE_CHECKING:
-    from ...libs.api.types import MediaItem
+from ...core.constants import APP_CACHE_DIR, APP_DIR, PLATFORM
+from ...libs.api.types import MediaItem
+from . import ansi, formatters
 
 logger = logging.getLogger(__name__)
 
@@ -27,15 +25,7 @@ IMAGES_CACHE_DIR = PREVIEWS_CACHE_DIR / "images"
 INFO_CACHE_DIR = PREVIEWS_CACHE_DIR / "info"
 FZF_SCRIPTS_DIR = APP_DIR / "libs" / "selectors" / "fzf" / "scripts"
 PREVIEW_SCRIPT_TEMPLATE_PATH = FZF_SCRIPTS_DIR / "preview.sh"
-
-# Ensure cache directories exist on startup
-IMAGES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-INFO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-
-# The helper functions (_get_cache_hash, _save_image_from_url, _save_info_text,
-# _format_info_text, and _cache_worker) remain exactly the same as before.
-# I am including them here for completeness.
+INFO_SCRIPT_TEMPLATE_PATH = FZF_SCRIPTS_DIR / "info.sh"
 
 
 def _get_cache_hash(text: str) -> str:
@@ -45,9 +35,9 @@ def _get_cache_hash(text: str) -> str:
 
 def _save_image_from_url(url: str, hash_id: str):
     """Downloads an image using httpx and saves it to the cache."""
+    temp_image_path = IMAGES_CACHE_DIR / f"{hash_id}.png.tmp"
+    image_path = IMAGES_CACHE_DIR / f"{hash_id}.png"
     try:
-        temp_image_path = IMAGES_CACHE_DIR / f"{hash_id}.png.tmp"
-        image_path = IMAGES_CACHE_DIR / f"{hash_id}.png"
         with httpx.stream("GET", url, follow_redirects=True, timeout=20) as response:
             response.raise_for_status()
             with temp_image_path.open("wb") as f:
@@ -69,25 +59,40 @@ def _save_info_text(info_text: str, hash_id: str):
         logger.error(f"Failed to write info cache for {hash_id}: {e}")
 
 
-def _format_info_text(item: MediaItem) -> str:
-    """Uses Rich to format a media item's details into a string."""
-    from .anilist import anilist_data_helper
+def _populate_info_template(item: MediaItem, config: AppConfig) -> str:
+    """
+    Takes the info.sh template and injects formatted, shell-safe data.
+    """
+    template = INFO_SCRIPT_TEMPLATE_PATH.read_text(encoding="utf-8")
+    description = formatters.clean_html(item.description or "No description available.")
 
-    io_buffer = StringIO()
-    console = Console(file=io_buffer, force_terminal=True, color_system="truecolor")
-    title = Text(
-        item.title.english or item.title.romaji or "Unknown Title", style="bold cyan"
-    )
-    description = anilist_data_helper.clean_html(
-        item.description or "No description available."
-    )
-    description = (description[:350] + "...") if len(description) > 350 else description
-    genres = f"[bold]Genres:[/bold] {', '.join(item.genres)}"
-    status = f"[bold]Status:[/bold] {item.status}"
-    score = f"[bold]Score:[/bold] {item.average_score / 10 if item.average_score else 'N/A'}"
-    panel_content = f"{genres}\n{status}\n{score}\n\n{description}"
-    console.print(Panel(panel_content, title=title, border_style="dim"))
-    return io_buffer.getvalue()
+    HEADER_COLOR = config.fzf.preview_header_color.split(",")
+    SEPARATOR_COLOR = config.fzf.preview_separator_color.split(",")
+
+    # Escape all variables before injecting them into the script
+    replacements = {
+        "TITLE": formatters.shell_safe(item.title.english or item.title.romaji),
+        "SCORE": formatters.shell_safe(
+            formatters.format_score_stars_full(item.average_score)
+        ),
+        "STATUS": formatters.shell_safe(item.status),
+        "FAVOURITES": formatters.shell_safe(
+            formatters.format_number_with_commas(item.favourites)
+        ),
+        "GENRES": formatters.shell_safe(formatters.format_genres(item.genres)),
+        "SYNOPSIS": formatters.shell_safe(description),
+        # Color codes
+        "C_TITLE": ansi.get_true_fg(HEADER_COLOR, bold=True),
+        "C_KEY": ansi.get_true_fg(HEADER_COLOR, bold=True),
+        "C_VALUE": ansi.get_true_fg(HEADER_COLOR, bold=True),
+        "C_RULE": ansi.get_true_fg(SEPARATOR_COLOR, bold=True),
+        "RESET": ansi.RESET,
+    }
+
+    for key, value in replacements.items():
+        template = template.replace(f"{{{key}}}", value)
+
+    return template
 
 
 def _cache_worker(items: List[MediaItem], titles: List[str], config: AppConfig):
@@ -102,7 +107,7 @@ def _cache_worker(items: List[MediaItem], titles: List[str], config: AppConfig):
                     )
             if config.general.preview in ("full", "text"):
                 if not (INFO_CACHE_DIR / hash_id).exists():
-                    info_text = _format_info_text(item)
+                    info_text = _populate_info_template(item, config)
                     executor.submit(_save_info_text, info_text, hash_id)
 
 
@@ -114,6 +119,10 @@ def get_anime_preview(
     Starts a background task to cache preview data and returns the fzf preview command
     by formatting a shell script template.
     """
+    # Ensure cache directories exist on startup
+    IMAGES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    INFO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
     # Start the non-blocking background Caching
     Thread(target=_cache_worker, args=(items, titles, config), daemon=True).start()
 
@@ -130,15 +139,17 @@ def get_anime_preview(
     path_sep = "\\" if PLATFORM == "win32" else "/"
 
     # Format the template with the dynamic values
-    final_script = template.format(
-        bash_functions=bash_functions,
-        preview_mode=config.general.preview,
-        image_cache_path=str(IMAGES_CACHE_DIR),
-        info_cache_path=str(INFO_CACHE_DIR),
-        path_sep=path_sep,
+    final_script = (
+        template.replace("{preview_mode}", config.general.preview)
+        .replace("{image_cache_path}", str(IMAGES_CACHE_DIR))
+        .replace("{info_cache_path}", str(INFO_CACHE_DIR))
+        .replace("{path_sep}", path_sep)
+        .replace("{image_renderer}", config.general.image_renderer)
     )
+    # )
 
     # Return the command for fzf to execute. `sh -c` is used to run the script string.
     # The -- "{}" ensures that the selected item is passed as the first argument ($1)
     # to the script, even if it contains spaces or special characters.
-    return f'sh -c {final_script!r} -- "{{}}"'
+    os.environ["SHELL"] = "bash"
+    return final_script

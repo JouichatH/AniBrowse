@@ -3,11 +3,11 @@
 # FastAnime FZF Preview Script Template
 #
 # This script is a template. The placeholders in curly braces, like
-# {placeholder}, are filled in by the Python application at runtime.
+# placeholder, are filled in by the Python application at runtime.
 # It is executed by `sh -c "..."` for each item fzf previews.
 # The first argument ($1) is the item string from fzf (the sanitized title).
 
-
+IMAGE_RENDERER="{image_renderer}"
 generate_sha256() {
   local input
 
@@ -37,11 +37,11 @@ fzf_preview() {
   if [ "$dim" = x ]; then
     dim=$(stty size </dev/tty | awk "{print \$2 \"x\" \$1}")
   fi
-  if ! [ "$FASTANIME_IMAGE_RENDERER" = "icat" ] && [ -z "$KITTY_WINDOW_ID" ] && [ "$((FZF_PREVIEW_TOP + FZF_PREVIEW_LINES))" -eq "$(stty size </dev/tty | awk "{print \$1}")" ]; then
+  if ! [ "$IMAGE_RENDERER" = "icat" ] && [ -z "$KITTY_WINDOW_ID" ] && [ "$((FZF_PREVIEW_TOP + FZF_PREVIEW_LINES))" -eq "$(stty size </dev/tty | awk "{print \$1}")" ]; then
     dim=${FZF_PREVIEW_COLUMNS}x$((FZF_PREVIEW_LINES - 1))
   fi
 
-  if [ "$FASTANIME_IMAGE_RENDERER" = "icat" ] && [ -z "$GHOSTTY_BIN_DIR" ]; then
+  if [ "$IMAGE_RENDERER" = "icat" ] && [ -z "$GHOSTTY_BIN_DIR" ]; then
     if command -v kitten >/dev/null 2>&1; then
       kitten icat --clear --transfer-mode=memory --unicode-placeholder --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
     elif command -v icat >/dev/null 2>&1; then
@@ -75,7 +75,7 @@ fzf_preview() {
   fi
 }
 # Generate the same cache key that the Python worker uses
-hash=$(_get_cache_hash "$1")
+hash=$(generate_sha256 {})
 
 # Display image if configured and the cached file exists
 if [ "{preview_mode}" = "full" ] || [ "{preview_mode}" = "image" ]; then
@@ -87,12 +87,11 @@ if [ "{preview_mode}" = "full" ] || [ "{preview_mode}" = "image" ]; then
     fi
     echo # Add a newline for spacing
 fi
-
 # Display text info if configured and the cached file exists
 if [ "{preview_mode}" = "full" ] || [ "{preview_mode}" = "text" ]; then
     info_file="{info_cache_path}{path_sep}$hash"
     if [ -f "$info_file" ]; then
-        cat "$info_file"
+        source "$info_file"
     else
         echo "📝 Loading details..."
     fi

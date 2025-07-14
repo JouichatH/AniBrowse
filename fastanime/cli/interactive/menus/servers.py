@@ -1,18 +1,14 @@
-from typing import TYPE_CHECKING, Dict, List
+from typing import Dict, List
 
 import click
+from rich.console import Console
 from rich.progress import Progress
 
 from ....libs.players.params import PlayerParams
 from ....libs.providers.anime.params import EpisodeStreamsParams
+from ....libs.providers.anime.types import Server
 from ..session import Context, session
-from ..state import ControlFlow, ProviderState, State
-
-if TYPE_CHECKING:
-    from ....cli.utils.utils import (
-        filter_by_quality,  # You may need to create this helper
-    )
-    from ....libs.providers.anime.types import Server
+from ..state import ControlFlow, State
 
 
 def _filter_by_quality(links, quality):
@@ -34,9 +30,14 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
     config = ctx.config
     provider = ctx.provider
     selector = ctx.selector
+    console = Console()
+    console.clear()
 
     if not provider_anime or not episode_number:
-        click.echo("[bold red]Error: Anime or episode details are missing.[/bold red]")
+        console.print(
+            "[bold red]Error: Anime or episode details are missing.[/bold red]"
+        )
+        selector.ask("Enter to continue...")
         return ControlFlow.BACK
 
     # --- Fetch Server Streams ---
@@ -55,7 +56,7 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
         all_servers: List[Server] = list(server_iterator) if server_iterator else []
 
     if not all_servers:
-        click.echo(
+        console.print(
             f"[bold yellow]No streaming servers found for this episode.[/bold yellow]"
         )
         return ControlFlow.BACK
@@ -67,10 +68,12 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
     preferred_server = config.stream.server.lower()
     if preferred_server == "top":
         selected_server = all_servers[0]
-        click.echo(f"[cyan]Auto-selecting top server:[/] {selected_server.name}")
+        console.print(f"[cyan]Auto-selecting top server:[/] {selected_server.name}")
     elif preferred_server in server_map:
         selected_server = server_map[preferred_server]
-        click.echo(f"[cyan]Auto-selecting preferred server:[/] {selected_server.name}")
+        console.print(
+            f"[cyan]Auto-selecting preferred server:[/] {selected_server.name}"
+        )
     else:
         choices = [*server_map.keys(), "Back"]
         chosen_name = selector.choose("Select Server", choices)
@@ -78,20 +81,16 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
             return ControlFlow.BACK
         selected_server = server_map[chosen_name]
 
-    if not selected_server:
-        return ControlFlow.BACK
-
-    # --- Select Stream Quality ---
     stream_link_obj = _filter_by_quality(selected_server.links, config.stream.quality)
     if not stream_link_obj:
-        click.echo(
+        console.print(
             f"[bold red]No stream of quality '{config.stream.quality}' found on server '{selected_server.name}'.[/bold red]"
         )
         return ControlFlow.CONTINUE
 
     # --- Launch Player ---
     final_title = f"{provider_anime.title} - Ep {episode_number}"
-    click.echo(f"[bold green]Launching player for:[/] {final_title}")
+    console.print(f"[bold green]Launching player for:[/] {final_title}")
 
     player_result = ctx.player.play(
         PlayerParams(
@@ -99,12 +98,9 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
             title=final_title,
             subtitles=[sub.url for sub in selected_server.subtitles],
             headers=selected_server.headers,
-            # start_time logic will be added in player_controls
         )
     )
 
-    # --- Transition to Player Controls ---
-    # We now have all the data for post-playback actions.
     return State(
         menu_name="PLAYER_CONTROLS",
         media_api=state.media_api,
@@ -112,7 +108,7 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
             update={
                 "servers": all_servers,
                 "selected_server": selected_server,
-                "last_player_result": player_result,  # We should add this to ProviderState
+                "last_player_result": player_result,
             }
         ),
     )

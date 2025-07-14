@@ -2,10 +2,11 @@ import threading
 from typing import TYPE_CHECKING, Callable, Dict
 
 import click
+from rich.console import Console
 
 from ....libs.api.params import UpdateListEntryParams
 from ..session import Context, session
-from ..state import ControlFlow, ProviderState, State
+from ..state import ControlFlow, State
 
 if TYPE_CHECKING:
     from ....libs.providers.anime.types import Server
@@ -27,8 +28,8 @@ def _update_progress_in_background(ctx: Context, anime_id: int, progress: int):
     """Fires off a non-blocking request to update AniList progress."""
 
     def task():
-        if not ctx.media_api.user_profile:
-            return
+        # if not ctx.media_api.user_profile:
+        #     return
         params = UpdateListEntryParams(media_id=anime_id, progress=progress)
         ctx.media_api.update_list_entry(params)
         # We don't need to show feedback here, it's a background task.
@@ -46,6 +47,8 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
     config = ctx.config
     player = ctx.player
     selector = ctx.selector
+    console = Console()
+    console.clear()
 
     provider_anime = state.provider.anime
     anilist_anime = state.media_api.anime
@@ -63,7 +66,9 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
             all_servers,
         )
     ):
-        click.echo("[bold red]Error: Player state is incomplete. Returning.[/bold red]")
+        console.print(
+            "[bold red]Error: Player state is incomplete. Returning.[/bold red]"
+        )
         return ControlFlow.BACK
 
     # --- Post-Playback Logic ---
@@ -86,7 +91,7 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
     current_index = available_episodes.index(current_episode_num)
 
     if config.stream.auto_next and current_index < len(available_episodes) - 1:
-        click.echo("[cyan]Auto-playing next episode...[/cyan]")
+        console.print("[cyan]Auto-playing next episode...[/cyan]")
         next_episode_num = available_episodes[current_index + 1]
         return State(
             menu_name="SERVERS",
@@ -108,7 +113,7 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
                     update={"episode_number": next_episode_num}
                 ),
             )
-        click.echo("[bold yellow]This is the last available episode.[/bold yellow]")
+        console.print("[bold yellow]This is the last available episode.[/bold yellow]")
         return ControlFlow.CONTINUE
 
     def replay() -> State | ControlFlow:
