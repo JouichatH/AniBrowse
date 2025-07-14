@@ -36,6 +36,7 @@ def media_actions(ctx: Context, state: State) -> State | ControlFlow:
         f"{'📼 ' if icons else ''}Watch Trailer": _watch_trailer(ctx, state),
         f"{'➕ ' if icons else ''}Add/Update List": _add_to_list(ctx, state),
         f"{'⭐ ' if icons else ''}Score Anime": _score_anime(ctx, state),
+        f"{'📚 ' if icons else ''}Add to Local History": _add_to_local_history(ctx, state),
         f"{'ℹ️ ' if icons else ''}View Info": _view_info(ctx, state),
         f"{'🔙 ' if icons else ''}Back to Results": lambda: ControlFlow.BACK,
     }
@@ -218,3 +219,71 @@ def _update_user_list_with_feedback(
         error_msg="Failed to update list entry",
         show_loading=False,
     )
+
+
+def _add_to_local_history(ctx: Context, state: State) -> MenuAction:
+    """Add anime to local watch history with status selection."""
+    
+    def action() -> State | ControlFlow:
+        anime = state.media_api.anime
+        if not anime:
+            click.echo("[bold red]No anime data available.[/bold red]")
+            return ControlFlow.CONTINUE
+        
+        feedback = create_feedback_manager(ctx.config.general.icons)
+        
+        # Check if already in watch history
+        from ...utils.watch_history_manager import WatchHistoryManager
+        history_manager = WatchHistoryManager()
+        existing_entry = history_manager.get_entry(anime.id)
+        
+        if existing_entry:
+            # Ask if user wants to update existing entry
+            if not feedback.confirm(f"'{existing_entry.get_display_title()}' is already in your local watch history. Update it?"):
+                return ControlFlow.CONTINUE
+        
+        # Status selection
+        statuses = ["watching", "completed", "planning", "paused", "dropped"]
+        status_choices = [status.title() for status in statuses]
+        
+        chosen_status = ctx.selector.choose(
+            "Select status for local watch history:",
+            choices=status_choices + ["Cancel"]
+        )
+        
+        if not chosen_status or chosen_status == "Cancel":
+            return ControlFlow.CONTINUE
+        
+        status = chosen_status.lower()
+        
+        # Episode number if applicable
+        episode = 0
+        if status in ["watching", "completed"]:
+            if anime.episodes and anime.episodes > 1:
+                episode_str = ctx.selector.ask(f"Enter current episode (1-{anime.episodes}, default: 0):")
+                try:
+                    episode = int(episode_str) if episode_str else 0
+                    episode = max(0, min(episode, anime.episodes))
+                except ValueError:
+                    episode = 0
+        
+        # Mark as completed if status is completed
+        if status == "completed" and anime.episodes:
+            episode = anime.episodes
+        
+        # Add to watch history
+        from ...utils.watch_history_tracker import watch_tracker
+        success = watch_tracker.add_anime_to_history(anime, status)
+        
+        if success and episode > 0:
+            # Update episode progress
+            history_manager.mark_episode_watched(anime.id, episode, 1.0 if status == "completed" else 0.0)
+        
+        if success:
+            feedback.success(f"Added '{anime.title.english or anime.title.romaji}' to local watch history with status: {status}")
+        else:
+            feedback.error("Failed to add anime to local watch history")
+        
+        return ControlFlow.CONTINUE
+    
+    return action

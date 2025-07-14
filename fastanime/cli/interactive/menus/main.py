@@ -58,8 +58,10 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
         f"{'🔁 ' if icons else ''}Rewatching": _create_user_list_action(
             ctx, "REPEATING"
         ),
+        # --- Local Watch History ---
+        f"{'📖 ' if icons else ''}Local Watch History": lambda: ("WATCH_HISTORY", None),
         # --- Control Flow and Utility Options ---
-        f"{'� ' if icons else ''}Session Management": lambda: ("SESSION_MANAGEMENT", None),
+        f"{'🔧 ' if icons else ''}Session Management": lambda: ("SESSION_MANAGEMENT", None),
         f"{'�📝 ' if icons else ''}Edit Config": lambda: ("RELOAD_CONFIG", None),
         f"{'❌ ' if icons else ''}Exit": lambda: ("EXIT", None),
     }

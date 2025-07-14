@@ -83,6 +83,14 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
             _update_progress_in_background(
                 ctx, anilist_anime.id, int(current_episode_num)
             )
+            
+            # Also update local watch history if enabled
+            if config.stream.continue_from_watch_history and config.stream.preferred_watch_history == "local":
+                from ...utils.watch_history_tracker import update_episode_progress
+                try:
+                    update_episode_progress(anilist_anime.id, int(current_episode_num), completion_pct)
+                except (ValueError, AttributeError):
+                    pass  # Skip if episode number conversion fails
 
     # --- Auto-Next Logic ---
     available_episodes = getattr(
@@ -93,6 +101,15 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
     if config.stream.auto_next and current_index < len(available_episodes) - 1:
         console.print("[cyan]Auto-playing next episode...[/cyan]")
         next_episode_num = available_episodes[current_index + 1]
+        
+        # Track next episode in watch history
+        if config.stream.continue_from_watch_history and config.stream.preferred_watch_history == "local" and anilist_anime:
+            from ...utils.watch_history_tracker import track_episode_viewing
+            try:
+                track_episode_viewing(anilist_anime, int(next_episode_num), start_tracking=True)
+            except (ValueError, AttributeError):
+                pass
+        
         return State(
             menu_name="SERVERS",
             media_api=state.media_api,
@@ -105,6 +122,15 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
     def next_episode() -> State | ControlFlow:
         if current_index < len(available_episodes) - 1:
             next_episode_num = available_episodes[current_index + 1]
+            
+            # Track next episode in watch history
+            if config.stream.continue_from_watch_history and config.stream.preferred_watch_history == "local" and anilist_anime:
+                from ...utils.watch_history_tracker import track_episode_viewing
+                try:
+                    track_episode_viewing(anilist_anime, int(next_episode_num), start_tracking=True)
+                except (ValueError, AttributeError):
+                    pass
+            
             # Transition back to the SERVERS menu with the new episode number.
             return State(
                 menu_name="SERVERS",
