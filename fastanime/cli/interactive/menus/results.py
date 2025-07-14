@@ -53,7 +53,7 @@ def results(ctx: Context, state: State) -> State | ControlFlow:
     # Create header with auth status and pagination info
     auth_status, _ = get_auth_status_indicator(ctx.media_api, ctx.config.general.icons)
     pagination_info = f"Page {page_info.current_page}"
-    if page_info.total > 0:
+    if page_info.total > 0 and page_info.per_page > 0:
         total_pages = (page_info.total + page_info.per_page - 1) // page_info.per_page
         pagination_info += f" of ~{total_pages}"
     
