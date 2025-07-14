@@ -10,9 +10,10 @@ from typing import Iterator, List, Optional
 from fastanime.core.config.model import AppConfig, GeneralConfig, StreamConfig, AnilistConfig
 from fastanime.cli.interactive.session import Context
 from fastanime.cli.interactive.state import State, ProviderState, MediaApiState, ControlFlow
-from fastanime.libs.api.types import MediaItem, MediaSearchResult, PageInfo, UserProfile
+from fastanime.libs.api.types import MediaItem, MediaSearchResult, UserProfile, MediaTitle, MediaImage, Studio
+from fastanime.libs.api.types import PageInfo as ApiPageInfo
 from fastanime.libs.api.params import ApiSearchParams, UserListParams
-from fastanime.libs.providers.anime.types import Anime, SearchResults, Server
+from fastanime.libs.providers.anime.types import Anime, SearchResults, Server, PageInfo, SearchResult, AnimeEpisodes
 from fastanime.libs.players.types import PlayerResult
 
 
@@ -54,7 +55,11 @@ def mock_provider():
     """Create a mock anime provider."""
     provider = Mock()
     provider.search_anime.return_value = SearchResults(
-        page_info=PageInfo(),
+        page_info=PageInfo(
+            total=1,
+            per_page=15,
+            current_page=1
+        ),
         results=[
             SearchResult(
                 id="anime1",
@@ -80,7 +85,7 @@ def mock_selector():
 def mock_player():
     """Create a mock player."""
     player = Mock()
-    player.play.return_value = PlayerResult(success=True, exit_code=0)
+    player.play.return_value = PlayerResult(stop_time="00:15:30", total_time="00:23:45")
     return player
 
 
@@ -93,7 +98,7 @@ def mock_media_api():
     api.user_profile = UserProfile(
         id=12345,
         name="TestUser",
-        avatar="https://example.com/avatar.jpg"
+        avatar_url="https://example.com/avatar.jpg"
     )
     
     # Mock search results
@@ -101,17 +106,17 @@ def mock_media_api():
         media=[
             MediaItem(
                 id=1,
-                title={"english": "Test Anime", "romaji": "Test Anime"},
+                title=MediaTitle(english="Test Anime", romaji="Test Anime"),
                 status="FINISHED",
                 episodes=12,
                 description="A test anime",
-                cover_image="https://example.com/cover.jpg",
+                cover_image=MediaImage(large="https://example.com/cover.jpg"),
                 banner_image="https://example.com/banner.jpg",
                 genres=["Action", "Adventure"],
-                studios=[{"name": "Test Studio"}]
+                studios=[Studio(name="Test Studio")]
             )
         ],
-        page_info=PageInfo(
+        page_info=ApiPageInfo(
             total=1,
             per_page=15,
             current_page=1,
@@ -146,14 +151,14 @@ def sample_media_item():
     """Create a sample MediaItem for testing."""
     return MediaItem(
         id=1,
-        title={"english": "Test Anime", "romaji": "Test Anime"},
+        title=MediaTitle(english="Test Anime", romaji="Test Anime"),
         status="FINISHED",
         episodes=12,
         description="A test anime",
-        cover_image="https://example.com/cover.jpg",
+        cover_image=MediaImage(large="https://example.com/cover.jpg"),
         banner_image="https://example.com/banner.jpg",
         genres=["Action", "Adventure"],
-        studios=[{"name": "Test Studio"}]
+        studios=[Studio(name="Test Studio")]
     )
 
 
@@ -161,9 +166,9 @@ def sample_media_item():
 def sample_provider_anime():
     """Create a sample provider Anime for testing."""
     return Anime(
-        name="Test Anime",
-        url="https://example.com/anime",
         id="test-anime",
+        title="Test Anime",
+        episodes=AnimeEpisodes(sub=["1", "2", "3"]),
         poster="https://example.com/poster.jpg"
     )
 
@@ -173,7 +178,7 @@ def sample_search_results(sample_media_item):
     """Create sample search results."""
     return MediaSearchResult(
         media=[sample_media_item],
-        page_info=PageInfo(
+        page_info=ApiPageInfo(
             total=1,
             per_page=15,
             current_page=1,

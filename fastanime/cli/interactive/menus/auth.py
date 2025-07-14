@@ -137,12 +137,13 @@ def _handle_login(ctx: Context, auth_manager: AuthManager, feedback, icons: bool
         feedback,
         "authenticate",
         loading_msg="Validating token with AniList",
-        success_msg=f"Successfully logged in as {profile.name if profile else 'user'}! 🎉" if icons else f"Successfully logged in as {profile.name if profile else 'user'}!",
+        success_msg=f"Successfully logged in! 🎉" if icons else f"Successfully logged in!",
         error_msg="Login failed",
         show_loading=True
     )
 
     if success and profile:
+        feedback.success(f"Logged in as {profile.name}" if profile else "Successfully logged in")
         feedback.pause_for_user("Press Enter to continue")
     
     return ControlFlow.CONTINUE
@@ -159,7 +160,10 @@ def _handle_logout(ctx: Context, auth_manager: AuthManager, feedback, icons: boo
 
     def perform_logout():
         # Clear from auth manager
-        auth_manager.clear_user_profile()
+        if hasattr(auth_manager, 'logout'):
+            auth_manager.logout()
+        else:
+            auth_manager.clear_user_profile()
         
         # Clear from API client
         ctx.media_api.token = None
@@ -182,7 +186,7 @@ def _handle_logout(ctx: Context, auth_manager: AuthManager, feedback, icons: boo
     if success:
         feedback.pause_for_user("Press Enter to continue")
     
-    return ControlFlow.CONTINUE
+    return ControlFlow.RELOAD_CONFIG
 
 
 def _display_user_profile_details(console: Console, user_profile: UserProfile, icons: bool):
