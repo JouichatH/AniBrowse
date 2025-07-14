@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Literal, Optional
+
+from pydantic import BaseModel, Field
 
 # --- Generic Enums and Type Aliases ---
 
@@ -17,8 +18,12 @@ UserListStatusType = Literal[
 # --- Generic Data Models ---
 
 
-@dataclass(frozen=True)
-class MediaImage:
+class BaseApiModel(BaseModel):
+    """Base model for all API types."""
+    pass
+
+
+class MediaImage(BaseApiModel):
     """A generic representation of media imagery URLs."""
 
     large: str
@@ -26,8 +31,7 @@ class MediaImage:
     extra_large: Optional[str] = None
 
 
-@dataclass(frozen=True)
-class MediaTitle:
+class MediaTitle(BaseApiModel):
     """A generic representation of media titles."""
 
     romaji: Optional[str] = None
@@ -35,8 +39,7 @@ class MediaTitle:
     native: Optional[str] = None
 
 
-@dataclass(frozen=True)
-class MediaTrailer:
+class MediaTrailer(BaseApiModel):
     """A generic representation of a media trailer."""
 
     id: str
@@ -44,16 +47,14 @@ class MediaTrailer:
     thumbnail_url: Optional[str] = None
 
 
-@dataclass(frozen=True)
-class AiringSchedule:
+class AiringSchedule(BaseApiModel):
     """A generic representation of the next airing episode."""
 
     episode: int
     airing_at: datetime | None = None
 
 
-@dataclass(frozen=True)
-class Studio:
+class Studio(BaseApiModel):
     """A generic representation of an animation studio."""
 
     id: int | None = None
@@ -62,24 +63,21 @@ class Studio:
     is_animation_studio: bool | None = None
 
 
-@dataclass(frozen=True)
-class MediaTag:
+class MediaTag(BaseApiModel):
     """A generic representation of a descriptive tag."""
 
     name: str
     rank: Optional[int] = None  # Percentage relevance from 0-100
 
 
-@dataclass(frozen=True)
-class StreamingEpisode:
+class StreamingEpisode(BaseApiModel):
     """A generic representation of a streaming episode."""
 
     title: str
     thumbnail: Optional[str] = None
 
 
-@dataclass(frozen=True)
-class UserListStatus:
+class UserListStatus(BaseApiModel):
     """Generic representation of a user's list status for a media item."""
 
     id: int | None = None
@@ -94,8 +92,7 @@ class UserListStatus:
     created_at: Optional[str] = None
 
 
-@dataclass(frozen=True)
-class MediaItem:
+class MediaItem(BaseApiModel):
     """
     The definitive, backend-agnostic representation of a single media item.
     This is the primary data model the application will interact with.
@@ -104,7 +101,7 @@ class MediaItem:
     id: int
     id_mal: Optional[int] = None
     type: MediaType = "ANIME"
-    title: MediaTitle = field(default_factory=MediaTitle)
+    title: MediaTitle = Field(default_factory=MediaTitle)
     status: Optional[str] = None
     format: Optional[str] = None  # e.g., TV, MOVIE, OVA
 
@@ -115,10 +112,10 @@ class MediaItem:
     description: Optional[str] = None
     episodes: Optional[int] = None
     duration: Optional[int] = None  # In minutes
-    genres: List[str] = field(default_factory=list)
-    tags: List[MediaTag] = field(default_factory=list)
-    studios: List[Studio] = field(default_factory=list)
-    synonyms: List[str] = field(default_factory=list)
+    genres: List[str] = Field(default_factory=list)
+    tags: List[MediaTag] = Field(default_factory=list)
+    studios: List[Studio] = Field(default_factory=list)
+    synonyms: List[str] = Field(default_factory=list)
 
     average_score: Optional[float] = None
     popularity: Optional[int] = None
@@ -127,14 +124,13 @@ class MediaItem:
     next_airing: Optional[AiringSchedule] = None
 
     # streaming episodes
-    streaming_episodes: List[StreamingEpisode] = field(default_factory=list)
+    streaming_episodes: List[StreamingEpisode] = Field(default_factory=list)
 
     # user related
     user_status: Optional[UserListStatus] = None
 
 
-@dataclass(frozen=True)
-class PageInfo:
+class PageInfo(BaseApiModel):
     """Generic pagination information."""
 
     total: int
@@ -143,16 +139,14 @@ class PageInfo:
     per_page: int
 
 
-@dataclass(frozen=True)
-class MediaSearchResult:
+class MediaSearchResult(BaseApiModel):
     """A generic representation of a page of media search results."""
 
     page_info: PageInfo
-    media: List[MediaItem] = field(default_factory=list)
+    media: List[MediaItem] = Field(default_factory=list)
 
 
-@dataclass(frozen=True)
-class UserProfile:
+class UserProfile(BaseApiModel):
     """A generic representation of a user's profile."""
 
     id: int

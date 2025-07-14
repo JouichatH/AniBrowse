@@ -32,30 +32,39 @@ JIKAN_STATUS_MAP = {
 
 def _to_generic_title(jikan_titles: list[dict]) -> MediaTitle:
     """Extracts titles from Jikan's list of title objects."""
-    title_obj = MediaTitle()
+    # Initialize with default values
+    romaji = None
+    english = None
+    native = None
+    
     # Jikan's default title is often the romaji one.
     # We prioritize specific types if available.
     for t in jikan_titles:
         type_ = t.get("type")
         title_ = t.get("title")
         if type_ == "Default":
-            title_obj.romaji = title_
+            romaji = title_
         elif type_ == "English":
-            title_obj.english = title_
+            english = title_
         elif type_ == "Japanese":
-            title_obj.native = title_
-    return title_obj
+            native = title_
+    
+    return MediaTitle(
+        romaji=romaji,
+        english=english,
+        native=native
+    )
 
 
 def _to_generic_image(jikan_images: dict) -> MediaImage:
     """Maps Jikan's image structure."""
     if not jikan_images:
-        return MediaImage()
+        return MediaImage(large="")  # Provide empty string as fallback
     # Jikan provides different image formats under a 'jpg' key.
     jpg_images = jikan_images.get("jpg", {})
     return MediaImage(
+        large=jpg_images.get("large_image_url", ""),  # Fallback to empty string
         medium=jpg_images.get("image_url"),
-        large=jpg_images.get("large_image_url"),
     )
 
 
@@ -71,7 +80,7 @@ def _to_generic_media_item(data: dict) -> MediaItem:
         id_mal=data["mal_id"],
         title=_to_generic_title(data.get("titles", [])),
         cover_image=_to_generic_image(data.get("images", {})),
-        status=JIKAN_STATUS_MAP.get(data.get("status")),
+        status=JIKAN_STATUS_MAP.get(data.get("status", ""), None),
         episodes=data.get("episodes"),
         duration=data.get("duration"),
         average_score=score,
