@@ -59,7 +59,8 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
             ctx, "REPEATING"
         ),
         # --- Control Flow and Utility Options ---
-        f"{'📝 ' if icons else ''}Edit Config": lambda: ("RELOAD_CONFIG", None),
+        f"{'� ' if icons else ''}Session Management": lambda: ("SESSION_MANAGEMENT", None),
+        f"{'�📝 ' if icons else ''}Edit Config": lambda: ("RELOAD_CONFIG", None),
         f"{'❌ ' if icons else ''}Exit": lambda: ("EXIT", None),
     }
 
@@ -81,6 +82,8 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
         return ControlFlow.EXIT
     if next_menu_name == "RELOAD_CONFIG":
         return ControlFlow.RELOAD_CONFIG
+    if next_menu_name == "SESSION_MANAGEMENT":
+        return State(menu_name="SESSION_MANAGEMENT")
     if next_menu_name == "CONTINUE":
         return ControlFlow.CONTINUE
 
