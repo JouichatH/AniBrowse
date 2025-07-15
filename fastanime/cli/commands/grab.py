@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 import click
 
-from ..utils.completion_functions import anime_titles_shell_complete
+from ..utils.completions import anime_titles_shell_complete
 
 if TYPE_CHECKING:
     from ..config import Config

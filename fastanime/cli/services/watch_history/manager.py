@@ -8,9 +8,9 @@ import logging
 from pathlib import Path
 from typing import List, Optional
 
-from ...core.constants import USER_WATCH_HISTORY_PATH
-from ...libs.api.types import MediaItem
-from .watch_history_types import WatchHistoryData, WatchHistoryEntry
+from ....core.constants import USER_WATCH_HISTORY_PATH
+from ....libs.api.types import MediaItem
+from .types import WatchHistoryData, WatchHistoryEntry
 
 logger = logging.getLogger(__name__)
 
@@ -327,3 +327,16 @@ class WatchHistoryManager:
         except Exception as e:
             logger.error(f"Failed to backup watch history: {e}")
             return False
+    
+    def get_entry_by_media_id(self, media_id: int) -> Optional[WatchHistoryEntry]:
+        """Get watch history entry by media ID (alias for get_entry)."""
+        return self.get_entry(media_id)
+    
+    def save_entry(self, entry: WatchHistoryEntry) -> bool:
+        """Save a watch history entry (alias for add_or_update_entry)."""
+        return self.add_or_update_entry(entry.media_item, entry.status, 
+                                       entry.last_watched_episode, entry.watch_progress)
+    
+    def get_currently_watching(self) -> List[WatchHistoryEntry]:
+        """Get entries that are currently being watched."""
+        return self.get_watching_entries()

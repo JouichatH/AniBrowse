@@ -6,6 +6,8 @@ commands = {
     "trending": "trending.trending",
     "recent": "recent.recent",
     "search": "search.search",
+    "download": "download.download",
+    "downloads": "downloads.downloads",
 }
 
 

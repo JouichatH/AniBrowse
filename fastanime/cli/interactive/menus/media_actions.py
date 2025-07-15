@@ -7,7 +7,7 @@ from ....libs.api.params import UpdateListEntryParams
 from ....libs.api.types import MediaItem
 from ....libs.players.params import PlayerParams
 from ...utils.feedback import create_feedback_manager, execute_with_feedback
-from ...utils.auth_utils import check_authentication_required, get_auth_status_indicator
+from ...utils.auth.utils import check_authentication_required, get_auth_status_indicator
 from ..session import Context, session
 from ..state import ControlFlow, ProviderState, State
 

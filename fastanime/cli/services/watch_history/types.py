@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from ...libs.api.types import MediaItem
+from ....libs.api.types import MediaItem
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,10 @@ class WatchHistoryEntry(BaseModel):
     last_watched: datetime = Field(default_factory=datetime.now)
     status: str = "watching"  # watching, completed, dropped, paused
     notes: str = ""
+    
+    # Download integration fields
+    has_downloads: bool = Field(default=False, description="Whether episodes are downloaded")
+    offline_available: bool = Field(default=False, description="Can watch offline")
     
     # With Pydantic, serialization is automatic!
     # No need for manual to_dict() and from_dict() methods

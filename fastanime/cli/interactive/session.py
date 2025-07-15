@@ -15,7 +15,7 @@ from ...libs.players.base import BasePlayer
 from ...libs.providers.anime.base import BaseAnimeProvider
 from ...libs.selectors.base import BaseSelector
 from ..config import ConfigLoader
-from ..utils.session_manager import SessionManager
+from ..utils.session.manager import SessionManager
 from .state import ControlFlow, State
 
 logger = logging.getLogger(__name__)

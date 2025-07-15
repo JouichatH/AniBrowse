@@ -6,8 +6,8 @@ Provides automatic watch history updates during episode viewing.
 import logging
 from typing import Optional
 
-from ...libs.api.types import MediaItem
-from ..utils.watch_history_manager import WatchHistoryManager
+from ....libs.api.types import MediaItem
+from .manager import WatchHistoryManager
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Literal
+from typing import List, Literal
 
 from pydantic import BaseModel, Field, PrivateAttr, computed_field, field_validator
 
@@ -156,6 +156,62 @@ class DownloadsConfig(OtherConfig):
     downloads_dir: Path = Field(
         default_factory=lambda: USER_VIDEOS_DIR,
         description="The default directory to save downloaded anime.",
+    )
+    
+    # Download tracking configuration
+    enable_tracking: bool = Field(
+        default=True, description="Enable download tracking and management"
+    )
+    auto_organize: bool = Field(
+        default=True, description="Automatically organize downloads by anime title"
+    )
+    max_concurrent: int = Field(
+        default=3, gt=0, le=10, description="Maximum concurrent downloads"
+    )
+    auto_cleanup_failed: bool = Field(
+        default=True, description="Automatically cleanup failed downloads"
+    )
+    retention_days: int = Field(
+        default=30, gt=0, description="Days to keep failed downloads before cleanup"
+    )
+    
+    # Integration with watch history
+    sync_with_watch_history: bool = Field(
+        default=True, description="Sync download status with watch history"
+    )
+    auto_mark_offline: bool = Field(
+        default=True, description="Automatically mark downloaded episodes as available offline"
+    )
+    
+    # File organization
+    naming_template: str = Field(
+        default="{title}/Season {season:02d}/{episode:02d} - {episode_title}.{ext}",
+        description="File naming template for downloaded episodes"
+    )
+    
+    # Quality and subtitles
+    preferred_quality: Literal["360", "480", "720", "1080", "best"] = Field(
+        default="1080", description="Preferred download quality"
+    )
+    download_subtitles: bool = Field(
+        default=True, description="Download subtitles when available"
+    )
+    subtitle_languages: List[str] = Field(
+        default=["en"], description="Preferred subtitle languages"
+    )
+    
+    # Queue management
+    queue_max_size: int = Field(
+        default=100, gt=0, description="Maximum number of items in download queue"
+    )
+    auto_start_downloads: bool = Field(
+        default=True, description="Automatically start downloads when items are queued"
+    )
+    retry_attempts: int = Field(
+        default=3, ge=0, description="Number of retry attempts for failed downloads"
+    )
+    retry_delay: int = Field(
+        default=300, ge=0, description="Delay between retry attempts in seconds"
     )
 
 

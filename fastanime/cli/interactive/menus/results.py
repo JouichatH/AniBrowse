@@ -2,7 +2,7 @@ from rich.console import Console
 
 from ....libs.api.types import MediaItem
 from ....libs.api.params import ApiSearchParams, UserListParams
-from ...utils.auth_utils import get_auth_status_indicator
+from ...utils.auth.utils import get_auth_status_indicator
 from ...utils.feedback import create_feedback_manager, execute_with_feedback
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State

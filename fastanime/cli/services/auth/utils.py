@@ -5,9 +5,9 @@ Provides functions to check authentication status and display user information.
 
 from typing import Optional
 
-from ...libs.api.base import BaseApiClient
-from ...libs.api.types import UserProfile
-from .feedback import FeedbackManager
+from ....libs.api.base import BaseApiClient
+from ....libs.api.types import UserProfile
+from ..feedback import FeedbackManager
 
 
 def get_auth_status_indicator(

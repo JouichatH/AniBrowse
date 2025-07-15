@@ -4,7 +4,7 @@ import click
 
 from ...core.config import AppConfig
 from ...core.exceptions import FastAnimeError
-from ..utils.completion_functions import anime_titles_shell_complete
+from ..utils.completions import anime_titles_shell_complete
 from . import examples
 
 if TYPE_CHECKING:
