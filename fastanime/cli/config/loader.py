@@ -9,7 +9,7 @@ from ...core.config import AppConfig
 from ...core.constants import USER_CONFIG_PATH
 from ...core.exceptions import ConfigError
 from .generate import generate_config_ini_from_app_model
-from .interactive_editor import InteractiveConfigEditor
+from .editor import InteractiveConfigEditor
 
 
 class ConfigLoader:

@@ -36,7 +36,8 @@ def media_actions(ctx: Context, state: State) -> State | ControlFlow:
         f"{'📼 ' if icons else ''}Watch Trailer": _watch_trailer(ctx, state),
         f"{'➕ ' if icons else ''}Add/Update List": _add_to_list(ctx, state),
         f"{'⭐ ' if icons else ''}Score Anime": _score_anime(ctx, state),
-        f"{'📚 ' if icons else ''}Add to Local History": _add_to_local_history(ctx, state),
+        f"{'� ' if icons else ''}Manage in Lists": _manage_in_lists(ctx, state),
+        f"{'�📚 ' if icons else ''}Add to Local History": _add_to_local_history(ctx, state),
         f"{'ℹ️ ' if icons else ''}View Info": _view_info(ctx, state),
         f"{'🔙 ' if icons else ''}Back to Results": lambda: ControlFlow.BACK,
     }
@@ -286,4 +287,31 @@ def _add_to_local_history(ctx: Context, state: State) -> MenuAction:
         
         return ControlFlow.CONTINUE
     
+    return action
+
+
+def _manage_in_lists(ctx: Context, state: State) -> MenuAction:
+    def action():
+        feedback = create_feedback_manager(ctx.config.general.icons)
+        anime = state.media_api.anime
+        if not anime:
+            return ControlFlow.CONTINUE
+
+        # Check authentication before proceeding
+        if not check_authentication_required(
+            ctx.media_api, feedback, "manage anime in your lists"
+        ):
+            return ControlFlow.CONTINUE
+
+        # Navigate to AniList anime details with this specific anime
+        return State(
+            menu_name="ANILIST_ANIME_DETAILS",
+            data={
+                "anime": anime,
+                "list_status": "CURRENT",  # Default status, will be updated when loaded
+                "return_page": 1,
+                "from_media_actions": True  # Flag to return here instead of lists
+            }
+        )
+
     return action

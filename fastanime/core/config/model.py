@@ -297,6 +297,49 @@ class StreamConfig(BaseModel):
         return v
 
 
+class ServiceConfig(BaseModel):
+    """Configuration for the background download service."""
+
+    enabled: bool = Field(
+        default=False,
+        description="Whether the background service should be enabled by default.",
+    )
+    watchlist_check_interval: int = Field(
+        default=30,
+        ge=5,
+        le=180,
+        description="Minutes between checking AniList watchlist for new episodes.",
+    )
+    queue_process_interval: int = Field(
+        default=1,
+        ge=1,
+        le=60,
+        description="Minutes between processing the download queue.",
+    )
+    max_concurrent_downloads: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum number of concurrent downloads.",
+    )
+    auto_retry_count: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        description="Number of times to retry failed downloads.",
+    )
+    cleanup_completed_days: int = Field(
+        default=7,
+        ge=1,
+        le=30,
+        description="Days to keep completed/failed jobs in queue before cleanup.",
+    )
+    notification_enabled: bool = Field(
+        default=True,
+        description="Whether to show notifications for new episodes.",
+    )
+
+
 class AppConfig(BaseModel):
     """The root configuration model for the FastAnime application."""
 
@@ -315,6 +358,10 @@ class AppConfig(BaseModel):
         default_factory=AnilistConfig,
         description="Configuration for AniList API integration.",
     )
+    service: ServiceConfig = Field(
+        default_factory=ServiceConfig,
+        description="Configuration for the background download service.",
+    )
 
     fzf: FzfConfig = Field(
         default_factory=FzfConfig,
@@ -326,4 +373,8 @@ class AppConfig(BaseModel):
     )
     mpv: MpvConfig = Field(
         default_factory=MpvConfig, description="Configuration for the MPV media player."
+    )
+    service: ServiceConfig = Field(
+        default_factory=ServiceConfig,
+        description="Configuration for the background download service.",
     )

@@ -58,7 +58,8 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
         f"{'🔁 ' if icons else ''}Rewatching": _create_user_list_action(
             ctx, "REPEATING"
         ),
-        # --- Local Watch History ---
+        # --- List Management ---
+        f"{'📚 ' if icons else ''}AniList Lists Manager": lambda: ("ANILIST_LISTS", None, None, None),
         f"{'📖 ' if icons else ''}Local Watch History": lambda: ("WATCH_HISTORY", None, None, None),
         # --- Authentication and Account Management ---
         f"{'🔐 ' if icons else ''}Authentication": lambda: ("AUTH", None, None, None),
@@ -90,6 +91,8 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
         return State(menu_name="SESSION_MANAGEMENT")
     if next_menu_name == "AUTH":
         return State(menu_name="AUTH")
+    if next_menu_name == "ANILIST_LISTS":
+        return State(menu_name="ANILIST_LISTS")
     if next_menu_name == "WATCH_HISTORY":
         return State(menu_name="WATCH_HISTORY")
     if next_menu_name == "CONTINUE":

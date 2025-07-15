@@ -63,7 +63,7 @@ def config(
 ):
     from ...core.constants import USER_CONFIG_PATH
     from ..config.generate import generate_config_ini_from_app_model
-    from ..config.interactive_editor import InteractiveConfigEditor
+    from ..config.editor import InteractiveConfigEditor
 
     if path:
         print(USER_CONFIG_PATH)

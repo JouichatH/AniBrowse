@@ -31,6 +31,8 @@ commands = {
     "search": ".search",
     "download": ".download",
     "anilist": ".anilist",
+    "queue": ".queue",
+    "service": ".service",
 }
 
 
