@@ -84,13 +84,14 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
                 ctx, anilist_anime.id, int(current_episode_num)
             )
             
-            # Also update local watch history if enabled
+            # Update unified media registry with actual PlayerResult data
             if config.stream.continue_from_watch_history and config.stream.preferred_watch_history == "local":
-                from ...utils.watch_history_tracker import update_episode_progress
+                from ...services.media_registry.tracker import get_media_tracker
                 try:
-                    update_episode_progress(anilist_anime.id, int(current_episode_num), completion_pct)
-                except (ValueError, AttributeError):
-                    pass  # Skip if episode number conversion fails
+                    tracker = get_media_tracker()
+                    tracker.track_from_player_result(anilist_anime, int(current_episode_num), player_result)
+                except (ValueError, AttributeError) as e:
+                    logger.warning(f"Failed to update media registry: {e}")
 
     # --- Auto-Next Logic ---
     available_episodes = getattr(
@@ -102,13 +103,14 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
         console.print("[cyan]Auto-playing next episode...[/cyan]")
         next_episode_num = available_episodes[current_index + 1]
         
-        # Track next episode in watch history
+        # Track next episode in unified media registry
         if config.stream.continue_from_watch_history and config.stream.preferred_watch_history == "local" and anilist_anime:
-            from ...utils.watch_history_tracker import track_episode_viewing
+            from ...services.media_registry.tracker import get_media_tracker
             try:
-                track_episode_viewing(anilist_anime, int(next_episode_num), start_tracking=True)
-            except (ValueError, AttributeError):
-                pass
+                tracker = get_media_tracker()
+                tracker.track_episode_start(anilist_anime, int(next_episode_num))
+            except (ValueError, AttributeError) as e:
+                logger.warning(f"Failed to track episode start: {e}")
         
         return State(
             menu_name="SERVERS",
