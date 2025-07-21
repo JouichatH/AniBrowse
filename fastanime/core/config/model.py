@@ -13,7 +13,7 @@ from ...core.constants import (
 )
 from ...libs.api.anilist.constants import SORTS_AVAILABLE
 from ...libs.providers.anime import PROVIDERS_AVAILABLE, SERVERS_AVAILABLE
-from ..constants import APP_ASCII_ART, APP_DATA_DIR, USER_VIDEOS_DIR
+from ..constants import APP_ASCII_ART
 from . import defaults
 from . import descriptions as desc
 
@@ -202,6 +202,13 @@ class ServiceConfig(BaseModel):
 
 class OtherConfig(BaseModel):
     pass
+
+
+class SessionsConfig(OtherConfig):
+    dir: Path = Field(
+        default_factory=lambda: defaults.SESSIONS_DIR,
+        description=desc.SESSIONS_DIR,
+    )
 
 
 class FzfConfig(OtherConfig):
@@ -465,4 +472,7 @@ class AppConfig(BaseModel):
     )
     media_registry: MediaRegistryConfig = Field(
         default_factory=MediaRegistryConfig, description=desc.APP_MEDIA_REGISTRY
+    )
+    sessions: SessionsConfig = Field(
+        default_factory=SessionsConfig, description=desc.APP_SESSIONS
     )

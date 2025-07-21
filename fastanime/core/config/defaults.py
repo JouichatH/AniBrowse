@@ -1,5 +1,3 @@
-# fastanime/core/config/defaults.py
-
 from ..constants import APP_DATA_DIR, APP_NAME, USER_VIDEOS_DIR
 
 # GeneralConfig
@@ -72,7 +70,9 @@ DOWNLOADS_AUTO_CLEANUP_FAILED = True
 DOWNLOADS_RETENTION_DAYS = 30
 DOWNLOADS_SYNC_WITH_WATCH_HISTORY = True
 DOWNLOADS_AUTO_MARK_OFFLINE = True
-DOWNLOADS_NAMING_TEMPLATE = "{title}/Season {season:02d}/{episode:02d} - {episode_title}.{ext}"
+DOWNLOADS_NAMING_TEMPLATE = (
+    "{title}/Season {season:02d}/{episode:02d} - {episode_title}.{ext}"
+)
 DOWNLOADS_PREFERRED_QUALITY = "1080"
 DOWNLOADS_DOWNLOAD_SUBTITLES = True
 DOWNLOADS_SUBTITLE_LANGUAGES = ["en"]
@@ -84,3 +84,6 @@ DOWNLOADS_RETRY_DELAY = 300
 # RegistryConfig
 MEDIA_REGISTRY_DIR = USER_VIDEOS_DIR / APP_NAME / "registry"
 MEDIA_REGISTRY_INDEX_DIR = APP_DATA_DIR
+
+# session config
+SESSIONS_DIR = APP_DATA_DIR / "sessions"

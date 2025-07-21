@@ -1,4 +1,6 @@
 # GeneralConfig
+from fastanime.core.config.defaults import SESSIONS_DIR
+
 GENERAL_PYGMENT_STYLE = "The pygment style to use"
 GENERAL_API_CLIENT = "The media database API to use (e.g., 'anilist', 'jikan')."
 GENERAL_PROVIDER = "The default anime provider to use for scraping."
@@ -130,3 +132,7 @@ APP_FZF = "Settings for the FZF selector interface."
 APP_ROFI = "Settings for the Rofi selector interface."
 APP_MPV = "Configuration for the MPV media player."
 APP_MEDIA_REGISTRY = "Configuration for the media registry."
+APP_SESSIONS = "Configuration for sessions."
+
+# session config
+SESSIONS_DIR = "The default directory to save sessions."
