@@ -42,6 +42,9 @@ class AniListApi(BaseApiClient):
             self.http_client.headers.pop("Authorization", None)
         return self.user_profile
 
+    def is_authenticated(self) -> bool:
+        return True if self.user_profile else False
+
     def get_viewer_profile(self) -> Optional[UserProfile]:
         if not self.token:
             return None

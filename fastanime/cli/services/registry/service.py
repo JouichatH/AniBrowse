@@ -8,7 +8,12 @@ from ....core.config.model import MediaRegistryConfig
 from ....core.exceptions import FastAnimeError
 from ....core.utils.file import AtomicWriter, FileLock, check_file_modified
 from ....libs.api.params import ApiSearchParams
-from ....libs.api.types import MediaItem, UserListStatusType
+from ....libs.api.types import (
+    MediaItem,
+    MediaSearchResult,
+    PageInfo,
+    UserListStatusType,
+)
 from .filters import MediaFilter
 from .models import (
     REGISTRY_VERSION,
@@ -26,10 +31,12 @@ class MediaRegistryService:
         self.media_registry_dir = self.config.media_dir / media_api
         self._media_api = media_api
         self._ensure_directories()
+        self._index = None
         self._index_file = self.config.index_dir / "registry.json"
         self._index_file_modified_time = 0
         _lock_file = self.config.media_dir / "registry.lock"
         self._lock = FileLock(_lock_file)
+        self._load_index()
 
     def _ensure_directories(self) -> None:
         """Ensure registry directories exist."""
@@ -68,7 +75,7 @@ class MediaRegistryService:
         with self._lock:
             index.last_updated = datetime.now()
             with AtomicWriter(self._index_file) as f:
-                json.dump(index.model_dump(), f, indent=2)
+                json.dump(index.model_dump(mode="json"), f, indent=2)
 
             logger.debug("saved registry index")
 
@@ -106,23 +113,22 @@ class MediaRegistryService:
         return index_entry
 
     def save_media_index_entry(self, index_entry: MediaRegistryIndexEntry) -> bool:
-        with self._lock:
-            index = self._load_index()
-            index.media_index[f"{self._media_api}_{index_entry.media_id}"] = index_entry
-            self._save_index(index)
+        index = self._load_index()
+        index.media_index[f"{self._media_api}_{index_entry.media_id}"] = index_entry
+        self._save_index(index)
 
-            logger.debug(f"Saved media record for {index_entry.media_id}")
-            return True
+        logger.debug(f"Saved media record for {index_entry.media_id}")
+        return True
 
     def save_media_record(self, record: MediaRecord) -> bool:
+        self.get_or_create_index_entry(record.media_item.id)
         with self._lock:
-            self.get_or_create_index_entry(record.media_item.id)
             media_id = record.media_item.id
 
             record_file = self._get_media_file_path(media_id)
 
             with AtomicWriter(record_file) as f:
-                json.dump(record.model_dump(), f, indent=2, default=str)
+                json.dump(record.model_dump(mode="json"), f, indent=2, default=str)
 
             logger.debug(f"Saved media record for {media_id}")
             return True
@@ -186,7 +192,7 @@ class MediaRegistryService:
         index.media_index[f"{self._media_api}_{media_id}"] = index_entry
         self._save_index(index)
 
-    def get_recently_watched(self, limit: int) -> List[MediaRecord]:
+    def get_recently_watched(self, limit: int) -> MediaSearchResult:
         """Get recently watched anime."""
         index = self._load_index()
 
@@ -194,7 +200,7 @@ class MediaRegistryService:
             index.media_index.values(), key=lambda x: x.last_watched, reverse=True
         )
 
-        recent_media = []
+        recent_media: List[MediaItem] = []
         for entry in sorted_entries:
             record = self.get_media_record(entry.media_id)
             if record:
@@ -202,7 +208,10 @@ class MediaRegistryService:
             if len(recent_media) == limit:
                 break
 
-        return recent_media
+        page_info = PageInfo(
+            total=len(sorted_entries),
+        )
+        return MediaSearchResult(page_info=page_info, media=recent_media)
 
     def get_registry_stats(self) -> Dict:
         """Get comprehensive registry statistics."""
@@ -258,10 +267,10 @@ class MediaRegistryService:
                 except OSError:
                     pass
 
-            index = self._load_index()
-            id = f"{self._media_api}_{media_id}"
-            if id in index.media_index:
-                del index.media_index[id]
-                self._save_index(index)
+        index = self._load_index()
+        id = f"{self._media_api}_{media_id}"
+        if id in index.media_index:
+            del index.media_index[id]
+            self._save_index(index)
 
             logger.debug(f"Removed media record {media_id}")

@@ -58,9 +58,7 @@ class ApiSearchParams:
 
 @dataclass(frozen=True)
 class UserListParams:
-    status: Literal[
-        "CURRENT", "PLANNING", "COMPLETED", "DROPPED", "PAUSED", "REPEATING"
-    ]
+    status: UserListStatusType
     page: int = 1
     per_page: int = 20
 

@@ -22,6 +22,10 @@ class BaseApiClient(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def is_authenticated(self) -> bool:
+        pass
+
+    @abc.abstractmethod
     def get_viewer_profile(self) -> Optional[UserProfile]:
         pass
 

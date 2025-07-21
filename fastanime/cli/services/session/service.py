@@ -50,7 +50,7 @@ class SessionsService:
     def _save_session(self, session: Session):
         path = self.dir / f"{session.name}.json"
         with AtomicWriter(path) as f:
-            json.dump(session.model_dump(), f)
+            json.dump(session.model_dump(mode="json"), f)
 
     def _load_session(self, session_name: str) -> Optional[Session]:
         path = self.dir / f"{session_name}.json"

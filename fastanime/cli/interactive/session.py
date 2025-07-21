@@ -121,7 +121,7 @@ class Session:
         try:
             self._run_main_loop()
         except Exception as e:
-            self._context.services.session.save_session(self._history)
+            self._context.services.session.create_crash_backup(self._history)
             raise
         self._context.services.session.save_session(self._history)
 

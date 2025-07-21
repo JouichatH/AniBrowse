@@ -35,7 +35,7 @@ class WatchHistoryService:
             status=status,
         )
 
-        if self.media_api:
+        if self.media_api and self.media_api.is_authenticated():
             self.media_api.update_list_entry(
                 UpdateListEntryParams(
                     media_id=media_item.id,
@@ -61,7 +61,7 @@ class WatchHistoryService:
             notes=notes,
         )
 
-        if self.media_api:
+        if self.media_api and self.media_api.is_authenticated():
             self.media_api.update_list_entry(
                 UpdateListEntryParams(
                     media_id=media_item.id,

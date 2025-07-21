@@ -1,88 +1,74 @@
-from rich.console import Console
-
-from ....libs.api.types import MediaItem
 from ....libs.api.params import ApiSearchParams, UserListParams
-from ...utils.auth.utils import get_auth_status_indicator
-from ...utils.feedback import create_feedback_manager, execute_with_feedback
+from ....libs.api.types import MediaItem
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State
 
 
 @session.menu
 def results(ctx: Context, state: State) -> State | ControlFlow:
-    """
-    Displays a paginated list of anime from a search or category query.
-    Allows the user to select an anime to view its actions or navigate pages.
-    """
     search_results = state.media_api.search_results
-    console = Console()
-    console.clear()
+    feedback = ctx.services.feedback
+    feedback.clear_console()
+
     if not search_results or not search_results.media:
-        console.print(
-            "[bold yellow]No anime found for the given criteria.[/bold yellow]"
-        )
+        feedback.info("No anime found for the given criteria")
         return ControlFlow.BACK
 
-    # --- Prepare choices and previews ---
     anime_items = search_results.media
     formatted_titles = [
         _format_anime_choice(anime, ctx.config) for anime in anime_items
     ]
 
-    # Map formatted titles back to the original MediaItem objects
     anime_map = dict(zip(formatted_titles, anime_items))
 
     preview_command = None
     if ctx.config.general.preview != "none":
-        # This function will start background jobs to cache preview data
         from ...utils.previews import get_anime_preview
 
         preview_command = get_anime_preview(anime_items, formatted_titles, ctx.config)
 
-    # --- Build Navigation and Final Choice List ---
     choices = formatted_titles
     page_info = search_results.page_info
 
     # Add pagination controls if available with more descriptive text
     if page_info.has_next_page:
-        choices.append(f"{'➡️ ' if ctx.config.general.icons else ''}Next Page (Page {page_info.current_page + 1})")
+        choices.append(
+            f"{'➡️ ' if ctx.config.general.icons else ''}Next Page (Page {page_info.current_page + 1})"
+        )
     if page_info.current_page > 1:
-        choices.append(f"{'⬅️ ' if ctx.config.general.icons else ''}Previous Page (Page {page_info.current_page - 1})")
+        choices.append(
+            f"{'⬅️ ' if ctx.config.general.icons else ''}Previous Page (Page {page_info.current_page - 1})"
+        )
     choices.append("Back")
 
     # Create header with auth status and pagination info
-    auth_status, _ = get_auth_status_indicator(ctx.media_api, ctx.config.general.icons)
     pagination_info = f"Page {page_info.current_page}"
     if page_info.total > 0 and page_info.per_page > 0:
         total_pages = (page_info.total + page_info.per_page - 1) // page_info.per_page
         pagination_info += f" of ~{total_pages}"
-    
-    header = f"Search Results ({len(anime_items)} anime) - {pagination_info}\n{auth_status}"
 
-    # --- Prompt User ---
     choice_str = ctx.selector.choose(
         prompt="Select Anime",
         choices=choices,
         preview=preview_command,
-        header=header,
     )
 
     if not choice_str:
         return ControlFlow.EXIT
 
-    # --- Handle User Selection ---
     if choice_str == "Back":
         return ControlFlow.BACK
 
-    # Handle pagination - check for both old and new formats
-    if (choice_str == "Next Page" or choice_str == "Previous Page" or 
-        choice_str.startswith("Next Page (") or choice_str.startswith("Previous Page (")):
+    if (
+        choice_str == "Next Page"
+        or choice_str == "Previous Page"
+        or choice_str.startswith("Next Page (")
+        or choice_str.startswith("Previous Page (")
+    ):
         page_delta = 1 if choice_str.startswith("Next Page") else -1
-        
-        # Implement pagination logic
+
         return _handle_pagination(ctx, state, page_delta)
 
-    # If an anime was selected, transition to the MEDIA_ACTIONS state
     selected_anime = anime_map.get(choice_str)
     if selected_anime:
         return State(
@@ -91,7 +77,6 @@ def results(ctx: Context, state: State) -> State | ControlFlow:
                 search_results=state.media_api.search_results,  # Carry over the list
                 anime=selected_anime,  # Set the newly selected item
             ),
-            # Persist provider state if it exists
             provider=state.provider,
         )
 
@@ -125,36 +110,38 @@ def _format_anime_choice(anime: MediaItem, config) -> str:
     return display_title
 
 
-def _handle_pagination(ctx: Context, state: State, page_delta: int) -> State | ControlFlow:
+def _handle_pagination(
+    ctx: Context, state: State, page_delta: int
+) -> State | ControlFlow:
     """
     Handle pagination by fetching the next or previous page of results.
-    
+
     Args:
         ctx: The application context
         state: Current state containing search results and original parameters
         page_delta: +1 for next page, -1 for previous page
-    
+
     Returns:
         New State with updated search results or ControlFlow.CONTINUE on error
     """
-    feedback = create_feedback_manager(ctx.config.general.icons)
-    
+    feedback = ctx.services.feedback
+
     if not state.media_api.search_results:
         feedback.error("No search results available for pagination")
         return ControlFlow.CONTINUE
-    
+
     current_page = state.media_api.search_results.page_info.current_page
     new_page = current_page + page_delta
-    
+
     # Validate page bounds
     if new_page < 1:
         feedback.warning("Already at the first page")
         return ControlFlow.CONTINUE
-    
+
     if page_delta > 0 and not state.media_api.search_results.page_info.has_next_page:
         feedback.warning("No more pages available")
         return ControlFlow.CONTINUE
-    
+
     # Determine which type of search to perform based on stored parameters
     if state.media_api.original_api_params:
         # Media search (trending, popular, search, etc.)
@@ -167,13 +154,15 @@ def _handle_pagination(ctx: Context, state: State, page_delta: int) -> State | C
         return ControlFlow.CONTINUE
 
 
-def _fetch_media_page(ctx: Context, state: State, page: int, feedback) -> State | ControlFlow:
+def _fetch_media_page(
+    ctx: Context, state: State, page: int, feedback
+) -> State | ControlFlow:
     """Fetch a specific page for media search results."""
     original_params = state.media_api.original_api_params
     if not original_params:
         feedback.error("No original API parameters found")
         return ControlFlow.CONTINUE
-    
+
     # Create new parameters with updated page number
     new_params = ApiSearchParams(
         query=original_params.query,
@@ -203,23 +192,9 @@ def _fetch_media_page(ctx: Context, state: State, page: int, feedback) -> State 
         type=original_params.type,
         on_list=original_params.on_list,
     )
-    
-    def fetch_data():
-        return ctx.media_api.search_media(new_params)
-    
-    success, result = execute_with_feedback(
-        fetch_data,
-        feedback,
-        f"fetch page {page}",
-        loading_msg=f"Loading page {page}",
-        success_msg=f"Page {page} loaded successfully",
-        show_loading=False,
-    )
-    
-    if not success or not result:
-        return ControlFlow.CONTINUE
-    
-    # Return new state with updated results
+
+    result = ctx.media_api.search_media(new_params)
+
     return State(
         menu_name="RESULTS",
         media_api=MediaApiState(
@@ -231,36 +206,24 @@ def _fetch_media_page(ctx: Context, state: State, page: int, feedback) -> State 
     )
 
 
-def _fetch_user_list_page(ctx: Context, state: State, page: int, feedback) -> State | ControlFlow:
+def _fetch_user_list_page(
+    ctx: Context, state: State, page: int, feedback
+) -> State | ControlFlow:
     """Fetch a specific page for user list results."""
     original_params = state.media_api.original_user_list_params
     if not original_params:
         feedback.error("No original user list parameters found")
         return ControlFlow.CONTINUE
-    
+
     # Create new parameters with updated page number
     new_params = UserListParams(
         status=original_params.status,
         page=page,
         per_page=original_params.per_page,
     )
-    
-    def fetch_data():
-        return ctx.media_api.fetch_user_list(new_params)
-    
-    success, result = execute_with_feedback(
-        fetch_data,
-        feedback,
-        f"fetch page {page} of {original_params.status.lower()} list",
-        loading_msg=f"Loading page {page}",
-        success_msg=f"Page {page} loaded successfully",
-        show_loading=False,
-    )
-    
-    if not success or not result:
-        return ControlFlow.CONTINUE
-    
-    # Return new state with updated results
+
+    result = ctx.media_api.fetch_user_list(new_params)
+
     return State(
         menu_name="RESULTS",
         media_api=MediaApiState(

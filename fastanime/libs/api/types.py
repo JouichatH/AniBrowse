@@ -130,10 +130,10 @@ class MediaItem(BaseApiModel):
 class PageInfo(BaseApiModel):
     """Generic pagination information."""
 
-    total: int
-    current_page: int
-    has_next_page: bool
-    per_page: int
+    total: int = 1
+    current_page: int = 1
+    has_next_page: bool = False
+    per_page: int = 15
 
 
 class MediaSearchResult(BaseApiModel):

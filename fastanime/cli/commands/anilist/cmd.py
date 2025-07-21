@@ -26,4 +26,4 @@ def anilist(ctx: click.Context, resume: bool):
 
     if ctx.invoked_subcommand is None:
         session.load_menus_from_folder()
-        session.run(config)
+        session.run(config, resume=resume)

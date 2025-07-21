@@ -21,6 +21,12 @@ from . import descriptions as desc
 class GeneralConfig(BaseModel):
     """Configuration for general application behavior and integrations."""
 
+    per_page: int = Field(
+        default=defaults.ANILIST_PER_PAGE,
+        gt=0,
+        le=50,
+        description=desc.ANILIST_PER_PAGE,
+    )
     pygment_style: str = Field(
         default=defaults.GENERAL_PYGMENT_STYLE, description=desc.GENERAL_PYGMENT_STYLE
     )

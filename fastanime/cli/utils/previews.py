@@ -155,7 +155,9 @@ def get_anime_preview(
     os.environ["SHELL"] = "bash"
     return final_script
 
+
 # --- Episode Preview Functionality ---
+
 
 def _populate_episode_info_template(episode_data: dict, config: AppConfig) -> str:
     """
@@ -172,8 +174,12 @@ def _populate_episode_info_template(episode_data: dict, config: AppConfig) -> st
         "SCORE": formatters.shell_safe("N/A"),  # Episodes don't have scores
         "STATUS": formatters.shell_safe(episode_data.get("status", "Available")),
         "FAVOURITES": formatters.shell_safe("N/A"),  # Episodes don't have favorites
-        "GENRES": formatters.shell_safe(episode_data.get("duration", "Unknown duration")),
-        "SYNOPSIS": formatters.shell_safe(episode_data.get("description", "No episode description available.")),
+        "GENRES": formatters.shell_safe(
+            episode_data.get("duration", "Unknown duration")
+        ),
+        "SYNOPSIS": formatters.shell_safe(
+            episode_data.get("description", "No episode description available.")
+        ),
         # Color codes
         "C_TITLE": ansi.get_true_fg(HEADER_COLOR, bold=True),
         "C_KEY": ansi.get_true_fg(HEADER_COLOR, bold=True),
@@ -191,72 +197,87 @@ def _populate_episode_info_template(episode_data: dict, config: AppConfig) -> st
 def _episode_cache_worker(episodes: List[str], anime: MediaItem, config: AppConfig):
     """Background task that fetches and saves episode preview data."""
     streaming_episodes = {ep.title: ep for ep in anime.streaming_episodes}
-    
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         for episode_str in episodes:
             hash_id = _get_cache_hash(episode_str)
-            
+
             # Find matching streaming episode
             episode_data = None
             for title, ep in streaming_episodes.items():
-                if f"Episode {episode_str}" in title or title.endswith(f" {episode_str}"):
+                if f"Episode {episode_str}" in title or title.endswith(
+                    f" {episode_str}"
+                ):
                     episode_data = {
                         "title": title,
                         "thumbnail": ep.thumbnail,
                         "description": f"Episode {episode_str} of {anime.title.english or anime.title.romaji}",
-                        "duration": f"{anime.duration} min" if anime.duration else "Unknown duration",
-                        "status": "Available"
+                        "duration": f"{anime.duration} min"
+                        if anime.duration
+                        else "Unknown duration",
+                        "status": "Available",
                     }
                     break
-            
+
             # Fallback if no streaming episode found
             if not episode_data:
                 episode_data = {
                     "title": f"Episode {episode_str}",
                     "thumbnail": None,
                     "description": f"Episode {episode_str} of {anime.title.english or anime.title.romaji}",
-                    "duration": f"{anime.duration} min" if anime.duration else "Unknown duration",
-                    "status": "Available"
+                    "duration": f"{anime.duration} min"
+                    if anime.duration
+                    else "Unknown duration",
+                    "status": "Available",
                 }
-            
+
             # Download thumbnail if available
             if episode_data["thumbnail"]:
-                executor.submit(_save_image_from_url, episode_data["thumbnail"], hash_id)
-            
+                executor.submit(
+                    _save_image_from_url, episode_data["thumbnail"], hash_id
+                )
+
             # Generate and save episode info
             episode_info = _populate_episode_info_template(episode_data, config)
             executor.submit(_save_info_text, episode_info, hash_id)
 
 
-def get_episode_preview(episodes: List[str], anime: MediaItem, config: AppConfig) -> str:
+def get_episode_preview(
+    episodes: List[str], anime: MediaItem, config: AppConfig
+) -> str:
     """
     Starts a background task to cache episode preview data and returns the fzf preview command.
-    
+
     Args:
         episodes: List of episode numbers as strings
         anime: MediaItem containing the anime data with streaming episodes
         config: Application configuration
-    
+
     Returns:
         FZF preview command string
     """
+    # TODO: finish implementation of episode preview
     # Ensure cache directories exist
     IMAGES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     INFO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     # Start background caching for episodes
-    Thread(target=_episode_cache_worker, args=(episodes, anime, config), daemon=True).start()
-    
+    Thread(
+        target=_episode_cache_worker, args=(episodes, anime, config), daemon=True
+    ).start()
+
     # Read the shell script template
     try:
         template = PREVIEW_SCRIPT_TEMPLATE_PATH.read_text(encoding="utf-8")
     except FileNotFoundError:
-        logger.error(f"Preview script template not found at {PREVIEW_SCRIPT_TEMPLATE_PATH}")
+        logger.error(
+            f"Preview script template not found at {PREVIEW_SCRIPT_TEMPLATE_PATH}"
+        )
         return "echo 'Error: Preview script template not found.'"
-    
+
     # Prepare values to inject into the template
     path_sep = "\\" if PLATFORM == "win32" else "/"
-    
+
     # Format the template with the dynamic values
     final_script = (
         template.replace("{preview_mode}", config.general.preview)
@@ -265,6 +286,6 @@ def get_episode_preview(episodes: List[str], anime: MediaItem, config: AppConfig
         .replace("{path_sep}", path_sep)
         .replace("{image_renderer}", config.general.image_renderer)
     )
-    
+
     os.environ["SHELL"] = "bash"
     return final_script

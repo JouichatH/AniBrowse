@@ -106,3 +106,6 @@ class FeedbackService:
         """Show detailed information in a styled panel."""
         console.print(Panel(content, title=title, border_style=style, expand=True))
         self.pause_for_user()
+
+    def clear_console(self):
+        console.clear()

@@ -83,15 +83,16 @@ def _to_generic_media_trailer(
 
 
 def _to_generic_airing_schedule(
-    anilist_schedule: AnilistMediaNextAiringEpisode,
+    anilist_schedule: Optional[AnilistMediaNextAiringEpisode],
 ) -> Optional[AiringSchedule]:
     """Maps an AniList nextAiringEpisode object to a generic AiringSchedule."""
-    return AiringSchedule(
-        airing_at=datetime.fromtimestamp(anilist_schedule["airingAt"])
-        if anilist_schedule.get("airingAt")
-        else None,
-        episode=anilist_schedule.get("episode", 0),
-    )
+    if anilist_schedule:
+        return AiringSchedule(
+            airing_at=datetime.fromtimestamp(anilist_schedule["airingAt"])
+            if anilist_schedule.get("airingAt")
+            else None,
+            episode=anilist_schedule.get("episode", 0),
+        )
 
 
 def _to_generic_studios(anilist_studios: AnilistStudioNodes) -> List[Studio]:

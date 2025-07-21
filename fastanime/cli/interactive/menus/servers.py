@@ -1,6 +1,5 @@
 from typing import Dict, List
 
-import click
 from rich.console import Console
 from rich.progress import Progress
 
@@ -100,6 +99,10 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
             headers=selected_server.headers,
         )
     )
+    if state.media_api.anime and state.provider.episode_number:
+        ctx.services.watch_history.track(
+            state.media_api.anime, state.provider.episode_number, player_result
+        )
 
     return State(
         menu_name="PLAYER_CONTROLS",

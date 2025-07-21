@@ -1,15 +1,13 @@
+import logging
 import random
 from typing import Callable, Dict, Tuple
 
-from rich.console import Console
-
 from ....libs.api.params import ApiSearchParams, UserListParams
 from ....libs.api.types import MediaSearchResult, MediaStatus, UserListStatusType
-from ...utils.auth.utils import check_authentication_required, format_auth_menu_header
-from ...utils.feedback import create_feedback_manager, execute_with_feedback
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State
 
+logger = logging.getLogger(__name__)
 MenuAction = Callable[
     [],
     Tuple[str, MediaSearchResult | None, ApiSearchParams | None, UserListParams | None],
@@ -23,10 +21,10 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     Displays top-level categories for the user to browse and select.
     """
     icons = ctx.config.general.icons
-    feedback = create_feedback_manager(icons)
-    console = Console()
-    console.clear()
+    feedback = ctx.services.feedback
+    feedback.clear_console()
 
+    # TODO: Make them just return the modified state or control flow
     options: Dict[str, MenuAction] = {
         # --- Search-based Actions ---
         f"{'🔥 ' if icons else ''}Trending": _create_media_list_action(
@@ -51,41 +49,21 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
         f"{'🎲 ' if icons else ''}Random": _create_random_media_list(ctx),
         f"{'🔎 ' if icons else ''}Search": _create_search_media_list(ctx),
         # --- Authenticated User List Actions ---
-        f"{'📺 ' if icons else ''}Watching": _create_user_list_action(ctx, "CURRENT"),
-        f"{'📑 ' if icons else ''}Planned": _create_user_list_action(ctx, "PLANNING"),
+        f"{'📺 ' if icons else ''}Watching": _create_user_list_action(ctx, "watching"),
+        f"{'📑 ' if icons else ''}Planned": _create_user_list_action(ctx, "planning"),
         f"{'✅ ' if icons else ''}Completed": _create_user_list_action(
-            ctx, "COMPLETED"
+            ctx, "completed"
         ),
-        f"{'⏸️ ' if icons else ''}Paused": _create_user_list_action(ctx, "PAUSED"),
-        f"{'🚮 ' if icons else ''}Dropped": _create_user_list_action(ctx, "DROPPED"),
+        f"{'⏸️ ' if icons else ''}Paused": _create_user_list_action(ctx, "paused"),
+        f"{'🚮 ' if icons else ''}Dropped": _create_user_list_action(ctx, "dropped"),
         f"{'🔁 ' if icons else ''}Rewatching": _create_user_list_action(
-            ctx, "REPEATING"
+            ctx, "repeating"
         ),
-        # --- List Management ---
-        f"{'📚 ' if icons else ''}AniList Lists Manager": lambda: (
-            "ANILIST_LISTS",
-            None,
-            None,
-            None,
-        ),
-        f"{'📖 ' if icons else ''}Local Watch History": lambda: (
-            "WATCH_HISTORY",
-            None,
-            None,
-            None,
-        ),
-        # --- Authentication and Account Management ---
-        f"{'🔐 ' if icons else ''}Authentication": lambda: ("AUTH", None, None, None),
-        # --- Control Flow and Utility Options ---
-        f"{'🔧 ' if icons else ''}Session Management": lambda: (
-            "SESSION_MANAGEMENT",
-            None,
-            None,
-            None,
-        ),
-        f"{'📝 ' if icons else ''}Edit Config": lambda: (
-            "RELOAD_CONFIG",
-            None,
+        f"{'🔁 ' if icons else ''}Recent": lambda: (
+            "RESULTS",
+            ctx.services.media_registry.get_recently_watched(
+                ctx.config.anilist.per_page
+            ),
             None,
             None,
         ),
@@ -95,7 +73,6 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     choice_str = ctx.selector.choose(
         prompt="Select Category",
         choices=list(options.keys()),
-        header=format_auth_menu_header(ctx.media_api, "FastAnime Main Menu", icons),
     )
 
     if not choice_str:
@@ -145,93 +122,42 @@ def _create_media_list_action(
     """A factory to create menu actions for fetching media lists"""
 
     def action():
-        feedback = create_feedback_manager(ctx.config.general.icons)
-
         # Create the search parameters
         search_params = ApiSearchParams(
             sort=sort, per_page=ctx.config.anilist.per_page, status=status
         )
 
-        def fetch_data():
-            return ctx.media_api.search_media(search_params)
+        result = ctx.media_api.search_media(search_params)
 
-        success, result = execute_with_feedback(
-            fetch_data,
-            feedback,
-            "fetch anime list",
-            loading_msg="Fetching anime",
-            success_msg="Anime list loaded successfully",
-        )
-
-        # Return the search parameters along with the result for pagination
-        return (
-            ("RESULTS", result, search_params, None)
-            if success
-            else ("CONTINUE", None, None, None)
-        )
+        return ("RESULTS", result, search_params, None)
 
     return action
 
 
 def _create_random_media_list(ctx: Context) -> MenuAction:
     def action():
-        feedback = create_feedback_manager(ctx.config.general.icons)
-
-        # Create the search parameters
         search_params = ApiSearchParams(
             id_in=random.sample(range(1, 160000), k=50),
             per_page=ctx.config.anilist.per_page,
         )
 
-        def fetch_data():
-            return ctx.media_api.search_media(search_params)
+        result = ctx.media_api.search_media(search_params)
 
-        success, result = execute_with_feedback(
-            fetch_data,
-            feedback,
-            "fetch random anime",
-            loading_msg="Fetching random anime",
-            success_msg="Random anime loaded successfully",
-        )
-
-        # Return the search parameters along with the result for pagination
-        return (
-            ("RESULTS", result, search_params, None)
-            if success
-            else ("CONTINUE", None, None, None)
-        )
+        return ("RESULTS", result, search_params, None)
 
     return action
 
 
 def _create_search_media_list(ctx: Context) -> MenuAction:
     def action():
-        feedback = create_feedback_manager(ctx.config.general.icons)
-
         query = ctx.selector.ask("Search for Anime")
         if not query:
             return "CONTINUE", None, None, None
 
-        # Create the search parameters
         search_params = ApiSearchParams(query=query)
+        result = ctx.media_api.search_media(search_params)
 
-        def fetch_data():
-            return ctx.media_api.search_media(search_params)
-
-        success, result = execute_with_feedback(
-            fetch_data,
-            feedback,
-            "search anime",
-            loading_msg=f"Searching for '{query}'",
-            success_msg=f"Search results for '{query}' loaded successfully",
-        )
-
-        # Return the search parameters along with the result for pagination
-        return (
-            ("RESULTS", result, search_params, None)
-            if success
-            else ("CONTINUE", None, None, None)
-        )
+        return ("RESULTS", result, search_params, None)
 
     return action
 
@@ -240,35 +166,17 @@ def _create_user_list_action(ctx: Context, status: UserListStatusType) -> MenuAc
     """A factory to create menu actions for fetching user lists, handling authentication."""
 
     def action():
-        feedback = create_feedback_manager(ctx.config.general.icons)
-
         # Check authentication
-        if not check_authentication_required(
-            ctx.media_api, feedback, f"view your {status.lower()} list"
-        ):
+        if not ctx.media_api.is_authenticated():
+            logger.warning("Not authenticated")
             return "CONTINUE", None, None, None
 
-        # Create the user list parameters
         user_list_params = UserListParams(
             status=status, per_page=ctx.config.anilist.per_page
         )
 
-        def fetch_data():
-            return ctx.media_api.fetch_user_list(user_list_params)
+        result = ctx.media_api.fetch_user_list(user_list_params)
 
-        success, result = execute_with_feedback(
-            fetch_data,
-            feedback,
-            f"fetch {status.lower()} list",
-            loading_msg=f"Fetching your {status.lower()} list",
-            success_msg=f"Your {status.lower()} list loaded successfully",
-        )
-
-        # Return the user list parameters along with the result for pagination
-        return (
-            ("RESULTS", result, None, user_list_params)
-            if success
-            else ("CONTINUE", None, None, None)
-        )
+        return ("RESULTS", result, None, user_list_params)
 
     return action
