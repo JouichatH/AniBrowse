@@ -79,8 +79,6 @@ APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
 APP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 USER_VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 
-USER_DATA_PATH = APP_DATA_DIR / "user_data.json"
-USER_WATCH_HISTORY_PATH = APP_DATA_DIR / "watch_history.json"
 USER_CONFIG_PATH = APP_DATA_DIR / "config.ini"
 LOG_FILE_PATH = APP_CACHE_DIR / "fastanime.log"
 
