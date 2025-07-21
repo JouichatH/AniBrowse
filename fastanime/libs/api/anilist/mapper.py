@@ -20,6 +20,7 @@ from .types import (
     AnilistBaseMediaDataSchema,
     AnilistCurrentlyLoggedInUser,
     AnilistDataSchema,
+    AnilistDateObject,
     AnilistImage,
     AnilistMediaList,
     AnilistMediaLists,
@@ -46,6 +47,18 @@ status_map = {
     "PAUSED": "paused",
     "REPEATING": "repeating",
 }
+
+
+def _to_generic_date(date: AnilistDateObject) -> Optional[datetime]:
+    return (
+        datetime(
+            date["year"],
+            date["month"],
+            date["day"],
+        )
+        if date and date["year"] and date["month"] and date["day"]
+        else None
+    )
 
 
 def _to_generic_media_title(anilist_title: AnilistMediaTitle) -> MediaTitle:
@@ -156,7 +169,7 @@ def _to_generic_user_status(
             return
         return UserListStatus(
             id=anilist_media["mediaListEntry"]["id"],
-            status=anilist_media["mediaListEntry"]["status"],
+            status=anilist_media["mediaListEntry"]["status"],  # type: ignore
             progress=anilist_media["mediaListEntry"]["progress"],
         )
 
@@ -186,16 +199,8 @@ def _to_generic_media_item(
         popularity=data.get("popularity"),
         favourites=data.get("favourites"),
         next_airing=_to_generic_airing_schedule(data.get("nextAiringEpisode")),
-        start_date=datetime(
-            data["startDate"]["year"],
-            data["startDate"]["month"],
-            data["startDate"]["day"],
-        ),
-        end_date=datetime(
-            data["startDate"]["year"],
-            data["startDate"]["month"],
-            data["startDate"]["day"],
-        ),
+        start_date=_to_generic_date(data["startDate"]),
+        end_date=_to_generic_date(data["endDate"]),
         streaming_episodes=_to_generic_streaming_episodes(
             data.get("streamingEpisodes", [])
         ),
