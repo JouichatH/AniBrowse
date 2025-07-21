@@ -23,7 +23,7 @@ def search_as_you_type(config: AppConfig, query: str):
         # Don't search for very short queries to avoid spamming the API
         return
 
-    api_client = create_api_client(config.general.api_client, config)
+    api_client = create_api_client(config.general.media_api, config)
     search_params = ApiSearchParams(query=query, per_page=25)
     results = api_client.search_media(search_params)
 

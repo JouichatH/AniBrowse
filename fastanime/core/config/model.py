@@ -24,7 +24,7 @@ class GeneralConfig(BaseModel):
     pygment_style: str = Field(
         default=defaults.GENERAL_PYGMENT_STYLE, description=desc.GENERAL_PYGMENT_STYLE
     )
-    api_client: Literal["anilist", "jikan"] = Field(
+    media_api: Literal["anilist", "jikan"] = Field(
         default=defaults.GENERAL_API_CLIENT,
         description=desc.GENERAL_API_CLIENT,
     )

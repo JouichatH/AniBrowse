@@ -3,13 +3,13 @@ from typing import Iterator, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from ...libs.api.params import ApiSearchParams, UserListParams  # Add this import
 from ...libs.api.types import (
     MediaItem,
     MediaSearchResult,
     MediaStatus,
     UserListStatusType,
 )
-from ...libs.api.params import ApiSearchParams, UserListParams  # Add this import
 from ...libs.players.types import PlayerResult
 from ...libs.providers.anime.types import Anime, SearchResults, Server
 
@@ -27,7 +27,7 @@ class ControlFlow(Enum):
     EXIT = auto()
     """Terminate the interactive session gracefully."""
 
-    RELOAD_CONFIG = auto()
+    CONFIG_EDIT = auto()
     """Reload the application configuration and re-initialize the context."""
 
     CONTINUE = auto()
@@ -77,7 +77,7 @@ class MediaApiState(BaseModel):
     user_media_status: Optional[UserListStatusType] = None
     media_status: Optional[MediaStatus] = None
     anime: Optional[MediaItem] = None
-    
+
     # Add pagination support: store original search parameters to enable page navigation
     original_api_params: Optional[ApiSearchParams] = None
     original_user_list_params: Optional[UserListParams] = None

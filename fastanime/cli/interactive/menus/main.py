@@ -5,12 +5,15 @@ from rich.console import Console
 
 from ....libs.api.params import ApiSearchParams, UserListParams
 from ....libs.api.types import MediaSearchResult, MediaStatus, UserListStatusType
+from ...utils.auth.utils import check_authentication_required, format_auth_menu_header
 from ...utils.feedback import create_feedback_manager, execute_with_feedback
-from ...utils.auth.utils import format_auth_menu_header, check_authentication_required
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State
 
-MenuAction = Callable[[], Tuple[str, MediaSearchResult | None, ApiSearchParams | None, UserListParams | None]]
+MenuAction = Callable[
+    [],
+    Tuple[str, MediaSearchResult | None, ApiSearchParams | None, UserListParams | None],
+]
 
 
 @session.menu
@@ -59,13 +62,33 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
             ctx, "REPEATING"
         ),
         # --- List Management ---
-        f"{'📚 ' if icons else ''}AniList Lists Manager": lambda: ("ANILIST_LISTS", None, None, None),
-        f"{'📖 ' if icons else ''}Local Watch History": lambda: ("WATCH_HISTORY", None, None, None),
+        f"{'📚 ' if icons else ''}AniList Lists Manager": lambda: (
+            "ANILIST_LISTS",
+            None,
+            None,
+            None,
+        ),
+        f"{'📖 ' if icons else ''}Local Watch History": lambda: (
+            "WATCH_HISTORY",
+            None,
+            None,
+            None,
+        ),
         # --- Authentication and Account Management ---
         f"{'🔐 ' if icons else ''}Authentication": lambda: ("AUTH", None, None, None),
         # --- Control Flow and Utility Options ---
-        f"{'🔧 ' if icons else ''}Session Management": lambda: ("SESSION_MANAGEMENT", None, None, None),
-        f"{'📝 ' if icons else ''}Edit Config": lambda: ("RELOAD_CONFIG", None, None, None),
+        f"{'🔧 ' if icons else ''}Session Management": lambda: (
+            "SESSION_MANAGEMENT",
+            None,
+            None,
+            None,
+        ),
+        f"{'📝 ' if icons else ''}Edit Config": lambda: (
+            "RELOAD_CONFIG",
+            None,
+            None,
+            None,
+        ),
         f"{'❌ ' if icons else ''}Exit": lambda: ("EXIT", None, None, None),
     }
 
@@ -86,7 +109,7 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     if next_menu_name == "EXIT":
         return ControlFlow.EXIT
     if next_menu_name == "RELOAD_CONFIG":
-        return ControlFlow.RELOAD_CONFIG
+        return ControlFlow.CONFIG_EDIT
     if next_menu_name == "SESSION_MANAGEMENT":
         return State(menu_name="SESSION_MANAGEMENT")
     if next_menu_name == "AUTH":
@@ -141,7 +164,11 @@ def _create_media_list_action(
         )
 
         # Return the search parameters along with the result for pagination
-        return ("RESULTS", result, search_params, None) if success else ("CONTINUE", None, None, None)
+        return (
+            ("RESULTS", result, search_params, None)
+            if success
+            else ("CONTINUE", None, None, None)
+        )
 
     return action
 
@@ -168,7 +195,11 @@ def _create_random_media_list(ctx: Context) -> MenuAction:
         )
 
         # Return the search parameters along with the result for pagination
-        return ("RESULTS", result, search_params, None) if success else ("CONTINUE", None, None, None)
+        return (
+            ("RESULTS", result, search_params, None)
+            if success
+            else ("CONTINUE", None, None, None)
+        )
 
     return action
 
@@ -196,7 +227,11 @@ def _create_search_media_list(ctx: Context) -> MenuAction:
         )
 
         # Return the search parameters along with the result for pagination
-        return ("RESULTS", result, search_params, None) if success else ("CONTINUE", None, None, None)
+        return (
+            ("RESULTS", result, search_params, None)
+            if success
+            else ("CONTINUE", None, None, None)
+        )
 
     return action
 
@@ -214,7 +249,9 @@ def _create_user_list_action(ctx: Context, status: UserListStatusType) -> MenuAc
             return "CONTINUE", None, None, None
 
         # Create the user list parameters
-        user_list_params = UserListParams(status=status, per_page=ctx.config.anilist.per_page)
+        user_list_params = UserListParams(
+            status=status, per_page=ctx.config.anilist.per_page
+        )
 
         def fetch_data():
             return ctx.media_api.fetch_user_list(user_list_params)
@@ -228,6 +265,10 @@ def _create_user_list_action(ctx: Context, status: UserListStatusType) -> MenuAc
         )
 
         # Return the user list parameters along with the result for pagination
-        return ("RESULTS", result, None, user_list_params) if success else ("CONTINUE", None, None, None)
+        return (
+            ("RESULTS", result, None, user_list_params)
+            if success
+            else ("CONTINUE", None, None, None)
+        )
 
     return action

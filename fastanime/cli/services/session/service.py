@@ -11,7 +11,7 @@ from .model import Session
 logger = logging.getLogger(__name__)
 
 
-class SessionService:
+class SessionsService:
     def __init__(self, config: SessionsConfig):
         self.dir = config.dir
         self._ensure_sessions_directory()

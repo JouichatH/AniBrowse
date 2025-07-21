@@ -12,26 +12,22 @@ def stats(config: "AppConfig"):
     import shutil
     import subprocess
 
+    from fastanime.cli.utils.feedback import create_feedback_manager
+    from fastanime.core.exceptions import FastAnimeError
+    from fastanime.libs.api.factory import create_api_client
     from rich.console import Console
     from rich.markdown import Markdown
     from rich.panel import Panel
-
-    from fastanime.core.exceptions import FastAnimeError
-    from fastanime.libs.api.factory import create_api_client
-    from fastanime.cli.utils.feedback import create_feedback_manager
 
     feedback = create_feedback_manager(config.general.icons)
     console = Console()
 
     try:
         # Create API client and ensure authentication
-        api_client = create_api_client(config.general.api_client, config)
-        
+        api_client = create_api_client(config.general.media_api, config)
+
         if not api_client.user_profile:
-            feedback.error(
-                "Not authenticated", 
-                "Please run: fastanime anilist login"
-            )
+            feedback.error("Not authenticated", "Please run: fastanime anilist login")
             raise click.Abort()
 
         user_profile = api_client.user_profile
@@ -48,7 +44,7 @@ def stats(config: "AppConfig"):
                 image_y = int(console.size.height * 0.1)
                 img_w = console.size.width // 3
                 img_h = console.size.height // 3
-                
+
                 image_process = subprocess.run(
                     [
                         KITTEN_EXECUTABLE,
@@ -60,13 +56,13 @@ def stats(config: "AppConfig"):
                     ],
                     check=False,
                 )
-                
+
                 if image_process.returncode != 0:
                     feedback.warning("Failed to display profile image")
 
         # Display user information
-        about_text = getattr(user_profile, 'about', '') or "No description available"
-        
+        about_text = getattr(user_profile, "about", "") or "No description available"
+
         console.print(
             Panel(
                 Markdown(about_text),
