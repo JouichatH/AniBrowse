@@ -5,12 +5,13 @@ from pathlib import Path
 from typing import Dict, Generator, List, Optional
 
 from ....core.config.model import MediaRegistryConfig
+from ....core.exceptions import FastAnimeError
 from ....core.utils.file import AtomicWriter, FileLock, check_file_modified
 from ....libs.api.params import ApiSearchParams
-from ....libs.api.types import MediaItem
-from ....libs.players.types import PlayerResult
+from ....libs.api.types import MediaItem, UserListStatusType
 from .filters import MediaFilter
 from .models import (
+    REGISTRY_VERSION,
     MediaRecord,
     MediaRegistryIndex,
     MediaRegistryIndexEntry,
@@ -52,6 +53,12 @@ class MediaRegistryService:
         else:
             self._index = MediaRegistryIndex()
             self._save_index(self._index)
+
+        # check if there was a major change in the registry
+        if self._index.version[0] != REGISTRY_VERSION[0]:
+            raise FastAnimeError(
+                f"Incompatible registry version of {self._index.version}. Current registry supports version {REGISTRY_VERSION}. Please migrate your registry using the migrator"
+            )
 
         logger.debug(f"Loaded registry index with {self._index.media_count} entries")
         return self._index
@@ -131,21 +138,52 @@ class MediaRegistryService:
 
         return record
 
-    def update_from_player_result(
-        self, media_item: MediaItem, episode_number: str, player_result: PlayerResult
+    def update_media_index_entry(
+        self,
+        media_id: int,
+        watched: bool = False,
+        media_item: Optional[MediaItem] = None,
+        progress: Optional[str] = None,
+        status: Optional[UserListStatusType] = None,
+        last_watch_position: Optional[str] = None,
+        total_duration: Optional[str] = None,
+        score: Optional[float] = None,
+        repeat: Optional[int] = None,
+        notes: Optional[str] = None,
+        last_notified_episode: Optional[str] = None,
     ):
         """Update record from player feedback."""
-        self.get_or_create_record(media_item)
+        if media_item:
+            self.get_or_create_record(media_item)
 
         index = self._load_index()
-        index_entry = index.media_index[f"{self._media_api}_{media_item.id}"]
+        index_entry = index.media_index[f"{self._media_api}_{media_id}"]
 
-        index_entry.last_watch_position = player_result.stop_time
-        index_entry.total_duration = player_result.total_time
-        index_entry.progress = episode_number
-        index_entry.last_watched = datetime.now()
+        if progress:
+            index_entry.progress = progress
+        if index_entry.status:
+            if status:
+                index_entry.status = status
+        else:
+            index_entry.status = "watching"
 
-        index.media_index[f"{self._media_api}_{media_item.id}"] = index_entry
+        if last_watch_position:
+            index_entry.last_watch_position = last_watch_position
+        if total_duration:
+            index_entry.total_duration = total_duration
+        if score:
+            index_entry.score = score
+        if repeat:
+            index_entry.repeat = repeat
+        if notes:
+            index_entry.notes = notes
+        if last_notified_episode:
+            index_entry.last_notified_episode = last_notified_episode
+
+        if watched:
+            index_entry.last_watched = datetime.now()
+
+        index.media_index[f"{self._media_api}_{media_id}"] = index_entry
         self._save_index(index)
 
     def get_recently_watched(self, limit: int) -> List[MediaRecord]:

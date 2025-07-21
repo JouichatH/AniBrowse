@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Literal, Optional, Union
 
+from .types import UserListStatusType
+
 
 @dataclass(frozen=True)
 class ApiSearchParams:
@@ -66,8 +68,6 @@ class UserListParams:
 @dataclass(frozen=True)
 class UpdateListEntryParams:
     media_id: int
-    status: Optional[
-        Literal["CURRENT", "PLANNING", "COMPLETED", "DROPPED", "PAUSED", "REPEATING"]
-    ] = None
-    progress: Optional[int] = None
+    status: Optional[UserListStatusType] = None
+    progress: Optional[str] = None
     score: Optional[float] = None

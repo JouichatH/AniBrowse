@@ -5,7 +5,7 @@ from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field
 
-from ....libs.api.types import MediaItem
+from ....libs.api.types import MediaItem, UserListStatusType
 from ...utils import converters
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 DownloadStatus = Literal[
     "not_downloaded", "queued", "downloading", "completed", "failed", "paused"
 ]
-MediaUserStatus = Literal["planning", "watching", "completed", "dropped", "paused"]
 REGISTRY_VERSION = "1.0"
 
 
@@ -36,7 +35,7 @@ class MediaRegistryIndexEntry(BaseModel):
     media_id: int
     media_api: Literal["anilist", "NONE", "jikan"] = "NONE"
 
-    status: MediaUserStatus = "watching"
+    status: UserListStatusType = "watching"
     progress: str = "0"
     last_watch_position: Optional[str] = None
     last_watched: datetime = Field(default_factory=datetime.now)

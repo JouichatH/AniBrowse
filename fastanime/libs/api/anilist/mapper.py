@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from ..types import (
     AiringSchedule,
@@ -23,6 +23,7 @@ from .types import (
     AnilistImage,
     AnilistMediaList,
     AnilistMediaLists,
+    AnilistMediaListStatus,
     AnilistMediaNextAiringEpisode,
     AnilistMediaTag,
     AnilistMediaTitle,
@@ -36,6 +37,15 @@ from .types import (
 )
 
 logger = logging.getLogger(__name__)
+
+status_map = {
+    "CURRENT": "watching",
+    "PLANNING": "planning",
+    "COMPLETED": "completed",
+    "DROPPED": "dropped",
+    "PAUSED": "paused",
+    "REPEATING": "repeating",
+}
 
 
 def _to_generic_media_title(anilist_title: AnilistMediaTitle) -> MediaTitle:
@@ -76,9 +86,6 @@ def _to_generic_airing_schedule(
     anilist_schedule: AnilistMediaNextAiringEpisode,
 ) -> Optional[AiringSchedule]:
     """Maps an AniList nextAiringEpisode object to a generic AiringSchedule."""
-    if not anilist_schedule:
-        return
-
     return AiringSchedule(
         airing_at=datetime.fromtimestamp(anilist_schedule["airingAt"])
         if anilist_schedule.get("airingAt")
@@ -126,7 +133,7 @@ def _to_generic_user_status(
     """Maps an AniList mediaListEntry to a generic UserListStatus."""
     if anilist_list_entry:
         return UserListStatus(
-            status=anilist_list_entry["status"],
+            status=status_map[anilist_list_entry["status"]],  # pyright: ignore
             progress=anilist_list_entry["progress"],
             score=anilist_list_entry["score"],
             repeat=anilist_list_entry["repeat"],

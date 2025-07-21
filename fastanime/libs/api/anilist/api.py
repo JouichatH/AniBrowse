@@ -6,7 +6,6 @@ from httpx import Client
 from ....core.config import AnilistConfig
 from ....core.utils.graphql import (
     execute_graphql,
-    execute_graphql_query_with_get_request,
 )
 from ..base import ApiSearchParams, BaseApiClient, UpdateListEntryParams, UserListParams
 from ..types import MediaSearchResult, UserProfile
@@ -14,6 +13,16 @@ from . import gql, mapper
 
 logger = logging.getLogger(__name__)
 ANILIST_ENDPOINT = "https://graphql.anilist.co"
+
+
+status_map = {
+    "watching": "CURRENT",
+    "planning": "PLANNING",
+    "completed": "COMPLETED",
+    "dropped": "DROPPED",
+    "paused": "PAUSED",
+    "repeating": "REPEATING",
+}
 
 
 class AniListApi(BaseApiClient):
@@ -70,8 +79,8 @@ class AniListApi(BaseApiClient):
         score_raw = int(params.score * 10) if params.score is not None else None
         variables = {
             "mediaId": params.media_id,
-            "status": params.status,
-            "progress": params.progress,
+            "status": status_map[params.status] if params.status else None,
+            "progress": int(float(params.progress)) if params.progress else None,
             "scoreRaw": score_raw,
         }
         variables = {k: v for k, v in variables.items() if v is not None}

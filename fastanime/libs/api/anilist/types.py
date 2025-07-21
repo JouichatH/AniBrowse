@@ -242,7 +242,7 @@ class AnilistNotifications(TypedDict):
 
 class AnilistMediaList(TypedDict):
     media: AnilistBaseMediaDataSchema
-    status: str
+    status: AnilistMediaListStatus
     progress: int
     score: int
     repeat: int

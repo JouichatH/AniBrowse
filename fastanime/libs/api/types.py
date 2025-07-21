@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from datetime import datetime
 from typing import List, Literal, Optional
 
@@ -11,10 +9,10 @@ MediaType = Literal["ANIME", "MANGA"]
 MediaStatus = Literal[
     "FINISHED", "RELEASING", "NOT_YET_RELEASED", "CANCELLED", "HIATUS"
 ]
-UserListStatusType = Literal[
-    "CURRENT", "PLANNING", "COMPLETED", "DROPPED", "PAUSED", "REPEATING"
-]
 
+UserListStatusType = Literal[
+    "planning", "watching", "completed", "dropped", "paused", "repeating"
+]
 # --- Generic Data Models ---
 
 
@@ -83,7 +81,7 @@ class UserListStatus(BaseApiModel):
 
     id: int | None = None
 
-    status: Optional[str] = None
+    status: Optional[UserListStatusType] = None
     progress: Optional[int] = None
     score: Optional[float] = None
     repeat: Optional[int] = None
