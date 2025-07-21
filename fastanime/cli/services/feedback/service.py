@@ -1,21 +1,15 @@
-"""
-User feedback utilities for the interactive CLI.
-Provides standardized success, error, warning, and confirmation dialogs.
-"""
-
 from contextlib import contextmanager
-from typing import Any, Callable, Optional
+from typing import Optional
 
 import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.prompt import Confirm
 
 console = Console()
 
 
-class FeedbackManager:
+class FeedbackService:
     """Centralized manager for user feedback in interactive menus."""
 
     def __init__(self, icons_enabled: bool = True):
@@ -60,25 +54,6 @@ class FeedbackManager:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
             console.print(main_msg)
-
-    def confirm(self, message: str, default: bool = False) -> bool:
-        """Show a confirmation dialog and return user's choice."""
-        icon = "❓ " if self.icons_enabled else ""
-        return Confirm.ask(f"[bold]{icon}{message}[/bold]", default=default)
-
-    def prompt(self, message: str, details: Optional[str] = None, default: Optional[str] = None) -> str:
-        """Prompt user for text input with optional details and default value."""
-        from rich.prompt import Prompt
-        
-        icon = "📝 " if self.icons_enabled else ""
-        
-        if details:
-            self.info(f"{icon}{message}", details)
-        
-        return Prompt.ask(
-            f"[bold]{icon}{message}[/bold]",
-            default=default or ""
-        )
 
     def notify_operation_result(
         self,
@@ -131,41 +106,3 @@ class FeedbackManager:
         """Show detailed information in a styled panel."""
         console.print(Panel(content, title=title, border_style=style, expand=True))
         self.pause_for_user()
-
-
-def execute_with_feedback(
-    operation: Callable[[], Any],
-    feedback: FeedbackManager,
-    operation_name: str,
-    loading_msg: Optional[str] = None,
-    success_msg: Optional[str] = None,
-    error_msg: Optional[str] = None,
-    show_loading: bool = True,
-) -> tuple[bool, Any]:
-    """
-    Execute an operation with comprehensive feedback handling.
-
-    Returns:
-        tuple of (success: bool, result: Any)
-    """
-    loading_message = loading_msg or f"Executing {operation_name}"
-
-    try:
-        if show_loading:
-            with feedback.loading_operation(loading_message, success_msg, error_msg):
-                result = operation()
-            return True, result
-        else:
-            result = operation()
-            if success_msg:
-                feedback.success(success_msg)
-            return True, result
-    except Exception as e:
-        final_error_msg = error_msg or f"{operation_name} failed"
-        feedback.error(final_error_msg, str(e) if str(e) else None)
-        return False, None
-
-
-def create_feedback_manager(icons_enabled: bool = True) -> FeedbackManager:
-    """Factory function to create a FeedbackManager instance."""
-    return FeedbackManager(icons_enabled)
