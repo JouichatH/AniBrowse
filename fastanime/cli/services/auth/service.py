@@ -9,7 +9,7 @@ from ...libs.api.types import UserProfile
 logger = logging.getLogger(__name__)
 
 
-class AuthManager:
+class AuthService:
     """
     Handles loading, saving, and clearing of user credentials and profile data.
 
