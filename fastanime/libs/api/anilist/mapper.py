@@ -30,6 +30,8 @@ from .types import (
     AnilistPageInfo,
     AnilistStudioNodes,
     AnilistViewerData,
+)
+from .types import (
     StreamingEpisode as AnilistStreamingEpisode,
 )
 
@@ -38,10 +40,13 @@ logger = logging.getLogger(__name__)
 
 def _to_generic_media_title(anilist_title: AnilistMediaTitle) -> MediaTitle:
     """Maps an AniList title object to a generic MediaTitle."""
+    romaji = anilist_title.get("romaji")
+    english = anilist_title.get("english")
+    native = anilist_title.get("native")
     return MediaTitle(
-        romaji=anilist_title.get("romaji"),
-        english=anilist_title.get("english"),
-        native=anilist_title.get("native"),
+        romaji=romaji,
+        english=(english or romaji or native or "NO_TITLE"),
+        native=native,
     )
 
 
@@ -103,13 +108,12 @@ def _to_generic_tags(anilist_tags: list[AnilistMediaTag]) -> List[MediaTag]:
     ]
 
 
-def _to_generic_streaming_episodes(anilist_episodes: list[AnilistStreamingEpisode]) -> List[StreamingEpisode]:
+def _to_generic_streaming_episodes(
+    anilist_episodes: list[AnilistStreamingEpisode],
+) -> List[StreamingEpisode]:
     """Maps a list of AniList streaming episodes to generic StreamingEpisode objects."""
     return [
-        StreamingEpisode(
-            title=episode["title"],
-            thumbnail=episode.get("thumbnail")
-        )
+        StreamingEpisode(title=episode["title"], thumbnail=episode.get("thumbnail"))
         for episode in anilist_episodes
         if episode.get("title")
     ]
@@ -174,7 +178,19 @@ def _to_generic_media_item(
         popularity=data.get("popularity"),
         favourites=data.get("favourites"),
         next_airing=_to_generic_airing_schedule(data.get("nextAiringEpisode")),
-        streaming_episodes=_to_generic_streaming_episodes(data.get("streamingEpisodes", [])),
+        start_date=datetime(
+            data["startDate"]["year"],
+            data["startDate"]["month"],
+            data["startDate"]["day"],
+        ),
+        end_date=datetime(
+            data["startDate"]["year"],
+            data["startDate"]["month"],
+            data["startDate"]["day"],
+        ),
+        streaming_episodes=_to_generic_streaming_episodes(
+            data.get("streamingEpisodes", [])
+        ),
         user_status=_to_generic_user_status(data, media_list),
     )
 

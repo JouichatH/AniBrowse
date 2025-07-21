@@ -20,6 +20,7 @@ UserListStatusType = Literal[
 
 class BaseApiModel(BaseModel):
     """Base model for all API types."""
+
     pass
 
 
@@ -34,8 +35,8 @@ class MediaImage(BaseApiModel):
 class MediaTitle(BaseApiModel):
     """A generic representation of media titles."""
 
+    english: str
     romaji: Optional[str] = None
-    english: Optional[str] = None
     native: Optional[str] = None
 
 
@@ -93,15 +94,10 @@ class UserListStatus(BaseApiModel):
 
 
 class MediaItem(BaseApiModel):
-    """
-    The definitive, backend-agnostic representation of a single media item.
-    This is the primary data model the application will interact with.
-    """
-
     id: int
+    title: MediaTitle
     id_mal: Optional[int] = None
     type: MediaType = "ANIME"
-    title: MediaTitle = Field(default_factory=MediaTitle)
     status: Optional[str] = None
     format: Optional[str] = None  # e.g., TV, MOVIE, OVA
 
@@ -120,6 +116,9 @@ class MediaItem(BaseApiModel):
     average_score: Optional[float] = None
     popularity: Optional[int] = None
     favourites: Optional[int] = None
+
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
 
     next_airing: Optional[AiringSchedule] = None
 

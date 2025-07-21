@@ -13,7 +13,191 @@ from ...core.constants import (
 )
 from ...libs.api.anilist.constants import SORTS_AVAILABLE
 from ...libs.providers.anime import PROVIDERS_AVAILABLE, SERVERS_AVAILABLE
-from ..constants import APP_ASCII_ART, USER_VIDEOS_DIR
+from ..constants import APP_ASCII_ART, APP_DATA_DIR, USER_VIDEOS_DIR
+from . import defaults
+from . import descriptions as desc
+
+
+class GeneralConfig(BaseModel):
+    """Configuration for general application behavior and integrations."""
+
+    pygment_style: str = Field(
+        default=defaults.GENERAL_PYGMENT_STYLE, description=desc.GENERAL_PYGMENT_STYLE
+    )
+    api_client: Literal["anilist", "jikan"] = Field(
+        default=defaults.GENERAL_API_CLIENT,
+        description=desc.GENERAL_API_CLIENT,
+    )
+    provider: str = Field(
+        default=defaults.GENERAL_PROVIDER,
+        description=desc.GENERAL_PROVIDER,
+        examples=list(PROVIDERS_AVAILABLE.keys()),
+    )
+    selector: Literal["default", "fzf", "rofi"] = Field(
+        default=defaults.GENERAL_SELECTOR, description=desc.GENERAL_SELECTOR
+    )
+    auto_select_anime_result: bool = Field(
+        default=defaults.GENERAL_AUTO_SELECT_ANIME_RESULT,
+        description=desc.GENERAL_AUTO_SELECT_ANIME_RESULT,
+    )
+    icons: bool = Field(default=defaults.GENERAL_ICONS, description=desc.GENERAL_ICONS)
+    preview: Literal["full", "text", "image", "none"] = Field(
+        default=defaults.GENERAL_PREVIEW, description=desc.GENERAL_PREVIEW
+    )
+    image_renderer: Literal["icat", "chafa", "imgcat"] = Field(
+        default="icat"
+        if os.environ.get("KITTY_WINDOW_ID")
+        else defaults.GENERAL_IMAGE_RENDERER,
+        description=desc.GENERAL_IMAGE_RENDERER,
+    )
+    manga_viewer: Literal["feh", "icat"] = Field(
+        default=defaults.GENERAL_MANGA_VIEWER,
+        description=desc.GENERAL_MANGA_VIEWER,
+    )
+    check_for_updates: bool = Field(
+        default=defaults.GENERAL_CHECK_FOR_UPDATES,
+        description=desc.GENERAL_CHECK_FOR_UPDATES,
+    )
+    cache_requests: bool = Field(
+        default=defaults.GENERAL_CACHE_REQUESTS,
+        description=desc.GENERAL_CACHE_REQUESTS,
+    )
+    max_cache_lifetime: str = Field(
+        default=defaults.GENERAL_MAX_CACHE_LIFETIME,
+        description=desc.GENERAL_MAX_CACHE_LIFETIME,
+    )
+    normalize_titles: bool = Field(
+        default=defaults.GENERAL_NORMALIZE_TITLES,
+        description=desc.GENERAL_NORMALIZE_TITLES,
+    )
+    discord: bool = Field(
+        default=defaults.GENERAL_DISCORD,
+        description=desc.GENERAL_DISCORD,
+    )
+    recent: int = Field(
+        default=defaults.GENERAL_RECENT,
+        ge=0,
+        description=desc.GENERAL_RECENT,
+    )
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, v: str) -> str:
+        if v not in PROVIDERS_AVAILABLE:
+            raise ValueError(
+                f"'{v}' is not a valid provider. Must be one of: {PROVIDERS_AVAILABLE}"
+            )
+        return v
+
+
+class StreamConfig(BaseModel):
+    """Configuration specific to video streaming and playback."""
+
+    player: Literal["mpv", "vlc"] = Field(
+        default=defaults.STREAM_PLAYER, description=desc.STREAM_PLAYER
+    )
+    quality: Literal["360", "480", "720", "1080"] = Field(
+        default=defaults.STREAM_QUALITY, description=desc.STREAM_QUALITY
+    )
+    translation_type: Literal["sub", "dub"] = Field(
+        default=defaults.STREAM_TRANSLATION_TYPE,
+        description=desc.STREAM_TRANSLATION_TYPE,
+    )
+    server: str = Field(
+        default=defaults.STREAM_SERVER,
+        description=desc.STREAM_SERVER,
+        examples=SERVERS_AVAILABLE,
+    )
+    auto_next: bool = Field(
+        default=defaults.STREAM_AUTO_NEXT,
+        description=desc.STREAM_AUTO_NEXT,
+    )
+    continue_from_watch_history: bool = Field(
+        default=defaults.STREAM_CONTINUE_FROM_WATCH_HISTORY,
+        description=desc.STREAM_CONTINUE_FROM_WATCH_HISTORY,
+    )
+    preferred_watch_history: Literal["local", "remote"] = Field(
+        default=defaults.STREAM_PREFERRED_WATCH_HISTORY,
+        description=desc.STREAM_PREFERRED_WATCH_HISTORY,
+    )
+    auto_skip: bool = Field(
+        default=defaults.STREAM_AUTO_SKIP,
+        description=desc.STREAM_AUTO_SKIP,
+    )
+    episode_complete_at: int = Field(
+        default=defaults.STREAM_EPISODE_COMPLETE_AT,
+        ge=0,
+        le=100,
+        description=desc.STREAM_EPISODE_COMPLETE_AT,
+    )
+    ytdlp_format: str = Field(
+        default=defaults.STREAM_YTDLP_FORMAT,
+        description=desc.STREAM_YTDLP_FORMAT,
+    )
+    force_forward_tracking: bool = Field(
+        default=defaults.STREAM_FORCE_FORWARD_TRACKING,
+        description=desc.STREAM_FORCE_FORWARD_TRACKING,
+    )
+    default_media_list_tracking: Literal["track", "disabled", "prompt"] = Field(
+        default=defaults.STREAM_DEFAULT_MEDIA_LIST_TRACKING,
+        description=desc.STREAM_DEFAULT_MEDIA_LIST_TRACKING,
+    )
+    sub_lang: str = Field(
+        default=defaults.STREAM_SUB_LANG,
+        description=desc.STREAM_SUB_LANG,
+    )
+
+    @field_validator("server")
+    @classmethod
+    def validate_server(cls, v: str) -> str:
+        if v.lower() != "top" and v not in SERVERS_AVAILABLE:
+            raise ValueError(
+                f"'{v}' is not a valid server. Must be 'top' or one of: {SERVERS_AVAILABLE}"
+            )
+        return v
+
+
+class ServiceConfig(BaseModel):
+    """Configuration for the background download service."""
+
+    enabled: bool = Field(
+        default=defaults.SERVICE_ENABLED,
+        description=desc.SERVICE_ENABLED,
+    )
+    watchlist_check_interval: int = Field(
+        default=defaults.SERVICE_WATCHLIST_CHECK_INTERVAL,
+        ge=5,
+        le=180,
+        description=desc.SERVICE_WATCHLIST_CHECK_INTERVAL,
+    )
+    queue_process_interval: int = Field(
+        default=defaults.SERVICE_QUEUE_PROCESS_INTERVAL,
+        ge=1,
+        le=60,
+        description=desc.SERVICE_QUEUE_PROCESS_INTERVAL,
+    )
+    max_concurrent_downloads: int = Field(
+        default=defaults.SERVICE_MAX_CONCURRENT_DOWNLOADS,
+        ge=1,
+        le=10,
+        description=desc.SERVICE_MAX_CONCURRENT_DOWNLOADS,
+    )
+    auto_retry_count: int = Field(
+        default=defaults.SERVICE_AUTO_RETRY_COUNT,
+        ge=0,
+        le=10,
+        description=desc.SERVICE_AUTO_RETRY_COUNT,
+    )
+    cleanup_completed_days: int = Field(
+        default=defaults.SERVICE_CLEANUP_COMPLETED_DAYS,
+        ge=1,
+        le=30,
+        description=desc.SERVICE_CLEANUP_COMPLETED_DAYS,
+    )
+    notification_enabled: bool = Field(
+        default=defaults.SERVICE_NOTIFICATION_ENABLED,
+        description=desc.SERVICE_NOTIFICATION_ENABLED,
+    )
 
 
 class OtherConfig(BaseModel):
@@ -25,14 +209,16 @@ class FzfConfig(OtherConfig):
 
     _opts: str = PrivateAttr(default=FZF_DEFAULT_OPTS.read_text(encoding="utf-8"))
     header_color: str = Field(
-        default="95,135,175", description="RGB color for the main TUI header."
+        default=defaults.FZF_HEADER_COLOR, description=desc.FZF_HEADER_COLOR
     )
     _header_ascii_art: str = PrivateAttr(default=APP_ASCII_ART)
     preview_header_color: str = Field(
-        default="215,0,95", description="RGB color for preview pane headers."
+        default=defaults.FZF_PREVIEW_HEADER_COLOR,
+        description=desc.FZF_PREVIEW_HEADER_COLOR,
     )
     preview_separator_color: str = Field(
-        default="208,208,208", description="RGB color for preview pane separators."
+        default=defaults.FZF_PREVIEW_SEPARATOR_COLOR,
+        description=desc.FZF_PREVIEW_SEPARATOR_COLOR,
     )
 
     def __init__(self, **kwargs):
@@ -45,16 +231,12 @@ class FzfConfig(OtherConfig):
         if header_ascii_art:
             self._header_ascii_art = header_ascii_art
 
-    @computed_field(
-        description="The FZF options, formatted with leading tabs for the config file."
-    )
+    @computed_field(description=desc.FZF_OPTS)
     @property
     def opts(self) -> str:
         return "\n" + "\n".join([f"\t{line}" for line in self._opts.split()])
 
-    @computed_field(
-        description="The ASCII art to display as a header in the FZF interface."
-    )
+    @computed_field(description=desc.FZF_HEADER_ASCII_ART)
     @property
     def header_ascii_art(self) -> str:
         return "\n" + "\n".join(
@@ -67,67 +249,63 @@ class RofiConfig(OtherConfig):
 
     theme_main: Path = Field(
         default=Path(str(ROFI_THEME_MAIN)),
-        description="Path to the main Rofi theme file.",
+        description=desc.ROFI_THEME_MAIN,
     )
     theme_preview: Path = Field(
         default=Path(str(ROFI_THEME_PREVIEW)),
-        description="Path to the Rofi theme file for previews.",
+        description=desc.ROFI_THEME_PREVIEW,
     )
     theme_confirm: Path = Field(
         default=Path(str(ROFI_THEME_CONFIRM)),
-        description="Path to the Rofi theme file for confirmation prompts.",
+        description=desc.ROFI_THEME_CONFIRM,
     )
     theme_input: Path = Field(
         default=Path(str(ROFI_THEME_INPUT)),
-        description="Path to the Rofi theme file for user input prompts.",
+        description=desc.ROFI_THEME_INPUT,
     )
 
 
 class MpvConfig(OtherConfig):
     """Configuration specific to the MPV player integration."""
 
-    args: str = Field(
-        default="", description="Comma-separated arguments to pass to the MPV player."
-    )
+    args: str = Field(default=defaults.MPV_ARGS, description=desc.MPV_ARGS)
     pre_args: str = Field(
-        default="",
-        description="Comma-separated arguments to prepend before the MPV command.",
+        default=defaults.MPV_PRE_ARGS,
+        description=desc.MPV_PRE_ARGS,
     )
     disable_popen: bool = Field(
-        default=True,
-        description="Disable using subprocess.Popen for MPV, which can be unstable on some systems.",
+        default=defaults.MPV_DISABLE_POPEN,
+        description=desc.MPV_DISABLE_POPEN,
     )
     use_python_mpv: bool = Field(
-        default=False,
-        description="Use the python-mpv library for enhanced player control.",
+        default=defaults.MPV_USE_PYTHON_MPV,
+        description=desc.MPV_USE_PYTHON_MPV,
     )
 
 
 class VlcConfig(OtherConfig):
     """Configuration specific to the vlc player integration."""
 
-    args: str = Field(
-        default="", description="Comma-separated arguments to pass to the Vlc player."
-    )
+    args: str = Field(default=defaults.VLC_ARGS, description=desc.VLC_ARGS)
 
 
 class AnilistConfig(OtherConfig):
     """Configuration for interacting with the AniList API."""
 
     per_page: int = Field(
-        default=15,
+        default=defaults.ANILIST_PER_PAGE,
         gt=0,
         le=50,
-        description="Number of items to fetch per page from AniList.",
+        description=desc.ANILIST_PER_PAGE,
     )
     sort_by: str = Field(
-        default="SEARCH_MATCH",
-        description="Default sort order for AniList search results.",
+        default=defaults.ANILIST_SORT_BY,
+        description=desc.ANILIST_SORT_BY,
         examples=SORTS_AVAILABLE,
     )
     preferred_language: Literal["english", "romaji"] = Field(
-        default="english",
-        description="Preferred language for anime titles from AniList.",
+        default=defaults.ANILIST_PREFERRED_LANGUAGE,
+        description=desc.ANILIST_PREFERRED_LANGUAGE,
     )
 
     @field_validator("sort_by")
@@ -150,249 +328,102 @@ class DownloadsConfig(OtherConfig):
     """Configuration for download related options"""
 
     downloader: Literal["auto", "default", "yt-dlp"] = Field(
-        default="auto", description="The downloader to use"
+        default=defaults.DOWNLOADS_DOWNLOADER, description=desc.DOWNLOADS_DOWNLOADER
     )
 
     downloads_dir: Path = Field(
-        default_factory=lambda: USER_VIDEOS_DIR,
-        description="The default directory to save downloaded anime.",
+        default_factory=lambda: defaults.DOWNLOADS_DOWNLOADS_DIR,
+        description=desc.DOWNLOADS_DOWNLOADS_DIR,
     )
-    
+
     # Download tracking configuration
     enable_tracking: bool = Field(
-        default=True, description="Enable download tracking and management"
+        default=defaults.DOWNLOADS_ENABLE_TRACKING,
+        description=desc.DOWNLOADS_ENABLE_TRACKING,
     )
     auto_organize: bool = Field(
-        default=True, description="Automatically organize downloads by anime title"
+        default=defaults.DOWNLOADS_AUTO_ORGANIZE,
+        description=desc.DOWNLOADS_AUTO_ORGANIZE,
     )
     max_concurrent: int = Field(
-        default=3, gt=0, le=10, description="Maximum concurrent downloads"
+        default=defaults.DOWNLOADS_MAX_CONCURRENT,
+        gt=0,
+        le=10,
+        description=desc.DOWNLOADS_MAX_CONCURRENT,
     )
     auto_cleanup_failed: bool = Field(
-        default=True, description="Automatically cleanup failed downloads"
+        default=defaults.DOWNLOADS_AUTO_CLEANUP_FAILED,
+        description=desc.DOWNLOADS_AUTO_CLEANUP_FAILED,
     )
     retention_days: int = Field(
-        default=30, gt=0, description="Days to keep failed downloads before cleanup"
+        default=defaults.DOWNLOADS_RETENTION_DAYS,
+        gt=0,
+        description=desc.DOWNLOADS_RETENTION_DAYS,
     )
-    
+
     # Integration with watch history
     sync_with_watch_history: bool = Field(
-        default=True, description="Sync download status with watch history"
+        default=defaults.DOWNLOADS_SYNC_WITH_WATCH_HISTORY,
+        description=desc.DOWNLOADS_SYNC_WITH_WATCH_HISTORY,
     )
     auto_mark_offline: bool = Field(
-        default=True, description="Automatically mark downloaded episodes as available offline"
+        default=defaults.DOWNLOADS_AUTO_MARK_OFFLINE,
+        description=desc.DOWNLOADS_AUTO_MARK_OFFLINE,
     )
-    
+
     # File organization
     naming_template: str = Field(
-        default="{title}/Season {season:02d}/{episode:02d} - {episode_title}.{ext}",
-        description="File naming template for downloaded episodes"
+        default=defaults.DOWNLOADS_NAMING_TEMPLATE,
+        description=desc.DOWNLOADS_NAMING_TEMPLATE,
     )
-    
+
     # Quality and subtitles
     preferred_quality: Literal["360", "480", "720", "1080", "best"] = Field(
-        default="1080", description="Preferred download quality"
+        default=defaults.DOWNLOADS_PREFERRED_QUALITY,
+        description=desc.DOWNLOADS_PREFERRED_QUALITY,
     )
     download_subtitles: bool = Field(
-        default=True, description="Download subtitles when available"
+        default=defaults.DOWNLOADS_DOWNLOAD_SUBTITLES,
+        description=desc.DOWNLOADS_DOWNLOAD_SUBTITLES,
     )
     subtitle_languages: List[str] = Field(
-        default=["en"], description="Preferred subtitle languages"
+        default=defaults.DOWNLOADS_SUBTITLE_LANGUAGES,
+        description=desc.DOWNLOADS_SUBTITLE_LANGUAGES,
     )
-    
+
     # Queue management
     queue_max_size: int = Field(
-        default=100, gt=0, description="Maximum number of items in download queue"
+        default=defaults.DOWNLOADS_QUEUE_MAX_SIZE,
+        gt=0,
+        description=desc.DOWNLOADS_QUEUE_MAX_SIZE,
     )
     auto_start_downloads: bool = Field(
-        default=True, description="Automatically start downloads when items are queued"
+        default=defaults.DOWNLOADS_AUTO_START_DOWNLOADS,
+        description=desc.DOWNLOADS_AUTO_START_DOWNLOADS,
     )
     retry_attempts: int = Field(
-        default=3, ge=0, description="Number of retry attempts for failed downloads"
+        default=defaults.DOWNLOADS_RETRY_ATTEMPTS,
+        ge=0,
+        description=desc.DOWNLOADS_RETRY_ATTEMPTS,
     )
     retry_delay: int = Field(
-        default=300, ge=0, description="Delay between retry attempts in seconds"
-    )
-
-
-class GeneralConfig(BaseModel):
-    """Configuration for general application behavior and integrations."""
-
-    pygment_style: str = Field(
-        default="github-dark", description="The pygment style to use"
-    )
-    api_client: Literal["anilist", "jikan"] = Field(
-        default="anilist",
-        description="The media database API to use (e.g., 'anilist', 'jikan').",
-    )
-    provider: str = Field(
-        default="allanime",
-        description="The default anime provider to use for scraping.",
-        examples=list(PROVIDERS_AVAILABLE.keys()),
-    )
-    selector: Literal["default", "fzf", "rofi"] = Field(
-        default="default", description="The interactive selector tool to use for menus."
-    )
-    auto_select_anime_result: bool = Field(
-        default=True,
-        description="Automatically select the best-matching search result from a provider.",
-    )
-    icons: bool = Field(
-        default=False, description="Display emoji icons in the user interface."
-    )
-    preview: Literal["full", "text", "image", "none"] = Field(
-        default="none", description="Type of preview to display in selectors."
-    )
-    image_renderer: Literal["icat", "chafa", "imgcat"] = Field(
-        default="icat" if os.environ.get("KITTY_WINDOW_ID") else "chafa",
-        description="The command-line tool to use for rendering images in the terminal.",
-    )
-    manga_viewer: Literal["feh", "icat"] = Field(
-        default="feh",
-        description="The external application to use for viewing manga pages.",
-    )
-    check_for_updates: bool = Field(
-        default=True,
-        description="Automatically check for new versions of FastAnime on startup.",
-    )
-    cache_requests: bool = Field(
-        default=True,
-        description="Enable caching of network requests to speed up subsequent operations.",
-    )
-    max_cache_lifetime: str = Field(
-        default="03:00:00",
-        description="Maximum lifetime for a cached request in DD:HH:MM format.",
-    )
-    normalize_titles: bool = Field(
-        default=True,
-        description="Attempt to normalize provider titles to match AniList titles.",
-    )
-    discord: bool = Field(
-        default=False,
-        description="Enable Discord Rich Presence to show your current activity.",
-    )
-    recent: int = Field(
-        default=50,
+        default=defaults.DOWNLOADS_RETRY_DELAY,
         ge=0,
-        description="Number of recently watched anime to keep in history.",
+        description=desc.DOWNLOADS_RETRY_DELAY,
     )
 
-    @field_validator("provider")
-    @classmethod
-    def validate_provider(cls, v: str) -> str:
-        if v not in PROVIDERS_AVAILABLE:
-            raise ValueError(
-                f"'{v}' is not a valid provider. Must be one of: {PROVIDERS_AVAILABLE}"
-            )
-        return v
 
+class MediaRegistryConfig(OtherConfig):
+    """Configuration for registry related options"""
 
-class StreamConfig(BaseModel):
-    """Configuration specific to video streaming and playback."""
-
-    player: Literal["mpv", "vlc"] = Field(
-        default="mpv", description="The media player to use for streaming."
-    )
-    quality: Literal["360", "480", "720", "1080"] = Field(
-        default="1080", description="Preferred stream quality."
-    )
-    translation_type: Literal["sub", "dub"] = Field(
-        default="sub", description="Preferred audio/subtitle language type."
-    )
-    server: str = Field(
-        default="TOP",
-        description="The default server to use from a provider. 'top' uses the first available.",
-        examples=SERVERS_AVAILABLE,
-    )
-    auto_next: bool = Field(
-        default=False,
-        description="Automatically play the next episode when the current one finishes.",
-    )
-    continue_from_watch_history: bool = Field(
-        default=True,
-        description="Automatically resume playback from the last known episode and position.",
-    )
-    preferred_watch_history: Literal["local", "remote"] = Field(
-        default="local",
-        description="Which watch history to prioritize: local file or remote AniList progress.",
-    )
-    auto_skip: bool = Field(
-        default=False,
-        description="Automatically skip openings/endings if skip data is available.",
-    )
-    episode_complete_at: int = Field(
-        default=80,
-        ge=0,
-        le=100,
-        description="Percentage of an episode to watch before it's marked as complete.",
-    )
-    ytdlp_format: str = Field(
-        default="best[height<=1080]/bestvideo[height<=1080]+bestaudio/best",
-        description="The format selection string for yt-dlp.",
-    )
-    force_forward_tracking: bool = Field(
-        default=True,
-        description="Prevent updating AniList progress to a lower episode number.",
-    )
-    default_media_list_tracking: Literal["track", "disabled", "prompt"] = Field(
-        default="prompt",
-        description="Default behavior for tracking progress on AniList.",
-    )
-    sub_lang: str = Field(
-        default="eng",
-        description="Preferred language code for subtitles (e.g., 'en', 'es').",
+    media_dir: Path = Field(
+        default=defaults.MEDIA_REGISTRY_DIR,
+        description=desc.MEDIA_REGISTRY_DIR,
     )
 
-    @field_validator("server")
-    @classmethod
-    def validate_server(cls, v: str) -> str:
-        if v.lower() != "top" and v not in SERVERS_AVAILABLE:
-            raise ValueError(
-                f"'{v}' is not a valid server. Must be 'top' or one of: {SERVERS_AVAILABLE}"
-            )
-        return v
-
-
-class ServiceConfig(BaseModel):
-    """Configuration for the background download service."""
-
-    enabled: bool = Field(
-        default=False,
-        description="Whether the background service should be enabled by default.",
-    )
-    watchlist_check_interval: int = Field(
-        default=30,
-        ge=5,
-        le=180,
-        description="Minutes between checking AniList watchlist for new episodes.",
-    )
-    queue_process_interval: int = Field(
-        default=1,
-        ge=1,
-        le=60,
-        description="Minutes between processing the download queue.",
-    )
-    max_concurrent_downloads: int = Field(
-        default=3,
-        ge=1,
-        le=10,
-        description="Maximum number of concurrent downloads.",
-    )
-    auto_retry_count: int = Field(
-        default=3,
-        ge=0,
-        le=10,
-        description="Number of times to retry failed downloads.",
-    )
-    cleanup_completed_days: int = Field(
-        default=7,
-        ge=1,
-        le=30,
-        description="Days to keep completed/failed jobs in queue before cleanup.",
-    )
-    notification_enabled: bool = Field(
-        default=True,
-        description="Whether to show notifications for new episodes.",
+    index_dir: Path = Field(
+        default=defaults.MEDIA_REGISTRY_INDEX_DIR,
+        description=desc.MEDIA_REGISTRY_INDEX_DIR,
     )
 
 
@@ -401,36 +432,37 @@ class AppConfig(BaseModel):
 
     general: GeneralConfig = Field(
         default_factory=GeneralConfig,
-        description="General configuration settings for application behavior.",
+        description=desc.APP_GENERAL,
     )
     stream: StreamConfig = Field(
         default_factory=StreamConfig,
-        description="Settings related to video streaming and playback.",
+        description=desc.APP_STREAM,
     )
     downloads: DownloadsConfig = Field(
-        default_factory=DownloadsConfig, description="Settings related to downloading"
+        default_factory=DownloadsConfig, description=desc.APP_DOWNLOADS
     )
     anilist: AnilistConfig = Field(
         default_factory=AnilistConfig,
-        description="Configuration for AniList API integration.",
+        description=desc.APP_ANILIST,
     )
     service: ServiceConfig = Field(
         default_factory=ServiceConfig,
-        description="Configuration for the background download service.",
+        description=desc.APP_SERVICE,
     )
 
     fzf: FzfConfig = Field(
         default_factory=FzfConfig,
-        description="Settings for the FZF selector interface.",
+        description=desc.APP_FZF,
     )
     rofi: RofiConfig = Field(
         default_factory=RofiConfig,
-        description="Settings for the Rofi selector interface.",
+        description=desc.APP_ROFI,
     )
-    mpv: MpvConfig = Field(
-        default_factory=MpvConfig, description="Configuration for the MPV media player."
-    )
+    mpv: MpvConfig = Field(default_factory=MpvConfig, description=desc.APP_MPV)
     service: ServiceConfig = Field(
         default_factory=ServiceConfig,
-        description="Configuration for the background download service.",
+        description=desc.APP_SERVICE,
+    )
+    media_registry: MediaRegistryConfig = Field(
+        default_factory=MediaRegistryConfig, description=desc.APP_MEDIA_REGISTRY
     )
