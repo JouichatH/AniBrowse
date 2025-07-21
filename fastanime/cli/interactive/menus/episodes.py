@@ -54,6 +54,7 @@ def episodes(ctx: Context, state: State) -> State | ControlFlow:
         )
 
         if not chosen_episode_str or chosen_episode_str == "Back":
+            # FIX: back broken
             return ControlFlow.BACK
 
         chosen_episode = chosen_episode_str
