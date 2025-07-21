@@ -26,6 +26,7 @@ print_kv() {
     else
         printf "{C_KEY}%s:{RESET}%*s%s\\n" "$key" "$padding_len" "" " $value"
     fi
+
 }
 
 # --- Draw a rule across the screen ---
@@ -37,15 +38,25 @@ draw_rule() {
     printf "{C_RULE}%s{RESET}\\n" "$rule"
 }
 
+
+draw_rule(){
+    ll=2
+    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
+        echo -n -e "{C_RULE}─{RESET}"
+        ((ll++))
+    done
+    echo
+}
+
 # --- Display Episode Content ---
 draw_rule
-print_kv "Episode" "{TITLE}"
+echo "{TITLE}"| fold -s -w "$WIDTH"
 draw_rule
 
 # Episode-specific information
-print_kv "Duration" "{GENRES}"
-print_kv "Status" "{STATUS}"
-draw_rule
+# print_kv "Duration" "{GENRES}"
+# print_kv "Status" "{STATUS}"
+# draw_rule
 
 # Episode description/summary
-echo "{SYNOPSIS}" | fold -s -w "$WIDTH"
+# echo "{SYNOPSIS}" | fold -s -w "$WIDTH"

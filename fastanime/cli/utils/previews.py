@@ -14,6 +14,7 @@ from rich.text import Text
 
 from ...core.config import AppConfig
 from ...core.constants import APP_CACHE_DIR, APP_DIR, PLATFORM
+from ...core.utils.file import AtomicWriter
 from ...libs.api.types import MediaItem, StreamingEpisode
 from . import ansi, formatters
 
@@ -36,26 +37,25 @@ def _get_cache_hash(text: str) -> str:
 
 def _save_image_from_url(url: str, hash_id: str):
     """Downloads an image using httpx and saves it to the cache."""
-    temp_image_path = IMAGES_CACHE_DIR / f"{hash_id}.png.tmp"
     image_path = IMAGES_CACHE_DIR / f"{hash_id}.png"
     try:
         with httpx.stream("GET", url, follow_redirects=True, timeout=20) as response:
             response.raise_for_status()
-            with temp_image_path.open("wb") as f:
+            with AtomicWriter(image_path, "wb", encoding=None) as f:
+                chunks = b""
                 for chunk in response.iter_bytes():
-                    f.write(chunk)
-        temp_image_path.rename(image_path)
+                    chunks += chunk
+                f.write(chunks)
     except Exception as e:
         logger.error(f"Failed to download image {url}: {e}")
-        if temp_image_path.exists():
-            temp_image_path.unlink()
 
 
 def _save_info_text(info_text: str, hash_id: str):
     """Saves pre-formatted text to the info cache."""
     try:
         info_path = INFO_CACHE_DIR / hash_id
-        info_path.write_text(info_text, encoding="utf-8")
+        with AtomicWriter(info_path) as f:
+            f.write(info_text)
     except IOError as e:
         logger.error(f"Failed to write info cache for {hash_id}: {e}")
 
