@@ -64,6 +64,9 @@ print_kv "Score" "{SCORE}" $score_multiplier
 print_kv "Favourites" "{FAVOURITES}"
 print_kv "Popularity" "{POPULARITY}"
 print_kv "Status" "{STATUS}"
+
+draw_rule
+
 print_kv "Episodes" "{EPISODES}"
 print_kv "Next Episode" "{NEXT_EPISODE}"
 
