@@ -222,7 +222,7 @@ def _fetch_user_list_page(
         per_page=original_params.per_page,
     )
 
-    result = ctx.media_api.fetch_user_list(new_params)
+    result = ctx.media_api.search_media_list(new_params)
 
     return State(
         menu_name="RESULTS",

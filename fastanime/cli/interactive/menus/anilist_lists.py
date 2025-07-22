@@ -41,7 +41,7 @@ def anilist_lists(ctx: Context, state: State) -> State | ControlFlow:
     if not ctx.media_api.user_profile:
         feedback.error(
             "Authentication Required",
-            "You must be logged in to access your AniList lists. Please authenticate first."
+            "You must be logged in to access your AniList lists. Please authenticate first.",
         )
         feedback.pause_for_user("Press Enter to continue")
         return State(menu_name="AUTH")
@@ -52,7 +52,7 @@ def anilist_lists(ctx: Context, state: State) -> State | ControlFlow:
     # Menu options
     options = [
         f"{'📺 ' if icons else ''}Currently Watching",
-        f"{'📋 ' if icons else ''}Planning to Watch", 
+        f"{'📋 ' if icons else ''}Planning to Watch",
         f"{'✅ ' if icons else ''}Completed",
         f"{'⏸️ ' if icons else ''}Paused",
         f"{'🚮 ' if icons else ''}Dropped",
@@ -111,7 +111,7 @@ def anilist_list_view(ctx: Context, state: State) -> State | ControlFlow:
 
     # Fetch list data
     def fetch_list():
-        return ctx.media_api.fetch_user_list(
+        return ctx.media_api.search_media_list(
             UserListParams(status=list_status, page=page, per_page=20)
         )
 
@@ -145,10 +145,12 @@ def anilist_list_view(ctx: Context, state: State) -> State | ControlFlow:
     if page > 1:
         options.append(f"{'⬅️ ' if icons else ''}Previous Page")
 
-    options.extend([
-        f"{'📊 ' if icons else ''}List Statistics",
-        f"{'↩️ ' if icons else ''}Back to Lists Menu",
-    ])
+    options.extend(
+        [
+            f"{'📊 ' if icons else ''}List Statistics",
+            f"{'↩️ ' if icons else ''}Back to Lists Menu",
+        ]
+    )
 
     choice = ctx.selector.choose(
         prompt="Select Action",
@@ -171,12 +173,12 @@ def anilist_list_view(ctx: Context, state: State) -> State | ControlFlow:
     elif "Next Page" in choice:
         return State(
             menu_name="ANILIST_LIST_VIEW",
-            data={"list_status": list_status, "page": page + 1}
+            data={"list_status": list_status, "page": page + 1},
         )
     elif "Previous Page" in choice:
         return State(
-            menu_name="ANILIST_LIST_VIEW", 
-            data={"list_status": list_status, "page": page - 1}
+            menu_name="ANILIST_LIST_VIEW",
+            data={"list_status": list_status, "page": page - 1},
         )
     elif "List Statistics" in choice:
         return _show_list_statistics(ctx, list_status, feedback, icons)
@@ -232,22 +234,30 @@ def anilist_anime_details(ctx: Context, state: State) -> State | ControlFlow:
         elif list_status:
             return State(
                 menu_name="ANILIST_LIST_VIEW",
-                data={"list_status": list_status, "page": return_page}
+                data={"list_status": list_status, "page": return_page},
             )
         else:
             return State(menu_name="ANILIST_LISTS")
 
     # Handle menu choices
     if "Edit Progress" in choice:
-        return _edit_anime_progress(ctx, anime, list_status, return_page, feedback, from_media_actions)
+        return _edit_anime_progress(
+            ctx, anime, list_status, return_page, feedback, from_media_actions
+        )
     elif "Edit Rating" in choice:
-        return _edit_anime_rating(ctx, anime, list_status, return_page, feedback, from_media_actions)
+        return _edit_anime_rating(
+            ctx, anime, list_status, return_page, feedback, from_media_actions
+        )
     elif "Edit Status" in choice:
-        return _edit_anime_status(ctx, anime, list_status, return_page, feedback, from_media_actions)
+        return _edit_anime_status(
+            ctx, anime, list_status, return_page, feedback, from_media_actions
+        )
     elif "Watch/Stream" in choice:
         return _stream_anime(ctx, anime)
     elif "Remove from List" in choice:
-        return _confirm_remove_anime(ctx, anime, list_status, return_page, feedback, icons, from_media_actions)
+        return _confirm_remove_anime(
+            ctx, anime, list_status, return_page, feedback, icons, from_media_actions
+        )
     else:  # Back to List/Media Actions
         # Return to appropriate menu based on how we got here
         if from_media_actions:
@@ -255,7 +265,7 @@ def anilist_anime_details(ctx: Context, state: State) -> State | ControlFlow:
         elif list_status:
             return State(
                 menu_name="ANILIST_LIST_VIEW",
-                data={"list_status": list_status, "page": return_page}
+                data={"list_status": list_status, "page": return_page},
             )
         else:
             return State(menu_name="ANILIST_LISTS")
@@ -264,12 +274,12 @@ def anilist_anime_details(ctx: Context, state: State) -> State | ControlFlow:
 def _display_lists_overview(console: Console, ctx: Context, icons: bool):
     """Display overview of all user lists with counts."""
     user = ctx.media_api.user_profile
-    
+
     # Create overview panel
     overview_text = f"[bold cyan]{user.name}[/bold cyan]'s AniList Management\n"
     overview_text += f"User ID: {user.id}\n\n"
     overview_text += "Manage your anime lists, track progress, and sync with AniList"
-    
+
     panel = Panel(
         overview_text,
         title=f"{'📚 ' if icons else ''}AniList Lists Overview",
@@ -280,15 +290,17 @@ def _display_lists_overview(console: Console, ctx: Context, icons: bool):
 
 
 def _display_list_contents(
-    console: Console, 
-    result: MediaSearchResult, 
-    list_status: str, 
-    page: int, 
-    icons: bool
+    console: Console,
+    result: MediaSearchResult,
+    list_status: str,
+    page: int,
+    icons: bool,
 ):
     """Display the contents of a specific list in a table."""
     if not result.media:
-        console.print(f"[yellow]No anime found in {_status_to_display_name(list_status)} list[/yellow]")
+        console.print(
+            f"[yellow]No anime found in {_status_to_display_name(list_status)} list[/yellow]"
+        )
         return
 
     table = Table(title=f"{_status_to_display_name(list_status)} - Page {page}")
@@ -301,29 +313,25 @@ def _display_list_contents(
     for i, anime in enumerate(result.media, 1):
         title = anime.title.english or anime.title.romaji or "Unknown Title"
         episodes = str(anime.episodes or "?")
-        
+
         # Get list entry details if available
         progress = "?"
         score = "?"
         status = _status_to_display_name(list_status)
-        
+
         # Note: In a real implementation, you'd get these from the MediaList entry
         # For now, we'll show placeholders
-        if hasattr(anime, 'media_list_entry') and anime.media_list_entry:
+        if hasattr(anime, "media_list_entry") and anime.media_list_entry:
             progress = str(anime.media_list_entry.progress or 0)
             score = str(anime.media_list_entry.score or "-")
 
-        table.add_row(
-            f"{i}. {title}",
-            episodes,
-            progress,
-            score,
-            status
-        )
+        table.add_row(f"{i}. {title}", episodes, progress, score, status)
 
     console.print(table)
-    console.print(f"\nShowing {len(result.media)} anime from {_status_to_display_name(list_status)} list")
-    
+    console.print(
+        f"\nShowing {len(result.media)} anime from {_status_to_display_name(list_status)} list"
+    )
+
     # Show pagination info
     if result.page_info.has_next_page:
         console.print(f"[dim]More results available on next page[/dim]")
@@ -332,19 +340,25 @@ def _display_list_contents(
 def _display_anime_list_details(console: Console, anime: MediaItem, icons: bool):
     """Display detailed information about an anime in the user's list."""
     title = anime.title.english or anime.title.romaji or "Unknown Title"
-    
+
     details_text = f"[bold]{title}[/bold]\n\n"
     details_text += f"Episodes: {anime.episodes or 'Unknown'}\n"
     details_text += f"Status: {anime.status or 'Unknown'}\n"
-    details_text += f"Genres: {', '.join(anime.genres) if anime.genres else 'Unknown'}\n"
-    
+    details_text += (
+        f"Genres: {', '.join(anime.genres) if anime.genres else 'Unknown'}\n"
+    )
+
     if anime.description:
         # Truncate description for display
-        desc = anime.description[:300] + "..." if len(anime.description) > 300 else anime.description
+        desc = (
+            anime.description[:300] + "..."
+            if len(anime.description) > 300
+            else anime.description
+        )
         details_text += f"\nDescription:\n{desc}"
 
     # Add list-specific information if available
-    if hasattr(anime, 'media_list_entry') and anime.media_list_entry:
+    if hasattr(anime, "media_list_entry") and anime.media_list_entry:
         entry = anime.media_list_entry
         details_text += f"\n\n[bold cyan]Your List Info:[/bold cyan]\n"
         details_text += f"Progress: {entry.progress or 0} episodes\n"
@@ -362,16 +376,12 @@ def _display_anime_list_details(console: Console, anime: MediaItem, icons: bool)
 def _navigate_to_list(ctx: Context, list_status: UserListStatusType) -> State:
     """Navigate to a specific list view."""
     return State(
-        menu_name="ANILIST_LIST_VIEW",
-        data={"list_status": list_status, "page": 1}
+        menu_name="ANILIST_LIST_VIEW", data={"list_status": list_status, "page": 1}
     )
 
 
 def _select_anime_for_details(
-    ctx: Context, 
-    result: MediaSearchResult, 
-    list_status: str, 
-    page: int
+    ctx: Context, result: MediaSearchResult, list_status: str, page: int
 ) -> State | ControlFlow:
     """Let user select an anime from the list to view/edit details."""
     if not result.media:
@@ -396,43 +406,45 @@ def _select_anime_for_details(
     try:
         index = int(choice.split(".")[0]) - 1
         selected_anime = result.media[index]
-        
+
         return State(
             menu_name="ANILIST_ANIME_DETAILS",
             data={
                 "anime": selected_anime,
                 "list_status": list_status,
-                "return_page": page
-            }
+                "return_page": page,
+            },
         )
     except (ValueError, IndexError):
         return ControlFlow.CONTINUE
 
 
 def _edit_anime_progress(
-    ctx: Context, 
-    anime: MediaItem, 
-    list_status: str, 
-    return_page: int, 
+    ctx: Context,
+    anime: MediaItem,
+    list_status: str,
+    return_page: int,
     feedback,
-    from_media_actions: bool = False
+    from_media_actions: bool = False,
 ) -> State | ControlFlow:
     """Edit the progress (episodes watched) for an anime."""
     current_progress = 0
-    if hasattr(anime, 'media_list_entry') and anime.media_list_entry:
+    if hasattr(anime, "media_list_entry") and anime.media_list_entry:
         current_progress = anime.media_list_entry.progress or 0
 
     max_episodes = anime.episodes or 999
-    
+
     try:
         new_progress = click.prompt(
             f"Enter new progress (0-{max_episodes}, current: {current_progress})",
             type=int,
-            default=current_progress
+            default=current_progress,
         )
-        
+
         if new_progress < 0 or new_progress > max_episodes:
-            feedback.error("Invalid progress", f"Progress must be between 0 and {max_episodes}")
+            feedback.error(
+                "Invalid progress", f"Progress must be between 0 and {max_episodes}"
+            )
             feedback.pause_for_user("Press Enter to continue")
             return ControlFlow.CONTINUE
 
@@ -463,32 +475,32 @@ def _edit_anime_progress(
     elif list_status:
         return State(
             menu_name="ANILIST_LIST_VIEW",
-            data={"list_status": list_status, "page": return_page}
+            data={"list_status": list_status, "page": return_page},
         )
     else:
         return State(menu_name="ANILIST_LISTS")
 
 
 def _edit_anime_rating(
-    ctx: Context, 
-    anime: MediaItem, 
-    list_status: str, 
-    return_page: int, 
+    ctx: Context,
+    anime: MediaItem,
+    list_status: str,
+    return_page: int,
     feedback,
-    from_media_actions: bool = False
+    from_media_actions: bool = False,
 ) -> State | ControlFlow:
     """Edit the rating/score for an anime."""
     current_score = 0.0
-    if hasattr(anime, 'media_list_entry') and anime.media_list_entry:
+    if hasattr(anime, "media_list_entry") and anime.media_list_entry:
         current_score = anime.media_list_entry.score or 0.0
 
     try:
         new_score = click.prompt(
             f"Enter new rating (0.0-10.0, current: {current_score})",
             type=float,
-            default=current_score
+            default=current_score,
         )
-        
+
         if new_score < 0.0 or new_score > 10.0:
             feedback.error("Invalid rating", "Rating must be between 0.0 and 10.0")
             feedback.pause_for_user("Press Enter to continue")
@@ -521,19 +533,19 @@ def _edit_anime_rating(
     elif list_status:
         return State(
             menu_name="ANILIST_LIST_VIEW",
-            data={"list_status": list_status, "page": return_page}
+            data={"list_status": list_status, "page": return_page},
         )
     else:
         return State(menu_name="ANILIST_LISTS")
 
 
 def _edit_anime_status(
-    ctx: Context, 
-    anime: MediaItem, 
-    list_status: str, 
-    return_page: int, 
+    ctx: Context,
+    anime: MediaItem,
+    list_status: str,
+    return_page: int,
     feedback,
-    from_media_actions: bool = False
+    from_media_actions: bool = False,
 ) -> State | ControlFlow:
     """Edit the list status for an anime."""
     status_options = [
@@ -573,8 +585,8 @@ def _edit_anime_status(
 
     if success:
         feedback.pause_for_user("Press Enter to continue")
-        
-        # If status changed, return to main lists menu since the anime 
+
+        # If status changed, return to main lists menu since the anime
         # is no longer in the current list
         if new_status != list_status:
             if from_media_actions:
@@ -588,27 +600,27 @@ def _edit_anime_status(
     elif list_status:
         return State(
             menu_name="ANILIST_LIST_VIEW",
-            data={"list_status": list_status, "page": return_page}
+            data={"list_status": list_status, "page": return_page},
         )
     else:
         return State(menu_name="ANILIST_LISTS")
 
 
 def _confirm_remove_anime(
-    ctx: Context, 
-    anime: MediaItem, 
-    list_status: str, 
-    return_page: int, 
-    feedback, 
+    ctx: Context,
+    anime: MediaItem,
+    list_status: str,
+    return_page: int,
+    feedback,
     icons: bool,
-    from_media_actions: bool = False
+    from_media_actions: bool = False,
 ) -> State | ControlFlow:
     """Confirm and remove an anime from the user's list."""
     title = anime.title.english or anime.title.romaji or "Unknown Title"
-    
+
     if not feedback.confirm(
         f"Remove '{title}' from your {_status_to_display_name(list_status)} list?",
-        default=False
+        default=False,
     ):
         return ControlFlow.CONTINUE
 
@@ -634,7 +646,7 @@ def _confirm_remove_anime(
     elif list_status:
         return State(
             menu_name="ANILIST_LIST_VIEW",
-            data={"list_status": list_status, "page": return_page}
+            data={"list_status": list_status, "page": return_page},
         )
     else:
         return State(menu_name="ANILIST_LISTS")
@@ -650,7 +662,7 @@ def _stream_anime(ctx: Context, anime: MediaItem) -> State:
             page=1,
             api_params=None,
             user_list_params=None,
-        )
+        ),
     )
 
 
@@ -671,7 +683,7 @@ def _show_all_lists_stats(ctx: Context, feedback, icons: bool) -> State | Contro
         border_style="green",
     )
     console.print(panel)
-    
+
     feedback.pause_for_user("Press Enter to continue")
     return ControlFlow.CONTINUE
 
@@ -684,12 +696,15 @@ def _search_all_lists(ctx: Context, feedback, icons: bool) -> State | ControlFlo
             return ControlFlow.CONTINUE
 
         # This would require implementing search across all lists
-        feedback.info("Search functionality", "Cross-list search will be implemented in a future update")
+        feedback.info(
+            "Search functionality",
+            "Cross-list search will be implemented in a future update",
+        )
         feedback.pause_for_user("Press Enter to continue")
-        
+
     except click.Abort:
         pass
-    
+
     return ControlFlow.CONTINUE
 
 
@@ -702,21 +717,17 @@ def _add_anime_to_list(ctx: Context, feedback, icons: bool) -> State | ControlFl
 
         # Navigate to search with intent to add to list
         return State(
-            menu_name="PROVIDER_SEARCH",
-            data={"query": query, "add_to_list_mode": True}
+            menu_name="PROVIDER_SEARCH", data={"query": query, "add_to_list_mode": True}
         )
-        
+
     except click.Abort:
         pass
-    
+
     return ControlFlow.CONTINUE
 
 
 def _add_anime_to_specific_list(
-    ctx: Context, 
-    list_status: str, 
-    feedback, 
-    icons: bool
+    ctx: Context, list_status: str, feedback, icons: bool
 ) -> State | ControlFlow:
     """Add a new anime to a specific list."""
     try:
@@ -727,22 +738,22 @@ def _add_anime_to_specific_list(
         # Navigate to search with specific list target
         return State(
             menu_name="PROVIDER_SEARCH",
-            data={"query": query, "target_list": list_status}
+            data={"query": query, "target_list": list_status},
         )
-        
+
     except click.Abort:
         pass
-    
+
     return ControlFlow.CONTINUE
 
 
 def _remove_anime_from_list(
-    ctx: Context, 
-    result: MediaSearchResult, 
-    list_status: str, 
-    page: int, 
-    feedback, 
-    icons: bool
+    ctx: Context,
+    result: MediaSearchResult,
+    list_status: str,
+    page: int,
+    feedback,
+    icons: bool,
 ) -> State | ControlFlow:
     """Select and remove an anime from the current list."""
     if not result.media:
@@ -769,7 +780,7 @@ def _remove_anime_from_list(
     try:
         index = int(choice.split(".")[0]) - 1
         selected_anime = result.media[index]
-        
+
         return _confirm_remove_anime(
             ctx, selected_anime, list_status, page, feedback, icons
         )
@@ -778,17 +789,14 @@ def _remove_anime_from_list(
 
 
 def _show_list_statistics(
-    ctx: Context, 
-    list_status: str, 
-    feedback, 
-    icons: bool
+    ctx: Context, list_status: str, feedback, icons: bool
 ) -> State | ControlFlow:
     """Show statistics for a specific list."""
     console = Console()
     console.clear()
 
     list_name = _status_to_display_name(list_status)
-    
+
     stats_text = f"[bold cyan]📊 {list_name} Statistics[/bold cyan]\n\n"
     stats_text += "[dim]Loading list statistics...[/dim]\n"
     stats_text += "[dim]This feature requires comprehensive list analysis.[/dim]"
@@ -799,7 +807,7 @@ def _show_list_statistics(
         border_style="blue",
     )
     console.print(panel)
-    
+
     feedback.pause_for_user("Press Enter to continue")
     return ControlFlow.CONTINUE
 

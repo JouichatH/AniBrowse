@@ -11,7 +11,7 @@ from ...core.constants import (
     ROFI_THEME_MAIN,
     ROFI_THEME_PREVIEW,
 )
-from ...libs.api.anilist.constants import SORTS_AVAILABLE
+from ...libs.api.anilist.constants import MEDIA_LIST_SORTS, SORTS_AVAILABLE
 from ...libs.providers.anime import PROVIDERS_AVAILABLE, SERVERS_AVAILABLE
 from ..constants import APP_ASCII_ART
 from . import defaults
@@ -316,6 +316,11 @@ class AnilistConfig(OtherConfig):
         description=desc.ANILIST_SORT_BY,
         examples=SORTS_AVAILABLE,
     )
+    media_list_sort_by: str = Field(
+        default=defaults.ANILIST_MEDIA_LIST_SORT_BY,
+        description=desc.ANILIST_MEDIA_LIST_SORT_BY,
+        examples=MEDIA_LIST_SORTS,
+    )
     preferred_language: Literal["english", "romaji"] = Field(
         default=defaults.ANILIST_PREFERRED_LANGUAGE,
         description=desc.ANILIST_PREFERRED_LANGUAGE,
@@ -325,6 +330,15 @@ class AnilistConfig(OtherConfig):
     @classmethod
     def validate_sort_by(cls, v: str) -> str:
         if v not in SORTS_AVAILABLE:
+            raise ValueError(
+                f"'{v}' is not a valid sort option. See documentation for available options."
+            )
+        return v
+
+    @field_validator("media_list_sort_by")
+    @classmethod
+    def validate_media_list_sort_by(cls, v: str) -> str:
+        if v not in MEDIA_LIST_SORTS:
             raise ValueError(
                 f"'{v}' is not a valid sort option. See documentation for available options."
             )

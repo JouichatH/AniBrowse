@@ -175,7 +175,7 @@ def _create_user_list_action(ctx: Context, status: UserListStatusType) -> MenuAc
             status=status, per_page=ctx.config.anilist.per_page
         )
 
-        result = ctx.media_api.fetch_user_list(user_list_params)
+        result = ctx.media_api.search_media_list(user_list_params)
 
         return ("RESULTS", result, None, user_list_params)
 

@@ -35,7 +35,7 @@ class BaseApiClient(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def fetch_user_list(self, params: UserListParams) -> Optional[MediaSearchResult]:
+    def search_media_list(self, params: UserListParams) -> Optional[MediaSearchResult]:
         pass
 
     @abc.abstractmethod

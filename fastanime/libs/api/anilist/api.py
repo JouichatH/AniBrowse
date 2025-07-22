@@ -55,21 +55,22 @@ class AniListApi(BaseApiClient):
 
     def search_media(self, params: ApiSearchParams) -> Optional[MediaSearchResult]:
         variables = {k: v for k, v in params.__dict__.items() if v is not None}
-        variables["perPage"] = self.config.per_page or params.per_page
+        variables["perPage"] = params.per_page or self.config.per_page
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.SEARCH_MEDIA, variables
         )
         return mapper.to_generic_search_result(response.json())
 
-    def fetch_user_list(self, params: UserListParams) -> Optional[MediaSearchResult]:
+    def search_media_list(self, params: UserListParams) -> Optional[MediaSearchResult]:
         if not self.user_profile:
             logger.error("Cannot fetch user list: user is not authenticated.")
             return None
         variables = {
+            "sort": params.sort or self.config.media_list_sort_by,
             "userId": self.user_profile.id,
             "status": status_map[params.status] if params.status else None,
             "page": params.page,
-            "perPage": self.config.per_page or params.per_page,
+            "perPage": params.per_page or self.config.per_page,
         }
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_USER_MEDIA_LIST, variables

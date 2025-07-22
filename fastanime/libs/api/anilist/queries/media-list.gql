@@ -4,13 +4,14 @@ query (
   $type: MediaType
   $page: Int
   $perPage: Int
+  $sort: [MediaListSort]
 ) {
   Page(perPage: $perPage, page: $page) {
     pageInfo {
       currentPage
       total
     }
-    mediaList(userId: $userId, status: $status, type: $type) {
+    mediaList(userId: $userId, status: $status, type: $type,sort: $sort) {
       mediaId
       media {
         id

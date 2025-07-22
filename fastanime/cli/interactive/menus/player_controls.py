@@ -4,37 +4,11 @@ from typing import TYPE_CHECKING, Callable, Dict
 import click
 from rich.console import Console
 
-from ....libs.api.params import UpdateListEntryParams
 from ..session import Context, session
 from ..state import ControlFlow, State
 
 if TYPE_CHECKING:
     from ....libs.providers.anime.types import Server
-
-
-def _calculate_completion(start_time: str, end_time: str) -> float:
-    """Calculates the percentage completion from two time strings (HH:MM:SS)."""
-    try:
-        start_parts = list(map(int, start_time.split(":")))
-        end_parts = list(map(int, end_time.split(":")))
-        start_secs = start_parts[0] * 3600 + start_parts[1] * 60 + start_parts[2]
-        end_secs = end_parts[0] * 3600 + end_parts[1] * 60 + end_parts[2]
-        return (start_secs / end_secs) * 100 if end_secs > 0 else 0
-    except (ValueError, IndexError, ZeroDivisionError):
-        return 0
-
-
-def _update_progress_in_background(ctx: Context, anime_id: int, progress: int):
-    """Fires off a non-blocking request to update AniList progress."""
-
-    def task():
-        # if not ctx.media_api.user_profile:
-        #     return
-        params = UpdateListEntryParams(media_id=anime_id, progress=progress)
-        ctx.media_api.update_list_entry(params)
-        # We don't need to show feedback here, it's a background task.
-
-    threading.Thread(target=task).start()
 
 
 @session.menu
@@ -71,28 +45,6 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
         )
         return ControlFlow.BACK
 
-    # --- Post-Playback Logic ---
-    if player_result and player_result.stop_time and player_result.total_time:
-        completion_pct = _calculate_completion(
-            player_result.stop_time, player_result.total_time
-        )
-        if completion_pct >= config.stream.episode_complete_at:
-            click.echo(
-                f"[green]Episode {current_episode_num} marked as complete. Updating progress...[/green]"
-            )
-            _update_progress_in_background(
-                ctx, anilist_anime.id, int(current_episode_num)
-            )
-            
-            # Update unified media registry with actual PlayerResult data
-            if config.stream.continue_from_watch_history and config.stream.preferred_watch_history == "local":
-                from ...services.media_registry.tracker import get_media_tracker
-                try:
-                    tracker = get_media_tracker()
-                    tracker.track_from_player_result(anilist_anime, int(current_episode_num), player_result)
-                except (ValueError, AttributeError) as e:
-                    logger.warning(f"Failed to update media registry: {e}")
-
     # --- Auto-Next Logic ---
     available_episodes = getattr(
         provider_anime.episodes, config.stream.translation_type, []
@@ -102,16 +54,9 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
     if config.stream.auto_next and current_index < len(available_episodes) - 1:
         console.print("[cyan]Auto-playing next episode...[/cyan]")
         next_episode_num = available_episodes[current_index + 1]
-        
+
         # Track next episode in unified media registry
-        if config.stream.continue_from_watch_history and config.stream.preferred_watch_history == "local" and anilist_anime:
-            from ...services.media_registry.tracker import get_media_tracker
-            try:
-                tracker = get_media_tracker()
-                tracker.track_episode_start(anilist_anime, int(next_episode_num))
-            except (ValueError, AttributeError) as e:
-                logger.warning(f"Failed to track episode start: {e}")
-        
+
         return State(
             menu_name="SERVERS",
             media_api=state.media_api,
@@ -124,15 +69,7 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
     def next_episode() -> State | ControlFlow:
         if current_index < len(available_episodes) - 1:
             next_episode_num = available_episodes[current_index + 1]
-            
-            # Track next episode in watch history
-            if config.stream.continue_from_watch_history and config.stream.preferred_watch_history == "local" and anilist_anime:
-                from ...utils.watch_history_tracker import track_episode_viewing
-                try:
-                    track_episode_viewing(anilist_anime, int(next_episode_num), start_tracking=True)
-                except (ValueError, AttributeError):
-                    pass
-            
+
             # Transition back to the SERVERS menu with the new episode number.
             return State(
                 menu_name="SERVERS",

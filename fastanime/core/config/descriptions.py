@@ -95,6 +95,7 @@ VLC_ARGS = "Comma-separated arguments to pass to the Vlc player."
 # AnilistConfig
 ANILIST_PER_PAGE = "Number of items to fetch per page from AniList."
 ANILIST_SORT_BY = "Default sort order for AniList search results."
+ANILIST_MEDIA_LIST_SORT_BY = "Default medai list sort order for AniList search results."
 ANILIST_PREFERRED_LANGUAGE = "Preferred language for anime titles from AniList."
 
 # DownloadsConfig

@@ -59,6 +59,7 @@ class ApiSearchParams:
 @dataclass(frozen=True)
 class UserListParams:
     status: UserListStatusType
+    sort: Optional[str] = None
     page: int = 1
     per_page: int = 20
 

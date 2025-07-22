@@ -150,7 +150,7 @@ def handle_user_list_command(
                 page=1,
                 per_page=config.anilist.per_page or 50,
             )
-            user_list = api_client.fetch_user_list(list_params)
+            user_list = api_client.search_media_list(list_params)
 
         if not user_list or not user_list.media:
             feedback.info(f"You have no anime in your {list_name} list")
