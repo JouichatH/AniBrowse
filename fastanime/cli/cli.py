@@ -30,6 +30,7 @@ commands = {
     "config": "config.config",
     "search": "search.search",
     "anilist": "anilist.anilist",
+    "download": "download.download",
 }
 
 
