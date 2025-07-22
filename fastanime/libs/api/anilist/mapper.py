@@ -50,15 +50,17 @@ status_map = {
 
 
 def _to_generic_date(date: AnilistDateObject) -> Optional[datetime]:
-    return (
-        datetime(
-            date["year"],
-            date["month"],
-            date["day"],
-        )
-        if date and date["year"] and date["month"] and date["day"]
-        else None
-    )
+    if not date:
+        return
+    year = date["year"]
+    month = date["month"]
+    day = date["day"]
+    if year:
+        if not month:
+            month = 1
+        if not day:
+            day = 1
+        return datetime(year, month, day)
 
 
 def _to_generic_media_title(anilist_title: AnilistMediaTitle) -> MediaTitle:
@@ -152,24 +154,20 @@ def _to_generic_user_status(
             score=anilist_list_entry["score"],
             repeat=anilist_list_entry["repeat"],
             notes=anilist_list_entry["notes"],
-            start_date=datetime(
-                anilist_list_entry["startDate"]["year"],
-                anilist_list_entry["startDate"]["month"],
-                anilist_list_entry["startDate"]["day"],
-            ),
-            completed_at=datetime(
-                anilist_list_entry["completedAt"]["year"],
-                anilist_list_entry["completedAt"]["month"],
-                anilist_list_entry["completedAt"]["day"],
-            ),
-            created_at=anilist_list_entry["createdAt"],
+            start_date=_to_generic_date(anilist_list_entry.get("startDate")),
+            completed_at=_to_generic_date(anilist_list_entry.get("completedAt")),
+            # TODO: should this be a datetime if so what is the raw values type
+            created_at=str(anilist_list_entry["createdAt"]),
         )
     else:
         if not anilist_media["mediaListEntry"]:
             return
+
         return UserListStatus(
             id=anilist_media["mediaListEntry"]["id"],
-            status=anilist_media["mediaListEntry"]["status"],  # type: ignore
+            status=status_map[anilist_media["mediaListEntry"]["status"]]  # pyright: ignore
+            if anilist_media["mediaListEntry"]["status"]
+            else None,
             progress=anilist_media["mediaListEntry"]["progress"],
         )
 
@@ -233,11 +231,13 @@ def to_generic_search_result(
             _to_generic_media_item(item, user_media_list_item)
             for item, user_media_list_item in zip(raw_media_list, user_media_list)
         ]
+        # TODO: further probe this type
+        page_info = _to_generic_page_info(page_data)  # type: ignore
     else:
         media_items: List[MediaItem] = [
             _to_generic_media_item(item) for item in raw_media_list
         ]
-    page_info = _to_generic_page_info(page_data["pageInfo"])
+        page_info = _to_generic_page_info(page_data["pageInfo"])
 
     return MediaSearchResult(page_info=page_info, media=media_items)
 

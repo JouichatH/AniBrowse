@@ -1,51 +1,57 @@
-import click
-from rich import print
-from rich.prompt import Confirm, Prompt
+from re import A
 
-from ....auth.manager import AuthManager  # Using the manager
+import click
+
+from .....core.config.model import AppConfig
+from .....core.constants import ANILIST_AUTH
+from .....libs.api.factory import create_api_client
+from .....libs.selectors.selector import create_selector
+from ....services.auth import AuthService
+from ....services.feedback import FeedbackService
 
 
 @click.command(help="Login to your AniList account to enable progress tracking.")
 @click.option("--status", "-s", is_flag=True, help="Check current login status.")
 @click.option("--logout", "-l", is_flag=True, help="Log out and erase credentials.")
-@click.pass_context
-def auth(ctx: click.Context, status: bool, logout: bool):
+@click.pass_obj
+def auth(config: AppConfig, status: bool, logout: bool):
     """Handles user authentication and credential management."""
-    manager = AuthManager()
+    auth_service = AuthService("anilist")
+    feedback = FeedbackService(config.general.icons)
+    selector = create_selector(config)
+    feedback.clear_console()
 
     if status:
-        user_data = manager.load_user_profile()
+        user_data = auth_service.get_auth()
         if user_data:
-            print(f"[bold green]Logged in as:[/] {user_data.get('name')}")
-            print(f"User ID: {user_data.get('id')}")
+            feedback.info(f"Logged in as: {user_data.user_profile}")
         else:
-            print("[bold yellow]Not logged in.[/]")
+            feedback.error("Not logged in.")
         return
 
     if logout:
-        if Confirm.ask(
-            "[bold red]Are you sure you want to log out and erase your token?[/]",
-            default=False,
-        ):
-            manager.clear_user_profile()
-            print("You have been logged out.")
+        if selector.confirm("Are you sure you want to log out and erase your token?"):
+            auth_service.clear_user_profile()
+            feedback.info("You have been logged out.")
         return
 
-    # --- Start Login Flow ---
-    from ....libs.api.factory import create_api_client
+    if auth_profile := auth_service.get_auth():
+        if not selector.confirm(
+            f"You are already logged in as {auth_profile.user_profile.name}.Would you like to relogin"
+        ):
+            return
+    api_client = create_api_client("anilist", config)
 
-    # Create a temporary client just for the login process
-    api_client = create_api_client("anilist", ctx.obj)
-
-    click.launch(
-        "https://anilist.co/api/v2/oauth/authorize?client_id=20148&response_type=token"
+    # TODO: stop the printing of opening browser session to stderr
+    click.launch(ANILIST_AUTH)
+    feedback.info("Your browser has been opened to obtain an AniList token.")
+    feedback.info(
+        "After authorizing, copy the token from the address bar and paste it below."
     )
-    print("Your browser has been opened to obtain an AniList token.")
-    print("After authorizing, copy the token from the address bar and paste it below.")
 
-    token = Prompt.ask("Enter your AniList Access Token")
-    if not token.strip():
-        print("[bold red]Login cancelled.[/]")
+    token = selector.ask("Enter your AniList Access Token")
+    if not token:
+        feedback.error("Login cancelled.")
         return
 
     # Use the API client to validate the token and get profile info
@@ -53,7 +59,7 @@ def auth(ctx: click.Context, status: bool, logout: bool):
 
     if profile:
         # If successful, use the manager to save the credentials
-        manager.save_user_profile(profile, token.strip())
-        print(f"[bold green]Successfully logged in as {profile.name}! ✨[/]")
+        auth_service.save_user_profile(profile, token)
+        feedback.info(f"Successfully logged in as {profile.name}! ✨")
     else:
-        print("[bold red]Login failed. The token may be invalid or expired.[/bold red]")
+        feedback.error("Login failed. The token may be invalid or expired.")

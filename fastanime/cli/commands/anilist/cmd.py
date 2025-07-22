@@ -1,17 +1,29 @@
 import click
 
 from ...interactive.session import session
+from ...utils.lazyloader import LazyGroup
+from . import examples
 
 commands = {
-    "trending": "trending.trending",
-    "recent": "recent.recent",
-    "search": "search.search",
-    "download": "download.download",
-    "downloads": "downloads.downloads",
+    # "trending": "trending.trending",
+    # "recent": "recent.recent",
+    # "search": "search.search",
+    # "download": "download.download",
+    # "downloads": "downloads.downloads",
+    "auth": "auth.auth",
 }
 
 
-@click.command(name="anilist")
+@click.group(
+    cls=LazyGroup,
+    name="anilist",
+    root="fastanime.cli.commands.anilist.commands",
+    invoke_without_command=True,
+    help="A beautiful interface that gives you access to a commplete streaming experience",
+    short_help="Access all streaming options",
+    lazy_subcommands=commands,
+    epilog=examples.main,
+)
 @click.option(
     "--resume", is_flag=True, help="Resume from the last session (Not yet implemented)."
 )

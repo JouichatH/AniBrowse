@@ -80,7 +80,13 @@ class Session:
         media_api = create_api_client(config.general.media_api, config)
 
         if auth_profile := auth.get_auth():
-            media_api.authenticate(auth_profile.token)
+            p = media_api.authenticate(auth_profile.token)
+            if p:
+                logger.debug(f"Authenticated as {p.name}")
+            else:
+                logger.warning(f"Failed to authenticate with {auth_profile.token}")
+        else:
+            logger.debug("Not authenticated")
 
         self._context = Context(
             config=config,

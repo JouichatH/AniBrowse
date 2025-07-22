@@ -14,7 +14,9 @@ GIT_REPO = "github.com"
 GIT_PROTOCOL = "https://"
 REPO_HOME = f"https://{GIT_REPO}/{AUTHOR}/FastAnime"
 DISCORD_INVITE = "https://discord.gg/C4rhMA4mmK"
-ANILIST_AUTH = "https://anilist.co/api/v2/oauth/authorize?client_id=20148"
+ANILIST_AUTH = (
+    "https://anilist.co/api/v2/oauth/authorize?client_id=20148&response_type=token"
+)
 
 try:
     APP_DIR = Path(str(resources.files(PROJECT_NAME.lower())))

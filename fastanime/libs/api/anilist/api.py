@@ -67,7 +67,7 @@ class AniListApi(BaseApiClient):
             return None
         variables = {
             "userId": self.user_profile.id,
-            "status": params.status,
+            "status": status_map[params.status] if params.status else None,
             "page": params.page,
             "perPage": self.config.per_page or params.per_page,
         }
