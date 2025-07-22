@@ -27,12 +27,9 @@ if TYPE_CHECKING:
 
 
 commands = {
-    "config": ".config",
-    "search": ".search",
-    "download": ".download",
-    "anilist": ".anilist",
-    "queue": ".queue",
-    "service": ".service",
+    "config": "config.config",
+    "search": "search.search",
+    "anilist": "anilist.anilist",
 }
 
 

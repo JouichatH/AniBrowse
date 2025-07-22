@@ -7,7 +7,6 @@ from yt_dlp.utils.networking import random_user_agent
 from .allanime.constants import SERVERS_AVAILABLE as ALLANIME_SERVERS
 from .animepahe.constants import SERVERS_AVAILABLE as ANIMEPAHE_SERVERS
 from .base import BaseAnimeProvider
-from .hianime.constants import SERVERS_AVAILABLE as HIANIME_SERVERS
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +17,7 @@ PROVIDERS_AVAILABLE = {
     "nyaa": "provider.Nyaa",
     "yugen": "provider.Yugen",
 }
-SERVERS_AVAILABLE = ["TOP", *ALLANIME_SERVERS, *ANIMEPAHE_SERVERS, *HIANIME_SERVERS]
+SERVERS_AVAILABLE = ["TOP", *ALLANIME_SERVERS, *ANIMEPAHE_SERVERS]
 
 
 class AnimeProviderFactory:
