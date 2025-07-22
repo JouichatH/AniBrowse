@@ -75,7 +75,8 @@ fzf_preview() {
   fi
 }
 # Generate the same cache key that the Python worker uses
-hash=$(generate_sha256 {})
+title={}
+hash=$(generate_sha256 "{PREFIX}$title")
 
 # Display image if configured and the cached file exists
 if [ "{preview_mode}" = "full" ] || [ "{preview_mode}" = "image" ]; then

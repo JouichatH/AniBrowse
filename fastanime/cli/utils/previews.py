@@ -195,6 +195,7 @@ def get_anime_preview(
         .replace("{info_cache_path}", str(INFO_CACHE_DIR))
         .replace("{path_sep}", path_sep)
         .replace("{image_renderer}", config.general.image_renderer)
+        .replace("{PREFIX}", "")
     )
     # )
 
@@ -249,7 +250,7 @@ def _episode_cache_worker(episodes: List[str], anime: MediaItem, config: AppConf
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         for episode_str in episodes:
-            hash_id = _get_cache_hash(episode_str)
+            hash_id = _get_cache_hash(f"{anime.title.english}_Episode_{episode_str}")
 
             # Find matching streaming episode
             episode_data = None
@@ -334,6 +335,7 @@ def get_episode_preview(
         .replace("{info_cache_path}", str(INFO_CACHE_DIR))
         .replace("{path_sep}", path_sep)
         .replace("{image_renderer}", config.general.image_renderer)
+        .replace("{PREFIX}", f"{anime.title.english}_Episode_")
     )
 
     os.environ["SHELL"] = "bash"
