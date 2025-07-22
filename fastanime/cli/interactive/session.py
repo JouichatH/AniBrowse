@@ -177,13 +177,8 @@ class Session:
 
         return decorator
 
-    def load_menus_from_folder(self, package_path: Path = MENUS_DIR):
-        """
-        Dynamically imports all Python modules from a folder to register their menus.
-
-        Args:
-            package_path: The filesystem path to the 'menus' package directory.
-        """
+    def load_menus_from_folder(self, package):
+        package_path = MENUS_DIR / package
         package_name = package_path.name
         logger.debug(f"Loading menus from '{package_path}'...")
 
