@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from ....core.utils.formatting import renumber_titles, strip_original_episode_prefix
 from ..types import (
     AiringSchedule,
     MediaImage,
@@ -131,15 +132,69 @@ def _to_generic_tags(anilist_tags: list[AnilistMediaTag]) -> List[MediaTag]:
     ]
 
 
+# def _to_generic_streaming_episodes(
+#     anilist_episodes: list[AnilistStreamingEpisode],
+# ) -> List[StreamingEpisode]:
+#     """Maps a list of AniList streaming episodes to generic StreamingEpisode objects."""
+#     return [
+#         StreamingEpisode(title=episode["title"], thumbnail=episode.get("thumbnail"))
+#         for episode in anilist_episodes
+#         if episode.get("title")
+#     ]
+
+
+# def _to_generic_streaming_episodes(
+#     anilist_episodes: list[dict],
+# ) -> List[StreamingEpisode]:
+#     """Maps a list of AniList streaming episodes to generic StreamingEpisode objects with renumbered episode titles."""
+
+#     # Extract titles
+#     titles = [ep["title"] for ep in anilist_episodes if "title" in ep]
+
+#     # Generate mapping: title -> renumbered_ep
+#     renumbered_map = renumber_titles(titles)
+
+#     # Apply renumbering
+#     return [
+#         StreamingEpisode(
+#             title=f"{renumbered_map[ep['title']]} - {ep['title']}",
+#             thumbnail=ep.get("thumbnail"),
+#         )
+#         for ep in anilist_episodes
+#         if ep.get("title")
+#     ]
+
+
 def _to_generic_streaming_episodes(
     anilist_episodes: list[AnilistStreamingEpisode],
 ) -> List[StreamingEpisode]:
-    """Maps a list of AniList streaming episodes to generic StreamingEpisode objects."""
-    return [
-        StreamingEpisode(title=episode["title"], thumbnail=episode.get("thumbnail"))
-        for episode in anilist_episodes
-        if episode.get("title")
-    ]
+    """Maps a list of AniList streaming episodes to generic StreamingEpisode objects,
+    renumbering them fresh if they contain episode numbers."""
+
+    titles = [ep["title"] for ep in anilist_episodes if "title" in ep and ep["title"]]
+    renumber_map = renumber_titles(titles)
+
+    result = []
+    for ep in anilist_episodes:
+        title = ep.get("title")
+        if not title:
+            continue
+
+        renumbered_ep = renumber_map.get(title)
+        display_title = (
+            f"Episode {renumbered_ep} - {strip_original_episode_prefix(title)}"
+            if renumbered_ep is not None
+            else title
+        )
+
+        result.append(
+            StreamingEpisode(
+                title=display_title,
+                thumbnail=ep.get("thumbnail"),
+            )
+        )
+
+    return result
 
 
 def _to_generic_user_status(
