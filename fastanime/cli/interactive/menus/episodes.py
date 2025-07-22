@@ -30,7 +30,7 @@ def episodes(ctx: Context, state: State) -> State | ControlFlow:
         feedback.warning(
             f"No '{config.stream.translation_type}' episodes found for this anime."
         )
-        return ControlFlow.BACK
+        return ControlFlow.BACKX2
 
     chosen_episode: str | None = None
 
@@ -54,8 +54,8 @@ def episodes(ctx: Context, state: State) -> State | ControlFlow:
         )
 
         if not chosen_episode_str or chosen_episode_str == "Back":
-            # FIX: back broken
-            return ControlFlow.BACK
+            # TODO: should improve the back logic for menus that can be pass through
+            return ControlFlow.BACKX2
 
         chosen_episode = chosen_episode_str
 

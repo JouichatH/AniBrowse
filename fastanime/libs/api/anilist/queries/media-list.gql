@@ -15,6 +15,7 @@ query (
       media {
         id
         idMal
+        format
         title {
           romaji
           english

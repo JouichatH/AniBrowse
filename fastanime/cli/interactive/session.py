@@ -146,6 +146,15 @@ class Session:
                 elif next_step == ControlFlow.BACK:
                     if len(self._history) > 1:
                         self._history.pop()
+                elif next_step == ControlFlow.BACKX2:
+                    if len(self._history) > 2:
+                        self._history.pop()
+                        self._history.pop()
+                elif next_step == ControlFlow.BACKX3:
+                    if len(self._history) > 3:
+                        self._history.pop()
+                        self._history.pop()
+                        self._history.pop()
                 elif next_step == ControlFlow.CONFIG_EDIT:
                     self._edit_config()
             else:

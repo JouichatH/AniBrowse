@@ -72,17 +72,66 @@ def _populate_info_template(item: MediaItem, config: AppConfig) -> str:
 
     # Escape all variables before injecting them into the script
     replacements = {
+        #
+        # plain text
+        #
         "TITLE": formatters.shell_safe(item.title.english or item.title.romaji),
+        "STATUS": formatters.shell_safe(item.status),
+        "FORMAT": formatters.shell_safe(item.format),
+        #
+        # numerical
+        #
+        "NEXT_EPISODE": formatters.shell_safe(
+            f"Episode {item.next_airing.episode} on {formatters.format_date(item.next_airing.airing_at)}"
+            if item.next_airing
+            else "N/A"
+        ),
+        "EPISODES": formatters.shell_safe(str(item.episodes)),
         "SCORE": formatters.shell_safe(
             formatters.format_score_stars_full(item.average_score)
         ),
-        "STATUS": formatters.shell_safe(item.status),
         "FAVOURITES": formatters.shell_safe(
             formatters.format_number_with_commas(item.favourites)
         ),
-        "GENRES": formatters.shell_safe(formatters.format_genres(item.genres)),
+        "POPULARITY": formatters.shell_safe(
+            formatters.format_number_with_commas(item.popularity)
+        ),
+        #
+        # list
+        #
+        "GENRES": formatters.shell_safe(
+            formatters.format_list_with_commas(item.genres)
+        ),
+        "TAGS": formatters.shell_safe(
+            formatters.format_list_with_commas([t.name for t in item.tags])
+        ),
+        "STUDIOS": formatters.shell_safe(
+            formatters.format_list_with_commas([t.name for t in item.studios if t.name])
+        ),
+        "SYNONYMNS": formatters.shell_safe(
+            formatters.format_list_with_commas(item.synonymns)
+        ),
+        #
+        # user
+        #
+        "USER_STATUS": formatters.shell_safe(
+            item.user_status.status if item.user_status else "NOT_ON_LIST"
+        ),
+        "USER_PROGRESS": formatters.shell_safe(
+            f"Episode {item.user_status.progress}" if item.user_status else "0"
+        ),
+        #
+        # dates
+        #
+        "START_DATE": formatters.shell_safe(formatters.format_date(item.start_date)),
+        "END_DATE": formatters.shell_safe(formatters.format_date(item.end_date)),
+        #
+        # big guy
+        #
         "SYNOPSIS": formatters.shell_safe(description),
+        #
         # Color codes
+        #
         "C_TITLE": ansi.get_true_fg(HEADER_COLOR, bold=True),
         "C_KEY": ansi.get_true_fg(HEADER_COLOR, bold=True),
         "C_VALUE": ansi.get_true_fg(HEADER_COLOR, bold=True),
@@ -107,12 +156,12 @@ def _cache_worker(items: List[MediaItem], titles: List[str], config: AppConfig):
                         _save_image_from_url, item.cover_image.large, hash_id
                     )
             if config.general.preview in ("full", "text"):
-                if not (INFO_CACHE_DIR / hash_id).exists():
+                # TODO: Come up with a better caching pattern for now just let it be remade
+                if not (INFO_CACHE_DIR / hash_id).exists() or True:
                     info_text = _populate_info_template(item, config)
                     executor.submit(_save_info_text, info_text, hash_id)
 
 
-# --- THIS IS THE MODIFIED FUNCTION ---
 def get_anime_preview(
     items: List[MediaItem], titles: List[str], config: AppConfig
 ) -> str:
@@ -205,7 +254,7 @@ def _episode_cache_worker(episodes: List[str], anime: MediaItem, config: AppConf
             # Find matching streaming episode
             episode_data = None
             for title, ep in streaming_episodes.items():
-                if f"Episode {episode_str}" in title or title.endswith(
+                if f"Episode {episode_str} -" in title or title.endswith(
                     f" {episode_str}"
                 ):
                     episode_data = {

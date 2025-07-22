@@ -109,7 +109,7 @@ class MediaItem(BaseApiModel):
     genres: List[str] = Field(default_factory=list)
     tags: List[MediaTag] = Field(default_factory=list)
     studios: List[Studio] = Field(default_factory=list)
-    synonyms: List[str] = Field(default_factory=list)
+    synonymns: List[str] = Field(default_factory=list)
 
     average_score: Optional[float] = None
     popularity: Optional[int] = None

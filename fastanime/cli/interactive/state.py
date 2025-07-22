@@ -24,6 +24,12 @@ class ControlFlow(Enum):
     BACK = auto()
     """Pop the current state from history and return to the previous one."""
 
+    BACKX2 = auto()
+    """Pop x2 the current state from history and return to the previous one."""
+
+    BACKX3 = auto()
+    """Pop x3 the current state from history and return to the previous one."""
+
     EXIT = auto()
     """Terminate the interactive session gracefully."""
 

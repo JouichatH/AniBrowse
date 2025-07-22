@@ -247,7 +247,7 @@ def _to_generic_media_item(
         genres=data.get("genres", []),
         tags=_to_generic_tags(data.get("tags")),
         studios=_to_generic_studios(data.get("studios")),
-        synonyms=data.get("synonyms", []),
+        synonymns=data.get("synonyms", []),
         average_score=data.get("averageScore"),
         popularity=data.get("popularity"),
         favourites=data.get("favourites"),

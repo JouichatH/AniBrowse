@@ -71,7 +71,7 @@ class MediaFilter:
                     )
                 )
                 or (item.description and query_lower in item.description.lower())
-                or any(query_lower in syn.lower() for syn in item.synonyms)
+                or any(query_lower in syn.lower() for syn in item.synonymns)
             ]
 
         # IDs

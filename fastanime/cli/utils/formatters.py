@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
 from yt_dlp.utils import clean_html as ytdlp_clean_html
@@ -6,6 +7,24 @@ from yt_dlp.utils import clean_html as ytdlp_clean_html
 from ...libs.api.types import AiringSchedule, MediaItem
 
 COMMA_REGEX = re.compile(r"([0-9]{3})(?=\d)")
+
+
+def format_date(dt: Optional[datetime], format_str: str = "%A, %d %B %Y") -> str:
+    """
+    Formats a datetime object to a readable string.
+
+    Default format: '2025-22 July'
+
+    Params:
+        dt (datetime): The datetime object to format.
+        format_str (str): Optional custom format string (defaults to "%Y-%d %B").
+
+    Returns:
+        str: The formatted date.
+    """
+    if not dt:
+        return "N/A"
+    return dt.strftime(format_str)
 
 
 def clean_html(raw_html: str) -> str:
@@ -30,9 +49,9 @@ def format_airing_schedule(airing: Optional[AiringSchedule]) -> str:
     return f"Ep {airing.episode} on {air_date}"
 
 
-def format_genres(genres: List[str]) -> str:
+def format_list_with_commas(list_of_strs: List[str]) -> str:
     """Joins a list of genres into a single, comma-separated string."""
-    return ", ".join(genres) if genres else "N/A"
+    return ", ".join(list_of_strs) if list_of_strs else "N/A"
 
 
 def format_score_stars_full(score: Optional[float]) -> str:
