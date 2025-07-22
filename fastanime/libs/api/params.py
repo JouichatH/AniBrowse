@@ -8,7 +8,7 @@ from .types import UserListStatusType
 class ApiSearchParams:
     query: Optional[str] = None
     page: int = 1
-    per_page: int = 20
+    per_page: Optional[int] = None
     sort: Optional[Union[str, List[str]]] = None
 
     # IDs
@@ -59,9 +59,10 @@ class ApiSearchParams:
 @dataclass(frozen=True)
 class UserListParams:
     status: UserListStatusType
-    sort: Optional[str] = None
     page: int = 1
-    per_page: int = 20
+    type: Optional[str] = None
+    sort: Optional[str] = None
+    per_page: Optional[int] = None
 
 
 @dataclass(frozen=True)

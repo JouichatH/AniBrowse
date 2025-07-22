@@ -1,6 +1,6 @@
 query (
   $query: String
-  $max_results: Int
+  $per_page: Int
   $page: Int
   $sort: [MediaSort]
   $id_in: [Int]
@@ -26,7 +26,7 @@ query (
   $season: MediaSeason
   $on_list: Boolean
 ) {
-  Page(perPage: $max_results, page: $page) {
+  Page(perPage: $per_page, page: $page) {
     pageInfo {
       total
       currentPage

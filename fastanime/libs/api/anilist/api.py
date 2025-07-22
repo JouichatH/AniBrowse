@@ -24,6 +24,37 @@ status_map = {
     "repeating": "REPEATING",
 }
 
+# TODO: Just remove and have consistent variable naming between the two
+search_params_map = {
+    # Custom Name: AniList Variable Name
+    "query": "query",
+    "page": "page",
+    "per_page": "per_page",
+    "sort": "sort",
+    "id_in": "id_in",
+    "genre_in": "genre_in",
+    "genre_not_in": "genre_not_in",
+    "tag_in": "tag_in",
+    "tag_not_in": "tag_not_in",
+    "status_in": "status_in",
+    "status": "status",
+    "status_not_in": "status_not_in",
+    "popularity_greater": "popularity_greater",
+    "popularity_lesser": "popularity_lesser",
+    "averageScore_greater": "averageScore_greater",
+    "averageScore_lesser": "averageScore_lesser",
+    "seasonYear": "seasonYear",
+    "season": "season",
+    "startDate_greater": "startDate_greater",
+    "startDate_lesser": "startDate_lesser",
+    "startDate": "startDate",
+    "endDate_greater": "endDate_greater",
+    "endDate_lesser": "endDate_lesser",
+    "format_in": "format_in",
+    "type": "type",
+    "on_list": "on_list",
+}
+
 
 class AniListApi(BaseApiClient):
     """AniList API implementation of the BaseApiClient contract."""
@@ -54,8 +85,16 @@ class AniListApi(BaseApiClient):
         return mapper.to_generic_user_profile(response.json())
 
     def search_media(self, params: ApiSearchParams) -> Optional[MediaSearchResult]:
-        variables = {k: v for k, v in params.__dict__.items() if v is not None}
-        variables["perPage"] = params.per_page or self.config.per_page
+        variables = {
+            search_params_map[k]: v for k, v in params.__dict__.items() if v is not None
+        }
+        variables["per_page"] = params.per_page or self.config.per_page
+
+        # ignore hentai by default
+        variables["genre_not_in"] = params.genre_not_in or ["Hentai"]
+
+        # anime by default
+        variables["type"] = params.type or "ANIME"
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.SEARCH_MEDIA, variables
         )
@@ -65,12 +104,16 @@ class AniListApi(BaseApiClient):
         if not self.user_profile:
             logger.error("Cannot fetch user list: user is not authenticated.")
             return None
+
+        # TODO: use consistent variable naming btw graphql and params
+        # so variables can be dynamically filled
         variables = {
             "sort": params.sort or self.config.media_list_sort_by,
             "userId": self.user_profile.id,
             "status": status_map[params.status] if params.status else None,
             "page": params.page,
             "perPage": params.per_page or self.config.per_page,
+            "type": params.type or "ANIME",
         }
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_USER_MEDIA_LIST, variables

@@ -67,6 +67,12 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
             None,
             None,
         ),
+        f"{'📝 ' if icons else ''}Edit Config": lambda: (
+            "CONFIG_EDIT",
+            None,
+            None,
+            None,
+        ),
         f"{'❌ ' if icons else ''}Exit": lambda: ("EXIT", None, None, None),
     }
 
@@ -85,7 +91,7 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
 
     if next_menu_name == "EXIT":
         return ControlFlow.EXIT
-    if next_menu_name == "RELOAD_CONFIG":
+    if next_menu_name == "CONFIG_EDIT":
         return ControlFlow.CONFIG_EDIT
     if next_menu_name == "SESSION_MANAGEMENT":
         return State(menu_name="SESSION_MANAGEMENT")
@@ -123,9 +129,7 @@ def _create_media_list_action(
 
     def action():
         # Create the search parameters
-        search_params = ApiSearchParams(
-            sort=sort, per_page=ctx.config.anilist.per_page, status=status
-        )
+        search_params = ApiSearchParams(sort=sort, status=status)
 
         result = ctx.media_api.search_media(search_params)
 
@@ -136,10 +140,7 @@ def _create_media_list_action(
 
 def _create_random_media_list(ctx: Context) -> MenuAction:
     def action():
-        search_params = ApiSearchParams(
-            id_in=random.sample(range(1, 160000), k=50),
-            per_page=ctx.config.anilist.per_page,
-        )
+        search_params = ApiSearchParams(id_in=random.sample(range(1, 15000), k=50))
 
         result = ctx.media_api.search_media(search_params)
 
@@ -171,9 +172,7 @@ def _create_user_list_action(ctx: Context, status: UserListStatusType) -> MenuAc
             logger.warning("Not authenticated")
             return "CONTINUE", None, None, None
 
-        user_list_params = UserListParams(
-            status=status, per_page=ctx.config.anilist.per_page
-        )
+        user_list_params = UserListParams(status=status)
 
         result = ctx.media_api.search_media_list(user_list_params)
 
