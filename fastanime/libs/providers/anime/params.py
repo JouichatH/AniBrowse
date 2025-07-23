@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Optional
 
 
 @dataclass(frozen=True)
@@ -16,12 +16,12 @@ class SearchParams:
 
     # filters
     translation_type: Literal["sub", "dub"] = "sub"
-    genre: str | None = None
-    year: int | None = None
-    status: str | None = None
+    genre: Optional[str] = None
+    year: Optional[int] = None
+    status: Optional[str] = None
     allow_nsfw: bool = True
     allow_unknown: bool = True
-    country_of_origin: str | None = None
+    country_of_origin: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -32,7 +32,7 @@ class EpisodeStreamsParams:
     anime_id: str
     episode: str
     translation_type: Literal["sub", "dub"] = "sub"
-    server: str | None = None
+    server: Optional[str] = None
     quality: Literal["1080", "720", "480", "360"] = "720"
     subtitles: bool = True
 

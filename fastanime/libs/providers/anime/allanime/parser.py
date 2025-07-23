@@ -1,11 +1,27 @@
+from typing import Union
+
 from httpx import Response
 
-from ..types import Anime, AnimeEpisodes, PageInfo, SearchResult, SearchResults
+from ..types import (
+    Anime,
+    AnimeEpisodes,
+    MediaTranslationType,
+    PageInfo,
+    SearchResult,
+    SearchResults,
+)
 from .types import AllAnimeSearchResults, AllAnimeShow
 
 
-def generate_list(count: int) -> list[str]:
-    return list(map(str, range(count)))
+def generate_list(count: Union[int, str]) -> list[str]:
+    return list(map(str, range(int(count))))
+
+
+translation_type_map = {
+    "sub": MediaTranslationType.SUB,
+    "dub": MediaTranslationType.DUB,
+    "raw": MediaTranslationType.RAW,
+}
 
 
 def map_to_search_results(response: Response) -> SearchResults:

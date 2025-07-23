@@ -4,9 +4,8 @@ import logging
 from httpx import Client
 from yt_dlp.utils.networking import random_user_agent
 
-from .allanime.constants import SERVERS_AVAILABLE as ALLANIME_SERVERS
-from .animepahe.constants import SERVERS_AVAILABLE as ANIMEPAHE_SERVERS
 from .base import BaseAnimeProvider
+from .types import ProviderName
 
 logger = logging.getLogger(__name__)
 
@@ -17,14 +16,13 @@ PROVIDERS_AVAILABLE = {
     "nyaa": "provider.Nyaa",
     "yugen": "provider.Yugen",
 }
-SERVERS_AVAILABLE = ["TOP", *ALLANIME_SERVERS, *ANIMEPAHE_SERVERS]
 
 
 class AnimeProviderFactory:
     """Factory for creating anime provider instances."""
 
     @staticmethod
-    def create(provider_name: str) -> BaseAnimeProvider:
+    def create(provider_name: ProviderName) -> BaseAnimeProvider:
         """
         Dynamically creates an instance of the specified anime provider.
 
@@ -41,26 +39,23 @@ class AnimeProviderFactory:
             ValueError: If the provider_name is not supported.
             ImportError: If the provider module or class cannot be found.
         """
-        if provider_name not in PROVIDERS_AVAILABLE:
-            raise ValueError(
-                f"Unsupported provider: '{provider_name}'. Supported providers are: "
-                f"{list(PROVIDERS_AVAILABLE.keys())}"
-            )
 
         # Correctly determine module and class name from the map
-        import_path = PROVIDERS_AVAILABLE[provider_name]
+        import_path = PROVIDERS_AVAILABLE[provider_name.value.lower()]
         module_name, class_name = import_path.split(".", 1)
 
         # Construct the full package path for dynamic import
-        package_path = f"fastanime.libs.providers.anime.{provider_name}"
+        package_path = f"fastanime.libs.providers.anime.{provider_name.value.lower()}"
 
         try:
             provider_module = importlib.import_module(f".{module_name}", package_path)
             provider_class = getattr(provider_module, class_name)
         except (ImportError, AttributeError) as e:
-            logger.error(f"Failed to load provider '{provider_name}': {e}")
+            logger.error(
+                f"Failed to load provider '{provider_name.value.lower()}': {e}"
+            )
             raise ImportError(
-                f"Could not load provider '{provider_name}'. "
+                f"Could not load provider '{provider_name.value.lower()}'. "
                 "Check the module path and class name in PROVIDERS_AVAILABLE."
             ) from e
 

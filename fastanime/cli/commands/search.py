@@ -177,7 +177,7 @@ def stream_anime(
             servers = {server.name: server for server in streams}
         servers_names = list(servers.keys())
         if config.stream.server in servers_names:
-            server = servers[config.stream.server]
+            server = servers[config.stream.server.value]
         else:
             server_name = selector.choose("Select Server", servers_names)
             if not server_name:

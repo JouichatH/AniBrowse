@@ -1,4 +1,15 @@
+from enum import Enum
 from typing import Literal, TypedDict
+
+
+class Server(Enum):
+    SHAREPOINT = "sharepoint"
+    DROPBOX = "dropbox"
+    GOGOANIME = "gogoanime"
+    WETRANSFER = "weTransfer"
+    WIXMP = "wixmp"
+    YT = "Yt"
+    MP4_UPLOAD = "mp4-upload"
 
 
 class AllAnimeEpisodesDetail(TypedDict):
@@ -27,7 +38,7 @@ class AllAnimeShow(TypedDict):
 class AllAnimeSearchResult(TypedDict):
     _id: str
     name: str
-    availableEpisodes: AllAnimeEpisodesDetail
+    availableEpisodes: AllAnimeEpisodes
     __typename: str | None
 
 

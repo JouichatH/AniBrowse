@@ -106,7 +106,6 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
     from rich.progress import Progress
 
     from ...core.exceptions import FastAnimeError
-    from ...libs.players.player import create_player
     from ...libs.providers.anime.params import (
         AnimeParams,
         SearchParams,
@@ -248,7 +247,7 @@ def download_anime(
             servers = {server.name: server for server in streams}
         servers_names = list(servers.keys())
         if config.stream.server in servers_names:
-            server = servers[config.stream.server]
+            server = servers[config.stream.server.value]
         else:
             server_name = selector.choose("Select Server", servers_names)
             if not server_name:

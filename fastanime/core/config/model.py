@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, PrivateAttr, computed_field, field_validator
+from pydantic import BaseModel, Field, PrivateAttr, computed_field
 
 from ...core.constants import (
     FZF_DEFAULT_OPTS,
@@ -12,7 +12,7 @@ from ...core.constants import (
     ROFI_THEME_PREVIEW,
 )
 from ...libs.api.types import MediaSort, UserMediaListSort
-from ...libs.providers.anime import PROVIDERS_AVAILABLE, SERVERS_AVAILABLE
+from ...libs.providers.anime.types import ProviderName, ProviderServer
 from ..constants import APP_ASCII_ART
 from . import defaults
 from . import descriptions as desc
@@ -28,13 +28,13 @@ class GeneralConfig(BaseModel):
         default=defaults.GENERAL_API_CLIENT,
         description=desc.GENERAL_API_CLIENT,
     )
-    provider: str = Field(
-        default=defaults.GENERAL_PROVIDER,
+    provider: ProviderName = Field(
+        default=ProviderName.ALLANIME,
         description=desc.GENERAL_PROVIDER,
-        examples=list(PROVIDERS_AVAILABLE.keys()),
     )
     selector: Literal["default", "fzf", "rofi"] = Field(
-        default=defaults.GENERAL_SELECTOR, description=desc.GENERAL_SELECTOR
+        default=defaults.GENERAL_SELECTOR,
+        description=desc.GENERAL_SELECTOR,
     )
     auto_select_anime_result: bool = Field(
         default=defaults.GENERAL_AUTO_SELECT_ANIME_RESULT,
@@ -42,7 +42,8 @@ class GeneralConfig(BaseModel):
     )
     icons: bool = Field(default=defaults.GENERAL_ICONS, description=desc.GENERAL_ICONS)
     preview: Literal["full", "text", "image", "none"] = Field(
-        default=defaults.GENERAL_PREVIEW, description=desc.GENERAL_PREVIEW
+        default=defaults.GENERAL_PREVIEW,
+        description=desc.GENERAL_PREVIEW,
     )
     image_renderer: Literal["icat", "chafa", "imgcat"] = Field(
         default="icat"
@@ -80,33 +81,25 @@ class GeneralConfig(BaseModel):
         description=desc.GENERAL_RECENT,
     )
 
-    @field_validator("provider")
-    @classmethod
-    def validate_provider(cls, v: str) -> str:
-        if v not in PROVIDERS_AVAILABLE:
-            raise ValueError(
-                f"'{v}' is not a valid provider. Must be one of: {PROVIDERS_AVAILABLE}"
-            )
-        return v
-
 
 class StreamConfig(BaseModel):
     """Configuration specific to video streaming and playback."""
 
     player: Literal["mpv", "vlc"] = Field(
-        default=defaults.STREAM_PLAYER, description=desc.STREAM_PLAYER
+        default=defaults.STREAM_PLAYER,
+        description=desc.STREAM_PLAYER,
     )
     quality: Literal["360", "480", "720", "1080"] = Field(
-        default=defaults.STREAM_QUALITY, description=desc.STREAM_QUALITY
+        default=defaults.STREAM_QUALITY,
+        description=desc.STREAM_QUALITY,
     )
     translation_type: Literal["sub", "dub"] = Field(
         default=defaults.STREAM_TRANSLATION_TYPE,
         description=desc.STREAM_TRANSLATION_TYPE,
     )
-    server: str = Field(
-        default=defaults.STREAM_SERVER,
+    server: ProviderServer = Field(
+        default=ProviderServer.TOP,
         description=desc.STREAM_SERVER,
-        examples=SERVERS_AVAILABLE,
     )
     auto_next: bool = Field(
         default=defaults.STREAM_AUTO_NEXT,
@@ -146,15 +139,6 @@ class StreamConfig(BaseModel):
         default=defaults.STREAM_SUB_LANG,
         description=desc.STREAM_SUB_LANG,
     )
-
-    @field_validator("server")
-    @classmethod
-    def validate_server(cls, v: str) -> str:
-        if v.lower() != "top" and v not in SERVERS_AVAILABLE:
-            raise ValueError(
-                f"'{v}' is not a valid server. Must be 'top' or one of: {SERVERS_AVAILABLE}"
-            )
-        return v
 
 
 class ServiceConfig(BaseModel):

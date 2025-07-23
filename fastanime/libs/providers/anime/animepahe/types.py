@@ -1,4 +1,9 @@
+from enum import Enum
 from typing import Literal, TypedDict
+
+
+class Server(Enum):
+    KWIK = "Kwik"
 
 
 class AnimePaheSearchResult(TypedDict):

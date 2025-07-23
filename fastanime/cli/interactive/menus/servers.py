@@ -28,7 +28,7 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
     if not state.media_api.anime:
         return ControlFlow.BACK
     anime_title = (
-        state.media_api.anime.title.romaji or state.media_api.anime.title.romaji
+        state.media_api.anime.title.romaji or state.media_api.anime.title.english
     )
     episode_number = state.provider.episode_number
     config = ctx.config
@@ -70,7 +70,7 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
     server_map: Dict[str, Server] = {s.name: s for s in all_servers}
     selected_server: Server | None = None
 
-    preferred_server = config.stream.server.lower()
+    preferred_server = config.stream.server.value.lower()
     if preferred_server == "top":
         selected_server = all_servers[0]
         console.print(f"[cyan]Auto-selecting top server:[/] {selected_server.name}")

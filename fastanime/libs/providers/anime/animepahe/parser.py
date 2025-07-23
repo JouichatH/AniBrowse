@@ -5,21 +5,22 @@ from ..types import (
     AnimeEpisodeInfo,
     AnimeEpisodes,
     EpisodeStream,
+    MediaTranslationType,
     PageInfo,
     SearchResult,
     SearchResults,
     Server,
-    Subtitle,
 )
 from .types import (
-    AnimePaheAnime,
     AnimePaheAnimePage,
-    AnimePaheEpisodeInfo,
     AnimePaheSearchPage,
-    AnimePaheSearchResult,
-    AnimePaheServer,
-    AnimePaheStreamLink,
 )
+
+translation_type_map = {
+    "sub": MediaTranslationType.SUB,
+    "dub": MediaTranslationType.DUB,
+    "raw": MediaTranslationType.RAW,
+}
 
 
 def map_to_search_results(data: AnimePaheSearchPage) -> SearchResults:
@@ -91,7 +92,7 @@ def map_to_server(
         EpisodeStream(
             link=stream_link,
             quality=quality,
-            translation_type=translation_type,
+            translation_type=translation_type_map[translation_type],
         )
     ]
     return Server(name="kwik", links=links, episode_title=episode.title)

@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal, get_args, get_origin
+from typing import Any, Literal, Optional, get_args, get_origin
 
 import click
 from pydantic import BaseModel
@@ -25,8 +25,8 @@ class ConfigOption(click.Option):
     This is used to ensure that options can be generated dynamically from Pydantic models.
     """
 
-    model_name: str | None
-    field_name: str | None
+    model_name: Optional[str]
+    field_name: Optional[str]
 
     def __init__(self, *args, **kwargs):
         self.model_name = kwargs.pop("model_name", None)
@@ -71,7 +71,13 @@ def options_from_model(model: type[BaseModel], parent_name: str = "") -> Callabl
             "help": field_info.description or "",
         }
 
-        if field_info.annotation is bool:
+        if (
+            field_info.annotation is not None
+            and isinstance(field_info.annotation, type)
+            and issubclass(field_info.annotation, Enum)
+        ):
+            kwargs["default"] = field_info.default.value
+        elif field_info.annotation is bool:
             if field_info.default is not PydanticUndefined:
                 kwargs["default"] = field_info.default
                 kwargs["show_default"] = True
