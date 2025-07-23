@@ -1,18 +1,18 @@
-from ....libs.api.params import ApiSearchParams, UserListParams
+from ....libs.api.params import MediaSearchParams, UserMediaListSearchParams
 from ....libs.api.types import MediaItem, MediaStatus, UserMediaListStatus
 from ..session import Context, session
-from ..state import ControlFlow, MediaApiState, State
+from ..state import InternalDirective, MediaApiState, State
 
 
 @session.menu
-def results(ctx: Context, state: State) -> State | ControlFlow:
+def results(ctx: Context, state: State) -> State | InternalDirective:
     search_results = state.media_api.search_results
     feedback = ctx.services.feedback
     feedback.clear_console()
 
     if not search_results or not search_results.media:
         feedback.info("No anime found for the given criteria")
-        return ControlFlow.BACK
+        return InternalDirective.BACK
 
     anime_items = search_results.media
     formatted_titles = [
@@ -54,10 +54,10 @@ def results(ctx: Context, state: State) -> State | ControlFlow:
     )
 
     if not choice_str:
-        return ControlFlow.EXIT
+        return InternalDirective.EXIT
 
     if choice_str == "Back":
-        return ControlFlow.BACK
+        return InternalDirective.BACK
 
     if (
         choice_str == "Next Page"
@@ -81,7 +81,7 @@ def results(ctx: Context, state: State) -> State | ControlFlow:
         )
 
     # Fallback
-    return ControlFlow.CONTINUE
+    return InternalDirective.CONTINUE
 
 
 def _format_anime_choice(anime: MediaItem, config) -> str:
@@ -112,7 +112,7 @@ def _format_anime_choice(anime: MediaItem, config) -> str:
 
 def _handle_pagination(
     ctx: Context, state: State, page_delta: int
-) -> State | ControlFlow:
+) -> State | InternalDirective:
     """
     Handle pagination by fetching the next or previous page of results.
 
@@ -128,7 +128,7 @@ def _handle_pagination(
 
     if not state.media_api.search_results:
         feedback.error("No search results available for pagination")
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     current_page = state.media_api.search_results.page_info.current_page
     new_page = current_page + page_delta
@@ -136,11 +136,11 @@ def _handle_pagination(
     # Validate page bounds
     if new_page < 1:
         feedback.warning("Already at the first page")
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     if page_delta > 0 and not state.media_api.search_results.page_info.has_next_page:
         feedback.warning("No more pages available")
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     # Determine which type of search to perform based on stored parameters
     if state.media_api.original_api_params:
@@ -151,20 +151,20 @@ def _handle_pagination(
         return _fetch_user_list_page(ctx, state, new_page, feedback)
     else:
         feedback.error("No original search parameters found for pagination")
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
 
 def _fetch_media_page(
     ctx: Context, state: State, page: int, feedback
-) -> State | ControlFlow:
+) -> State | InternalDirective:
     """Fetch a specific page for media search results."""
     original_params = state.media_api.original_api_params
     if not original_params:
         feedback.error("No original API parameters found")
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     # Create new parameters with updated page number
-    new_params = ApiSearchParams(
+    new_params = MediaSearchParams(
         query=original_params.query,
         page=page,
         per_page=original_params.per_page,
@@ -208,15 +208,15 @@ def _fetch_media_page(
 
 def _fetch_user_list_page(
     ctx: Context, state: State, page: int, feedback
-) -> State | ControlFlow:
+) -> State | InternalDirective:
     """Fetch a specific page for user list results."""
     original_params = state.media_api.original_user_list_params
     if not original_params:
         feedback.error("No original user list parameters found")
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     # Create new parameters with updated page number
-    new_params = UserListParams(
+    new_params = UserMediaListSearchParams(
         status=original_params.status,
         page=page,
         per_page=original_params.per_page,

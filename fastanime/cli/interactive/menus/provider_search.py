@@ -7,16 +7,16 @@ from thefuzz import fuzz
 from ....libs.providers.anime.params import SearchParams
 from ....libs.providers.anime.types import SearchResult
 from ..session import Context, session
-from ..state import ControlFlow, ProviderState, State
+from ..state import InternalDirective, ProviderState, State
 
 
 @session.menu
-def provider_search(ctx: Context, state: State) -> State | ControlFlow:
+def provider_search(ctx: Context, state: State) -> State | InternalDirective:
     feedback = ctx.services.feedback
     anilist_anime = state.media_api.anime
     if not anilist_anime:
         feedback.error("No AniList anime to search for", "Please select an anime first")
-        return ControlFlow.BACK
+        return InternalDirective.BACK
 
     provider = ctx.provider
     selector = ctx.selector
@@ -29,7 +29,7 @@ def provider_search(ctx: Context, state: State) -> State | ControlFlow:
             "Selected anime has no searchable title",
             "This anime entry is missing required title information",
         )
-        return ControlFlow.BACK
+        return InternalDirective.BACK
 
     provider_search_results = provider.search(
         SearchParams(
@@ -42,7 +42,7 @@ def provider_search(ctx: Context, state: State) -> State | ControlFlow:
             f"Could not find '{anilist_title}' on {provider.__class__.__name__}",
             "Try another provider from the config or go back to search again",
         )
-        return ControlFlow.BACK
+        return InternalDirective.BACK
 
     provider_results_map: dict[str, SearchResult] = {
         result.title: result for result in provider_search_results.results
@@ -68,7 +68,7 @@ def provider_search(ctx: Context, state: State) -> State | ControlFlow:
         )
 
         if not chosen_title or chosen_title == "Back":
-            return ControlFlow.BACK
+            return InternalDirective.BACK
 
         selected_provider_anime = provider_results_map[chosen_title]
 
@@ -88,7 +88,7 @@ def provider_search(ctx: Context, state: State) -> State | ControlFlow:
         feedback.warning(
             f"Failed to fetch details for '{selected_provider_anime.title}'."
         )
-        return ControlFlow.BACK
+        return InternalDirective.BACK
 
     return State(
         menu_name="EPISODES",

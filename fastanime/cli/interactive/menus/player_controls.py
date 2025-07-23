@@ -5,14 +5,14 @@ import click
 from rich.console import Console
 
 from ..session import Context, session
-from ..state import ControlFlow, State
+from ..state import InternalDirective, State
 
 if TYPE_CHECKING:
     from ....libs.providers.anime.types import Server
 
 
 @session.menu
-def player_controls(ctx: Context, state: State) -> State | ControlFlow:
+def player_controls(ctx: Context, state: State) -> State | InternalDirective:
     """
     Handles post-playback options like playing the next episode,
     replaying, or changing streaming options.
@@ -43,7 +43,7 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
         console.print(
             "[bold red]Error: Player state is incomplete. Returning.[/bold red]"
         )
-        return ControlFlow.BACK
+        return InternalDirective.BACK
 
     # --- Auto-Next Logic ---
     available_episodes = getattr(
@@ -66,7 +66,7 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
         )
 
     # --- Action Definitions ---
-    def next_episode() -> State | ControlFlow:
+    def next_episode() -> State | InternalDirective:
         if current_index < len(available_episodes) - 1:
             next_episode_num = available_episodes[current_index + 1]
 
@@ -79,15 +79,15 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
                 ),
             )
         console.print("[bold yellow]This is the last available episode.[/bold yellow]")
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
-    def replay() -> State | ControlFlow:
+    def replay() -> State | InternalDirective:
         # We don't need to change state, just re-trigger the SERVERS menu's logic.
         return State(
             menu_name="SERVERS", media_api=state.media_api, provider=state.provider
         )
 
-    def change_server() -> State | ControlFlow:
+    def change_server() -> State | InternalDirective:
         server_map: Dict[str, Server] = {s.name: s for s in all_servers}
         new_server_name = selector.choose(
             "Select a different server:", list(server_map.keys())
@@ -101,11 +101,11 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
                     update={"selected_server": server_map[new_server_name]}
                 ),
             )
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     # --- Menu Options ---
     icons = config.general.icons
-    options: Dict[str, Callable[[], State | ControlFlow]] = {}
+    options: Dict[str, Callable[[], State | InternalDirective]] = {}
 
     if current_index < len(available_episodes) - 1:
         options[f"{'⏭️ ' if icons else ''}Next Episode"] = next_episode
@@ -118,7 +118,7 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
                 menu_name="EPISODES", media_api=state.media_api, provider=state.provider
             ),
             f"{'🏠 ' if icons else ''}Main Menu": lambda: State(menu_name="MAIN"),
-            f"{'❌ ' if icons else ''}Exit": lambda: ControlFlow.EXIT,
+            f"{'❌ ' if icons else ''}Exit": lambda: InternalDirective.EXIT,
         }
     )
 
@@ -131,4 +131,4 @@ def player_controls(ctx: Context, state: State) -> State | ControlFlow:
     if choice_str and choice_str in options:
         return options[choice_str]()
 
-    return ControlFlow.BACK
+    return InternalDirective.BACK

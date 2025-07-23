@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 )
 @click.pass_obj
 def popular(config: "AppConfig", dump_json: bool):
-    from fastanime.libs.api.params import ApiSearchParams
+    from fastanime.libs.api.params import MediaSearchParams
     from ..helpers import handle_media_search_command
 
     def create_search_params(config):
-        return ApiSearchParams(
+        return MediaSearchParams(
             per_page=config.anilist.per_page or 15,
             sort=["POPULARITY_DESC"]
         )

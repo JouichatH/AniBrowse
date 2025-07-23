@@ -7,7 +7,7 @@ from typing import Dict, Generator, List, Optional
 from ....core.config.model import MediaRegistryConfig
 from ....core.exceptions import FastAnimeError
 from ....core.utils.file import AtomicWriter, FileLock, check_file_modified
-from ....libs.api.params import ApiSearchParams
+from ....libs.api.params import MediaSearchParams
 from ....libs.api.types import (
     MediaItem,
     MediaSearchResult,
@@ -245,7 +245,7 @@ class MediaRegistryService:
                 logger.warning(f"{self.media_registry_dir} is impure which caused: {e}")
         return records
 
-    def search_for_media(self, params: ApiSearchParams) -> List[MediaItem]:
+    def search_for_media(self, params: MediaSearchParams) -> List[MediaItem]:
         """Search media by title."""
         try:
             # TODO: enhance performance

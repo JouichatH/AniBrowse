@@ -6,13 +6,13 @@ from ....libs.api.params import UpdateListEntryParams
 from ....libs.api.types import MediaItem
 from ....libs.players.params import PlayerParams
 from ..session import Context, session
-from ..state import ControlFlow, ProviderState, State
+from ..state import InternalDirective, ProviderState, State
 
-MenuAction = Callable[[], State | ControlFlow]
+MenuAction = Callable[[], State | InternalDirective]
 
 
 @session.menu
-def media_actions(ctx: Context, state: State) -> State | ControlFlow:
+def media_actions(ctx: Context, state: State) -> State | InternalDirective:
     icons = ctx.config.general.icons
     anime = state.media_api.anime
     anime_title = anime.title.english or anime.title.romaji if anime else "Unknown"
@@ -26,7 +26,7 @@ def media_actions(ctx: Context, state: State) -> State | ControlFlow:
         f"{'➕ ' if icons else ''}Add/Update List": _add_to_list(ctx, state),
         f"{'⭐ ' if icons else ''}Score Anime": _score_anime(ctx, state),
         f"{'ℹ️ ' if icons else ''}View Info": _view_info(ctx, state),
-        f"{'🔙 ' if icons else ''}Back to Results": lambda: ControlFlow.BACK,
+        f"{'🔙 ' if icons else ''}Back to Results": lambda: InternalDirective.BACK,
     }
 
     choice_str = ctx.selector.choose(
@@ -37,7 +37,7 @@ def media_actions(ctx: Context, state: State) -> State | ControlFlow:
     if choice_str and choice_str in options:
         return options[choice_str]()
 
-    return ControlFlow.BACK
+    return InternalDirective.BACK
 
 
 # --- Action Implementations ---
@@ -57,7 +57,7 @@ def _watch_trailer(ctx: Context, state: State) -> MenuAction:
         feedback = ctx.services.feedback
         anime = state.media_api.anime
         if not anime:
-            return ControlFlow.CONTINUE
+            return InternalDirective.CONTINUE
         if not anime.trailer or not anime.trailer.id:
             feedback.warning(
                 "No trailer available for this anime",
@@ -68,7 +68,7 @@ def _watch_trailer(ctx: Context, state: State) -> MenuAction:
 
             ctx.player.play(PlayerParams(url=trailer_url, title=""))
 
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     return action
 
@@ -78,10 +78,10 @@ def _add_to_list(ctx: Context, state: State) -> MenuAction:
         feedback = ctx.services.feedback
         anime = state.media_api.anime
         if not anime:
-            return ControlFlow.CONTINUE
+            return InternalDirective.CONTINUE
 
         if not ctx.media_api.is_authenticated():
-            return ControlFlow.CONTINUE
+            return InternalDirective.CONTINUE
 
         choices = [
             "watching",
@@ -99,7 +99,7 @@ def _add_to_list(ctx: Context, state: State) -> MenuAction:
                 UpdateListEntryParams(media_id=anime.id, status=status),  # pyright:ignore
                 feedback,
             )
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     return action
 
@@ -109,11 +109,11 @@ def _score_anime(ctx: Context, state: State) -> MenuAction:
         feedback = ctx.services.feedback
         anime = state.media_api.anime
         if not anime:
-            return ControlFlow.CONTINUE
+            return InternalDirective.CONTINUE
 
         # Check authentication before proceeding
         if not ctx.media_api.is_authenticated():
-            return ControlFlow.CONTINUE
+            return InternalDirective.CONTINUE
 
         score_str = ctx.selector.ask("Enter score (0.0 - 10.0):")
         try:
@@ -130,7 +130,7 @@ def _score_anime(ctx: Context, state: State) -> MenuAction:
             feedback.error(
                 "Invalid score entered", "Please enter a number between 0.0 and 10.0"
             )
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     return action
 
@@ -139,7 +139,7 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
     def action():
         anime = state.media_api.anime
         if not anime:
-            return ControlFlow.CONTINUE
+            return InternalDirective.CONTINUE
 
         # TODO: Make this nice and include all other media item fields
         from rich import box
@@ -161,7 +161,7 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
 
         console.print(Panel(panel_content, title=title, box=box.ROUNDED, expand=True))
         ctx.selector.ask("Press Enter to continue...")
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     return action
 
@@ -170,6 +170,6 @@ def _update_user_list(
     ctx: Context, anime: MediaItem, params: UpdateListEntryParams, feedback
 ):
     if ctx.media_api.is_authenticated():
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     ctx.media_api.update_list_entry(params)

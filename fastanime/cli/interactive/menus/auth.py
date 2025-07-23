@@ -15,11 +15,11 @@ from ....libs.api.types import UserProfile
 from ...auth.manager import AuthManager
 from ...utils.feedback import create_feedback_manager, execute_with_feedback
 from ..session import Context, session
-from ..state import ControlFlow, State
+from ..state import InternalDirective, State
 
 
 @session.menu
-def auth(ctx: Context, state: State) -> State | ControlFlow:
+def auth(ctx: Context, state: State) -> State | InternalDirective:
     """
     Interactive authentication menu for managing AniList login/logout and viewing user profile.
     """
@@ -56,7 +56,7 @@ def auth(ctx: Context, state: State) -> State | ControlFlow:
     )
 
     if not choice:
-        return ControlFlow.BACK
+        return InternalDirective.BACK
 
     # Handle menu choices
     if "Login to AniList" in choice:
@@ -66,13 +66,13 @@ def auth(ctx: Context, state: State) -> State | ControlFlow:
     elif "View Profile Details" in choice:
         _display_user_profile_details(console, user_profile, icons)
         feedback.pause_for_user("Press Enter to continue")
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
     elif "How to Get Token" in choice:
         _display_token_help(console, icons)
         feedback.pause_for_user("Press Enter to continue")
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
     else:  # Back to Main Menu
-        return ControlFlow.BACK
+        return InternalDirective.BACK
 
 
 def _display_auth_status(
@@ -99,7 +99,7 @@ def _display_auth_status(
 
 def _handle_login(
     ctx: Context, auth_manager: AuthManager, feedback, icons: bool
-) -> State | ControlFlow:
+) -> State | InternalDirective:
     """Handle the interactive login process."""
 
     def perform_login():
@@ -164,19 +164,19 @@ def _handle_login(
         )
         feedback.pause_for_user("Press Enter to continue")
 
-    return ControlFlow.CONTINUE
+    return InternalDirective.CONTINUE
 
 
 def _handle_logout(
     ctx: Context, auth_manager: AuthManager, feedback, icons: bool
-) -> State | ControlFlow:
+) -> State | InternalDirective:
     """Handle the logout process with confirmation."""
     if not feedback.confirm(
         "Are you sure you want to logout?",
         "This will remove your saved AniList token and log you out",
         default=False,
     ):
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     def perform_logout():
         # Clear from auth manager
@@ -208,7 +208,7 @@ def _handle_logout(
     if success:
         feedback.pause_for_user("Press Enter to continue")
 
-    return ControlFlow.CONFIG_EDIT
+    return InternalDirective.CONFIG_EDIT
 
 
 def _display_user_profile_details(

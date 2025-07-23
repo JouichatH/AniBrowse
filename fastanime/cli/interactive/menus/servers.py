@@ -7,7 +7,7 @@ from ....libs.players.params import PlayerParams
 from ....libs.providers.anime.params import EpisodeStreamsParams
 from ....libs.providers.anime.types import Server
 from ..session import Context, session
-from ..state import ControlFlow, State
+from ..state import InternalDirective, State
 
 
 def _filter_by_quality(links, quality):
@@ -19,14 +19,14 @@ def _filter_by_quality(links, quality):
 
 
 @session.menu
-def servers(ctx: Context, state: State) -> State | ControlFlow:
+def servers(ctx: Context, state: State) -> State | InternalDirective:
     """
     Fetches and displays available streaming servers for a chosen episode,
     then launches the media player and transitions to post-playback controls.
     """
     provider_anime = state.provider.anime
     if not state.media_api.anime:
-        return ControlFlow.BACK
+        return InternalDirective.BACK
     anime_title = (
         state.media_api.anime.title.romaji or state.media_api.anime.title.english
     )
@@ -42,7 +42,7 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
             "[bold red]Error: Anime or episode details are missing.[/bold red]"
         )
         selector.ask("Enter to continue...")
-        return ControlFlow.BACK
+        return InternalDirective.BACK
 
     # --- Fetch Server Streams ---
     with Progress(transient=True) as progress:
@@ -64,7 +64,7 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
         console.print(
             f"[bold yellow]No streaming servers found for this episode.[/bold yellow]"
         )
-        return ControlFlow.BACK
+        return InternalDirective.BACK
 
     # --- Auto-Select or Prompt for Server ---
     server_map: Dict[str, Server] = {s.name: s for s in all_servers}
@@ -83,7 +83,7 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
         choices = [*server_map.keys(), "Back"]
         chosen_name = selector.choose("Select Server", choices)
         if not chosen_name or chosen_name == "Back":
-            return ControlFlow.BACK
+            return InternalDirective.BACK
         selected_server = server_map[chosen_name]
 
     stream_link_obj = _filter_by_quality(selected_server.links, config.stream.quality)
@@ -91,7 +91,7 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
         console.print(
             f"[bold red]No stream of quality '{config.stream.quality}' found on server '{selected_server.name}'.[/bold red]"
         )
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     # --- Launch Player ---
     final_title = f"{provider_anime.title} - Ep {episode_number}"

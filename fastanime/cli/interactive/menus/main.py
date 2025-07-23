@@ -2,7 +2,7 @@ import logging
 import random
 from typing import Callable, Dict, Tuple
 
-from ....libs.api.params import ApiSearchParams, UserListParams
+from ....libs.api.params import MediaSearchParams, UserMediaListSearchParams
 from ....libs.api.types import (
     MediaSearchResult,
     MediaSort,
@@ -10,17 +10,22 @@ from ....libs.api.types import (
     UserMediaListStatus,
 )
 from ..session import Context, session
-from ..state import ControlFlow, MediaApiState, State
+from ..state import InternalDirective, MediaApiState, State
 
 logger = logging.getLogger(__name__)
 MenuAction = Callable[
     [],
-    Tuple[str, MediaSearchResult | None, ApiSearchParams | None, UserListParams | None],
+    Tuple[
+        str,
+        MediaSearchResult | None,
+        MediaSearchParams | None,
+        UserMediaListSearchParams | None,
+    ],
 ]
 
 
 @session.menu
-def main(ctx: Context, state: State) -> State | ControlFlow:
+def main(ctx: Context, state: State) -> State | InternalDirective:
     """
     The main entry point menu for the interactive session.
     Displays top-level categories for the user to browse and select.
@@ -95,7 +100,7 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     )
 
     if not choice_str:
-        return ControlFlow.EXIT
+        return InternalDirective.EXIT
 
     # --- Action Handling ---
     selected_action = options[choice_str]
@@ -103,9 +108,9 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     next_menu_name, result_data, api_params, user_list_params = selected_action()
 
     if next_menu_name == "EXIT":
-        return ControlFlow.EXIT
+        return InternalDirective.EXIT
     if next_menu_name == "CONFIG_EDIT":
-        return ControlFlow.CONFIG_EDIT
+        return InternalDirective.CONFIG_EDIT
     if next_menu_name == "SESSION_MANAGEMENT":
         return State(menu_name="SESSION_MANAGEMENT")
     if next_menu_name == "AUTH":
@@ -115,14 +120,14 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     if next_menu_name == "WATCH_HISTORY":
         return State(menu_name="WATCH_HISTORY")
     if next_menu_name == "CONTINUE":
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     if not result_data:
         feedback.error(
             f"Failed to fetch data for '{choice_str.strip()}'",
             "Please check your internet connection and try again.",
         )
-        return ControlFlow.CONTINUE
+        return InternalDirective.CONTINUE
 
     # On success, transition to the RESULTS menu state.
     return State(
@@ -142,7 +147,7 @@ def _create_media_list_action(
 
     def action():
         # Create the search parameters
-        search_params = ApiSearchParams(sort=sort, status=status)
+        search_params = MediaSearchParams(sort=sort, status=status)
 
         result = ctx.media_api.search_media(search_params)
 
@@ -153,7 +158,7 @@ def _create_media_list_action(
 
 def _create_random_media_list(ctx: Context) -> MenuAction:
     def action():
-        search_params = ApiSearchParams(id_in=random.sample(range(1, 15000), k=50))
+        search_params = MediaSearchParams(id_in=random.sample(range(1, 15000), k=50))
 
         result = ctx.media_api.search_media(search_params)
 
@@ -168,7 +173,7 @@ def _create_search_media_list(ctx: Context) -> MenuAction:
         if not query:
             return "CONTINUE", None, None, None
 
-        search_params = ApiSearchParams(query=query)
+        search_params = MediaSearchParams(query=query)
         result = ctx.media_api.search_media(search_params)
 
         return ("RESULTS", result, search_params, None)
@@ -185,7 +190,7 @@ def _create_user_list_action(ctx: Context, status: UserMediaListStatus) -> MenuA
             logger.warning("Not authenticated")
             return "CONTINUE", None, None, None
 
-        user_list_params = UserListParams(status=status)
+        user_list_params = UserMediaListSearchParams(status=status)
 
         result = ctx.media_api.search_media_list(user_list_params)
 

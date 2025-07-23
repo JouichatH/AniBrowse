@@ -119,7 +119,7 @@ def handle_user_list_command(
     """
     from fastanime.cli.utils.feedback import create_feedback_manager
     from fastanime.core.exceptions import FastAnimeError
-    from fastanime.libs.api.params import UserListParams
+    from fastanime.libs.api.params import UserMediaListSearchParams
 
     feedback = create_feedback_manager(config.general.icons)
 
@@ -145,7 +145,7 @@ def handle_user_list_command(
         # Fetch user's anime list
         with Progress() as progress:
             progress.add_task(f"Fetching your {list_name} list...", total=None)
-            list_params = UserListParams(
+            list_params = UserMediaListSearchParams(
                 status=status,  # type: ignore  # We validated it above
                 page=1,
                 per_page=config.anilist.per_page or 50,

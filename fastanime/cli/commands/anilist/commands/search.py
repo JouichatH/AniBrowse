@@ -98,7 +98,7 @@ def search(
     from fastanime.cli.utils.feedback import create_feedback_manager
     from fastanime.core.exceptions import FastAnimeError
     from fastanime.libs.api.factory import create_api_client
-    from fastanime.libs.api.params import ApiSearchParams
+    from fastanime.libs.api.params import MediaSearchParams
     from rich.progress import Progress
 
     feedback = create_feedback_manager(config.general.icons)
@@ -108,7 +108,7 @@ def search(
         api_client = create_api_client(config.general.media_api, config)
 
         # Build search parameters
-        search_params = ApiSearchParams(
+        search_params = MediaSearchParams(
             query=title,
             per_page=config.anilist.per_page or 50,
             sort=[sort] if sort else None,

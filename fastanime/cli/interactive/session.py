@@ -23,7 +23,7 @@ from ..services.feedback import FeedbackService
 from ..services.registry import MediaRegistryService
 from ..services.session import SessionsService
 from ..services.watch_history import WatchHistoryService
-from .state import ControlFlow, State
+from .state import InternalDirective, State
 
 logger = logging.getLogger(__name__)
 
@@ -140,22 +140,22 @@ class Session:
                 self._context, current_state
             )
 
-            if isinstance(next_step, ControlFlow):
-                if next_step == ControlFlow.EXIT:
+            if isinstance(next_step, InternalDirective):
+                if next_step == InternalDirective.EXIT:
                     break
-                elif next_step == ControlFlow.BACK:
+                elif next_step == InternalDirective.BACK:
                     if len(self._history) > 1:
                         self._history.pop()
-                elif next_step == ControlFlow.BACKX2:
+                elif next_step == InternalDirective.BACKX2:
                     if len(self._history) > 2:
                         self._history.pop()
                         self._history.pop()
-                elif next_step == ControlFlow.BACKX3:
+                elif next_step == InternalDirective.BACKX3:
                     if len(self._history) > 3:
                         self._history.pop()
                         self._history.pop()
                         self._history.pop()
-                elif next_step == ControlFlow.CONFIG_EDIT:
+                elif next_step == InternalDirective.CONFIG_EDIT:
                     self._edit_config()
             else:
                 # if the state is main menu we should reset the history

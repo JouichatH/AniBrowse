@@ -4,10 +4,10 @@ import logging
 from typing import TYPE_CHECKING, List, Optional
 
 from ..base import (
-    ApiSearchParams,
     BaseApiClient,
+    MediaSearchParams,
     UpdateListEntryParams,
-    UserListParams,
+    UserMediaListSearchParams,
 )
 from ..types import MediaItem, MediaSearchResult, UserProfile
 from . import mapper
@@ -45,7 +45,7 @@ class JikanApi(BaseApiClient):
 
     # --- Read-Only Method Implementations ---
 
-    def search_media(self, params: ApiSearchParams) -> Optional[MediaSearchResult]:
+    def search_media(self, params: MediaSearchParams) -> Optional[MediaSearchResult]:
         """Searches for anime on MyAnimeList via Jikan."""
         jikan_params = {
             "q": params.query,
@@ -87,7 +87,9 @@ class JikanApi(BaseApiClient):
         logger.warning("Jikan API does not support user profiles.")
         return None
 
-    def fetch_user_list(self, params: UserListParams) -> Optional[MediaSearchResult]:
+    def fetch_user_list(
+        self, params: UserMediaListSearchParams
+    ) -> Optional[MediaSearchResult]:
         logger.warning("Jikan API does not support fetching user lists.")
         return None
 

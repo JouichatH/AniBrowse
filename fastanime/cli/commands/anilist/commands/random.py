@@ -24,7 +24,7 @@ def random_anime(config: "AppConfig", dump_json: bool):
     from fastanime.cli.utils.feedback import create_feedback_manager
     from fastanime.core.exceptions import FastAnimeError
     from fastanime.libs.api.factory import create_api_client
-    from fastanime.libs.api.params import ApiSearchParams
+    from fastanime.libs.api.params import MediaSearchParams
     from rich.progress import Progress
 
     feedback = create_feedback_manager(config.general.icons)
@@ -39,7 +39,7 @@ def random_anime(config: "AppConfig", dump_json: bool):
         # Search for random anime
         with Progress() as progress:
             progress.add_task("Fetching random anime...", total=None)
-            search_params = ApiSearchParams(id_in=random_ids, per_page=50)
+            search_params = MediaSearchParams(id_in=random_ids, per_page=50)
             search_result = api_client.search_media(search_params)
 
         if not search_result or not search_result.media:

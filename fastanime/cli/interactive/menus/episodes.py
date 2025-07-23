@@ -4,11 +4,11 @@ import click
 from rich.console import Console
 
 from ..session import Context, session
-from ..state import ControlFlow, ProviderState, State
+from ..state import InternalDirective, ProviderState, State
 
 
 @session.menu
-def episodes(ctx: Context, state: State) -> State | ControlFlow:
+def episodes(ctx: Context, state: State) -> State | InternalDirective:
     """
     Displays available episodes for a selected provider anime and handles
     the logic for continuing from watch history or manual selection.
@@ -21,7 +21,7 @@ def episodes(ctx: Context, state: State) -> State | ControlFlow:
 
     if not provider_anime or not anilist_anime:
         feedback.error("Error: Anime details are missing.")
-        return ControlFlow.BACK
+        return InternalDirective.BACK
 
     available_episodes = getattr(
         provider_anime.episodes, config.stream.translation_type, []
@@ -30,7 +30,7 @@ def episodes(ctx: Context, state: State) -> State | ControlFlow:
         feedback.warning(
             f"No '{config.stream.translation_type}' episodes found for this anime."
         )
-        return ControlFlow.BACKX2
+        return InternalDirective.BACKX2
 
     chosen_episode: str | None = None
 
@@ -55,7 +55,7 @@ def episodes(ctx: Context, state: State) -> State | ControlFlow:
 
         if not chosen_episode_str or chosen_episode_str == "Back":
             # TODO: should improve the back logic for menus that can be pass through
-            return ControlFlow.BACKX2
+            return InternalDirective.BACKX2
 
         chosen_episode = chosen_episode_str
 

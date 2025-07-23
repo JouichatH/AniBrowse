@@ -15,7 +15,7 @@ from .types import (
 
 
 @dataclass(frozen=True)
-class ApiSearchParams:
+class MediaSearchParams:
     query: Optional[str] = None
     page: int = 1
     per_page: Optional[int] = None
@@ -67,7 +67,7 @@ class ApiSearchParams:
 
 
 @dataclass(frozen=True)
-class UserListParams:
+class UserMediaListSearchParams:
     status: UserMediaListStatus
     page: int = 1
     type: Optional[MediaType] = None

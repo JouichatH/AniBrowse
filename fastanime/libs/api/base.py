@@ -4,7 +4,7 @@ from typing import Any, Optional
 from httpx import Client
 
 from ...core.config import AnilistConfig
-from .params import ApiSearchParams, UpdateListEntryParams, UserListParams
+from .params import MediaSearchParams, UpdateListEntryParams, UserMediaListSearchParams
 from .types import MediaSearchResult, UserProfile
 
 
@@ -30,12 +30,14 @@ class BaseApiClient(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def search_media(self, params: ApiSearchParams) -> Optional[MediaSearchResult]:
+    def search_media(self, params: MediaSearchParams) -> Optional[MediaSearchResult]:
         """Searches for media based on a query and other filters."""
         pass
 
     @abc.abstractmethod
-    def search_media_list(self, params: UserListParams) -> Optional[MediaSearchResult]:
+    def search_media_list(
+        self, params: UserMediaListSearchParams
+    ) -> Optional[MediaSearchResult]:
         pass
 
     @abc.abstractmethod

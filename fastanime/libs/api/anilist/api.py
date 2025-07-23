@@ -8,7 +8,12 @@ from ....core.config import AnilistConfig
 from ....core.utils.graphql import (
     execute_graphql,
 )
-from ..base import ApiSearchParams, BaseApiClient, UpdateListEntryParams, UserListParams
+from ..base import (
+    BaseApiClient,
+    MediaSearchParams,
+    UpdateListEntryParams,
+    UserMediaListSearchParams,
+)
 from ..types import MediaSearchResult, UserMediaListStatus, UserProfile
 from . import gql, mapper
 
@@ -85,7 +90,7 @@ class AniListApi(BaseApiClient):
         )
         return mapper.to_generic_user_profile(response.json())
 
-    def search_media(self, params: ApiSearchParams) -> Optional[MediaSearchResult]:
+    def search_media(self, params: MediaSearchParams) -> Optional[MediaSearchResult]:
         variables = {
             search_params_map[k]: v
             for k, v in params.__dict__.items()
@@ -126,7 +131,9 @@ class AniListApi(BaseApiClient):
         )
         return mapper.to_generic_search_result(response.json())
 
-    def search_media_list(self, params: UserListParams) -> Optional[MediaSearchResult]:
+    def search_media_list(
+        self, params: UserMediaListSearchParams
+    ) -> Optional[MediaSearchResult]:
         if not self.user_profile:
             logger.error("Cannot fetch user list: user is not authenticated.")
             return None
@@ -203,14 +210,14 @@ if __name__ == "__main__":
 
     from ....core.config import AnilistConfig
     from ....core.constants import APP_ASCII_ART
-    from ..params import ApiSearchParams
+    from ..params import MediaSearchParams
 
     anilist = AniListApi(AnilistConfig(), Client())
     print(APP_ASCII_ART)
 
     # search
     query = input("What anime would you like to search for: ")
-    search_results = anilist.search_media(ApiSearchParams(query=query))
+    search_results = anilist.search_media(MediaSearchParams(query=query))
     if not search_results:
         print("Nothing was finding matching: ", query)
         exit()

@@ -1,6 +1,6 @@
 from typing import List
 
-from ....libs.api.params import ApiSearchParams
+from ....libs.api.params import MediaSearchParams
 from ....libs.api.types import MediaItem
 
 
@@ -37,7 +37,7 @@ class MediaFilter:
 
     @classmethod
     def apply(
-        cls, media_items: List[MediaItem], filters: ApiSearchParams
+        cls, media_items: List[MediaItem], filters: MediaSearchParams
     ) -> List[MediaItem]:
         """
         Applies filtering, sorting, and pagination to a list of MediaItem objects.
