@@ -1,7 +1,8 @@
 import logging
 import random
 import time
-from typing import TYPE_CHECKING
+from functools import lru_cache
+from typing import TYPE_CHECKING, Iterator, Optional, Union
 
 from yt_dlp.utils import (
     extract_attributes,
@@ -11,7 +12,7 @@ from yt_dlp.utils import (
 
 from ..base import BaseAnimeProvider
 from ..params import AnimeParams, EpisodeStreamsParams, SearchParams
-from ..types import Anime, SearchResults, Server
+from ..types import Anime, AnimeEpisodeInfo, SearchResult, SearchResults, Server
 from ..utils.debug import debug_provider
 from .constants import (
     ANIMEPAHE_BASE,
@@ -21,7 +22,7 @@ from .constants import (
     SERVER_HEADERS,
 )
 from .extractors import process_animepahe_embed_page
-from .parser import map_to_anime_result, map_to_server, map_to_search_results
+from .parser import map_to_anime_result, map_to_search_results, map_to_server
 from .types import AnimePaheAnimePage, AnimePaheSearchPage, AnimePaheSearchResult
 
 logger = logging.getLogger(__name__)
@@ -32,62 +33,53 @@ class AnimePahe(BaseAnimeProvider):
 
     @debug_provider
     def search(self, params: SearchParams) -> SearchResults | None:
-        response = self.client.get(
-            ANIMEPAHE_ENDPOINT, params={"m": "search", "q": params.query}
-        )
+        return self._search(params)
+
+    @lru_cache()
+    def _search(self, params: SearchParams) -> SearchResults | None:
+        url_params = {"m": "search", "q": params.query}
+        response = self.client.get(ANIMEPAHE_ENDPOINT, params=url_params)
         response.raise_for_status()
         data: AnimePaheSearchPage = response.json()
+        if not data.get("data"):
+            return
         return map_to_search_results(data)
 
     @debug_provider
     def get(self, params: AnimeParams) -> Anime | None:
+        return self._get_anime(params)
+
+    @lru_cache()
+    def _get_anime(self, params: AnimeParams) -> Anime | None:
         page = 1
         standardized_episode_number = 0
-        anime_result: AnimePaheSearchResult = self.search(SearchParams(query=params.id)).results[0]
-        data: AnimePaheAnimePage = {}  # pyright:ignore
 
-        def _pages_loader(
-        self,
-        data,
-        session_id,
-        params,
-        page,
-        standardized_episode_number,
-    ):
-        response = self.client.get(ANIMEPAHE_ENDPOINT, params=params)
-        response.raise_for_status()
-        if not data:
-            data.update(response.json())
-        elif ep_data := response.json().get("data"):
-            data["data"].extend(ep_data)
-        if response.json()["next_page_url"]:
-            # TODO: Refine this
-            time.sleep(
-                random.choice(
-                    [
-                        0.25,
-                        0.1,
-                        0.5,
-                        0.75,
-                        1,
-                    ]
-                )
-            )
-            page += 1
-            self._pages_loader(
-                data,
-                session_id,
-                params={
-                    "m": "release",
-                    "page": page,
-                    "id": session_id,
-                    "sort": "episode_asc",
-                },
+        search_result = self._get_search_result(params)
+        if not search_result:
+            logger.error(f"No search result found for ID {params.id}")
+            return None
+
+        anime: Optional[AnimePaheAnimePage] = None
+
+        has_next_page = True
+        while has_next_page:
+            logger.debug(f"Loading page: {page}")
+            _anime_page = self._anime_page_loader(
+                m="release",
+                id=params.id,
+                sort="episode_asc",
                 page=page,
-                standardized_episode_number=standardized_episode_number,
             )
-        else:
-            for episode in data.get("data", []):
+
+            has_next_page = True if _anime_page["next_page_url"] else False
+            page += 1
+            if not anime:
+                anime = _anime_page
+            else:
+                anime["data"].extend(_anime_page["data"])
+
+        if anime:
+            for episode in anime.get("data", []):
                 if episode["episode"] % 1 == 0:
                     standardized_episode_number += 1
                     episode.update({"episode": standardized_episode_number})
@@ -95,103 +87,52 @@ class AnimePahe(BaseAnimeProvider):
                     standardized_episode_number += episode["episode"] % 1
                     episode.update({"episode": standardized_episode_number})
                     standardized_episode_number = int(standardized_episode_number)
-        return data
 
-    @debug_provider
-    def get(self, params: AnimeParams) -> Anime | None:
-        page = 1
-        standardized_episode_number = 0
-        search_results = self.search(SearchParams(query=params.id))
+            return map_to_anime_result(search_result, anime)
+
+    @lru_cache()
+    def _get_search_result(self, params: AnimeParams) -> Optional[SearchResult]:
+        search_results = self._search(SearchParams(query=params.query))
         if not search_results or not search_results.results:
-            logger.error(f"[ANIMEPAHE-ERROR]: No search results found for ID {params.id}")
+            logger.error(f"No search results found for ID {params.id}")
             return None
-        anime_result: AnimePaheSearchResult = search_results.results[0]
+        for search_result in search_results.results:
+            if search_result.id == params.id:
+                return search_result
 
-        data: AnimePaheAnimePage = {}  # pyright:ignore
-
-        data = self._pages_loader(
-            data,
-            params.id,
-            params={
-                "m": "release",
-                "id": params.id,
-                "sort": "episode_asc",
-                "page": page,
-            },
-            page=page,
-            standardized_episode_number=standardized_episode_number,
-        )
-
-        if not data:
-            return None
-        
-        # Construct AnimePaheAnime TypedDict for mapping
-        anime_pahe_anime_data = {
-            "id": params.id,
-            "title": anime_result.title,
-            "year": anime_result.year,
-            "season": anime_result.season,
-            "poster": anime_result.poster,
-            "score": anime_result.score,
-            "availableEpisodesDetail": {
-                "sub": list(map(str, [episode["episode"] for episode in data["data"]])),
-                "dub": list(map(str, [episode["episode"] for episode in data["data"]])),
-                "raw": list(map(str, [episode["episode"] for episode in data["data"]])),
-            },
-            "episodesInfo": [
-                {
-                    "title": episode["title"],
-                    "episode": episode["episode"],
-                    "id": episode["session"],
-                    "translation_type": episode["audio"],
-                    "duration": episode["duration"],
-                    "poster": episode["snapshot"],
-                }
-                for episode in data["data"]
-            ],
+    @lru_cache()
+    def _anime_page_loader(self, m, id, sort, page) -> AnimePaheAnimePage:
+        url_params = {
+            "m": m,
+            "id": id,
+            "sort": sort,
+            "page": page,
         }
-        return map_to_anime_result(anime_pahe_anime_data)
+        response = self.client.get(ANIMEPAHE_ENDPOINT, params=url_params)
+        response.raise_for_status()
+        return response.json()
 
     @debug_provider
-    def episode_streams(self, params: EpisodeStreamsParams) -> "Iterator[Server] | None":
-        anime_info = self.get(AnimeParams(id=params.anime_id))
-        if not anime_info:
-            logger.error(
-                f"[ANIMEPAHE-ERROR]: Anime with ID {params.anime_id} not found"
-            )
-            return
-
-        episode = next(
-            (
-                ep
-                for ep in anime_info.episodes_info
-                if float(ep.episode) == float(params.episode)
-            ),
-            None,
-        )
-
+    def episode_streams(self, params: EpisodeStreamsParams) -> Iterator[Server] | None:
+        episode = self._get_episode_info(params)
         if not episode:
             logger.error(
-                f"[ANIMEPAHE-ERROR]: Episode {params.episode} doesn't exist for anime {anime_info.title}"
+                f"Episode {params.episode} doesn't exist for anime {params.anime_id}"
             )
             return
 
-        url = f"{ANIMEPAHE_BASE}/play/{params.anime_id}/{episode.id}"
-        response = self.client.get(url)
+        url = f"{ANIMEPAHE_BASE}/play/{params.anime_id}/{episode.session_id}"
+        response = self.client.get(url, follow_redirects=True)
         response.raise_for_status()
 
         c = get_element_by_id("resolutionMenu", response.text)
         resolutionMenuItems = get_elements_html_by_class("dropdown-item", c)
         res_dicts = [extract_attributes(item) for item in resolutionMenuItems]
+        quality = None
+        translation_type = None
+        stream_link = None
 
-        streams = {
-            "server": "kwik",
-            "links": [],
-            "episode_title": f"{episode.title or anime_info.title}; Episode {episode.episode}",
-            "subtitles": [],
-            "headers": {},
-        }
-
+        # TODO: better document the scraping process
         for res_dict in res_dicts:
             embed_url = res_dict["data-src"]
             data_audio = "dub" if res_dict["data-audio"] == "eng" else "sub"
@@ -200,40 +141,54 @@ class AnimePahe(BaseAnimeProvider):
                 continue
 
             if not embed_url:
-                logger.warning(
-                    "[ANIMEPAHE-WARN]: embed url not found please report to the developers"
-                )
+                logger.warning("embed url not found please report to the developers")
                 continue
 
             embed_response = self.client.get(
-                embed_url, headers={"User-Agent": self.client.headers["User-Agent"], **SERVER_HEADERS}
+                embed_url,
+                headers={
+                    "User-Agent": self.client.headers["User-Agent"],
+                    **SERVER_HEADERS,
+                },
             )
             embed_response.raise_for_status()
             embed_page = embed_response.text
 
             decoded_js = process_animepahe_embed_page(embed_page)
             if not decoded_js:
-                logger.error("[ANIMEPAHE-ERROR]: failed to decode embed page")
+                logger.error("failed to decode embed page")
                 continue
             juicy_stream = JUICY_STREAM_REGEX.search(decoded_js)
             if not juicy_stream:
-                logger.error("[ANIMEPAHE-ERROR]: failed to find juicy stream")
+                logger.error("failed to find juicy stream")
                 continue
             juicy_stream = juicy_stream.group(1)
+            quality = res_dict["data-resolution"]
+            translation_type = data_audio
+            stream_link = juicy_stream
 
-            streams["links"].append(
-                {
-                    "quality": res_dict["data-resolution"],
-                    "translation_type": data_audio,
-                    "link": juicy_stream,
-                }
-            )
-        if streams["links"]:
-            yield map_to_server(streams)
+        if translation_type and quality and stream_link:
+            yield map_to_server(episode, translation_type, quality, stream_link)
+
+    @lru_cache()
+    def _get_episode_info(
+        self, params: EpisodeStreamsParams
+    ) -> Optional[AnimeEpisodeInfo]:
+        anime_info = self._get_anime(
+            AnimeParams(id=params.anime_id, query=params.query)
+        )
+        if not anime_info:
+            logger.error(f"No anime info for {params.anime_id}")
+            return
+        if not anime_info.episodes_info:
+            logger.error(f"No episodes info for {params.anime_id}")
+            return
+        for episode in anime_info.episodes_info:
+            if episode.episode == params.episode:
+                return episode
 
 
 if __name__ == "__main__":
-    from httpx import Client
     from ..utils.debug import test_anime_provider
 
-    test_anime_provider(AnimePahe, Client())
+    test_anime_provider(AnimePahe)

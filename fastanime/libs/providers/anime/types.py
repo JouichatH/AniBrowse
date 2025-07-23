@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
@@ -25,20 +25,23 @@ class SearchResult(BaseAnimeProviderModel):
     episodes: AnimeEpisodes
     other_titles: list[str] = []
     media_type: str | None = None
-    score: int | None = None
+    score: float | None = None
     status: str | None = None
     season: str | None = None
     poster: str | None = None
+    year: str | None = None
 
 
 class SearchResults(BaseAnimeProviderModel):
     page_info: PageInfo
     results: list[SearchResult]
+    model_config = {"frozen": True}
 
 
 class AnimeEpisodeInfo(BaseAnimeProviderModel):
     id: str
     episode: str
+    session_id: Optional[str] = None
     title: str | None = None
     poster: str | None = None
     duration: str | None = None

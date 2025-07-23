@@ -80,7 +80,9 @@ def provider_search(ctx: Context, state: State) -> State | ControlFlow:
         )
         from ....libs.providers.anime.params import AnimeParams
 
-        full_provider_anime = provider.get(AnimeParams(id=selected_provider_anime.id))
+        full_provider_anime = provider.get(
+            AnimeParams(id=selected_provider_anime.id, query=anilist_title.lower())
+        )
 
     if not full_provider_anime:
         feedback.warning(

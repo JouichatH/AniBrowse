@@ -1,7 +1,25 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from ..types import Anime, AnimeEpisodes, AnimeEpisodeInfo, PageInfo, SearchResult, SearchResults, Server, EpisodeStream, Subtitle
-from .types import AnimePaheAnimePage, AnimePaheSearchResult, AnimePaheSearchPage, AnimePaheServer, AnimePaheEpisodeInfo, AnimePaheAnime, AnimePaheStreamLink
+from ..types import (
+    Anime,
+    AnimeEpisodeInfo,
+    AnimeEpisodes,
+    EpisodeStream,
+    PageInfo,
+    SearchResult,
+    SearchResults,
+    Server,
+    Subtitle,
+)
+from .types import (
+    AnimePaheAnime,
+    AnimePaheAnimePage,
+    AnimePaheEpisodeInfo,
+    AnimePaheSearchPage,
+    AnimePaheSearchResult,
+    AnimePaheServer,
+    AnimePaheStreamLink,
+)
 
 
 def map_to_search_results(data: AnimePaheSearchPage) -> SearchResults:
@@ -21,6 +39,7 @@ def map_to_search_results(data: AnimePaheSearchPage) -> SearchResults:
                 status=result["status"],
                 season=result["season"],
                 poster=result["poster"],
+                year=str(result["year"]),
             )
         )
 
@@ -34,47 +53,45 @@ def map_to_search_results(data: AnimePaheSearchPage) -> SearchResults:
     )
 
 
-def map_to_anime_result(data: AnimePaheAnime) -> Anime:
+def map_to_anime_result(
+    search_result: SearchResult, anime: AnimePaheAnimePage
+) -> Anime:
     episodes_info = []
-    for ep_info in data["episodesInfo"]:
+    episodes = []
+    for ep_info in anime["data"]:
+        episodes.append(str(ep_info["episode"]))
         episodes_info.append(
             AnimeEpisodeInfo(
-                id=ep_info["id"],
+                id=str(ep_info["id"]),
+                session_id=ep_info["session"],
                 episode=str(ep_info["episode"]),
                 title=ep_info["title"],
-                poster=ep_info["poster"],
-                duration=ep_info["duration"],
+                poster=ep_info["snapshot"],
+                duration=str(ep_info["duration"]),
             )
         )
 
     return Anime(
-        id=data["id"],
-        title=data["title"],
+        id=search_result.id,
+        title=search_result.title,
         episodes=AnimeEpisodes(
-            sub=data["availableEpisodesDetail"]["sub"],
-            dub=data["availableEpisodesDetail"]["dub"],
-            raw=data["availableEpisodesDetail"]["raw"],
+            sub=episodes,
+            dub=episodes,
         ),
-        year=str(data["year"]),
-        poster=data["poster"],
+        year=str(search_result.year),
+        poster=search_result.poster,
         episodes_info=episodes_info,
     )
 
 
-def map_to_server(data: AnimePaheServer) -> Server:
-    links = []
-    for link in data["links"]:
-        links.append(
-            EpisodeStream(
-                link=link["link"],
-                quality=link["quality"],
-                translation_type=link["translation_type"],
-            )
+def map_to_server(
+    episode: AnimeEpisodeInfo, translation_type: Any, quality: Any, stream_link: Any
+) -> Server:
+    links = [
+        EpisodeStream(
+            link=stream_link,
+            quality=quality,
+            translation_type=translation_type,
         )
-    return Server(
-        name=data["server"],
-        links=links,
-        episode_title=data["episode_title"],
-        subtitles=data["subtitles"],
-        headers=data["headers"],
-    )
+    ]
+    return Server(name="kwik", links=links, episode_title=episode.title)

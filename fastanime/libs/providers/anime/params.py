@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 
-@dataclass
+@dataclass(frozen=True)
 class SearchParams:
     """Parameters for searching anime."""
 
@@ -24,10 +24,11 @@ class SearchParams:
     country_of_origin: str | None = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class EpisodeStreamsParams:
     """Parameters for fetching episode streams."""
 
+    query: str
     anime_id: str
     episode: str
     translation_type: Literal["sub", "dub"] = "sub"
@@ -36,8 +37,10 @@ class EpisodeStreamsParams:
     subtitles: bool = True
 
 
-@dataclass
+@dataclass(frozen=True)
 class AnimeParams:
     """Parameters for fetching anime details."""
 
     id: str
+    # HACK: for the sake of providers which require previous data
+    query: str

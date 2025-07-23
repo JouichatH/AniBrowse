@@ -25,6 +25,11 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
     then launches the media player and transitions to post-playback controls.
     """
     provider_anime = state.provider.anime
+    if not state.media_api.anime:
+        return ControlFlow.BACK
+    anime_title = (
+        state.media_api.anime.title.romaji or state.media_api.anime.title.romaji
+    )
     episode_number = state.provider.episode_number
     config = ctx.config
     provider = ctx.provider
@@ -47,6 +52,7 @@ def servers(ctx: Context, state: State) -> State | ControlFlow:
         server_iterator = provider.episode_streams(
             EpisodeStreamsParams(
                 anime_id=provider_anime.id,
+                query=anime_title,
                 episode=episode_number,
                 translation_type=config.stream.translation_type,
             )

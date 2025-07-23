@@ -46,7 +46,7 @@ def test_anime_provider(AnimeProvider: Type[BaseAnimeProvider]):
     result = search_results.results[
         int(input(f"Select result (1-{len(search_results.results)}): ")) - 1
     ]
-    anime = anime_provider.get(AnimeParams(id=result.id))
+    anime = anime_provider.get(AnimeParams(id=result.id, query=query))
 
     if not anime:
         return
@@ -56,6 +56,7 @@ def test_anime_provider(AnimeProvider: Type[BaseAnimeProvider]):
     episode_number = input("What episode do you wish to watch: ")
     episode_streams = anime_provider.episode_streams(
         EpisodeStreamsParams(
+            query=query,
             anime_id=anime.id,
             episode=episode_number,
             translation_type=translation_type,  # type:ignore

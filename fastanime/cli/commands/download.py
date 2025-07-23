@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import Unpack
 
-    from ...libs.players.base import BasePlayer
     from ...libs.providers.anime.base import BaseAnimeProvider
     from ...libs.providers.anime.types import Anime
     from ...libs.selectors.base import BaseSelector
@@ -116,7 +115,6 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
     from ...libs.selectors.selector import create_selector
 
     provider = create_provider(config.general.provider)
-    player = create_player(config)
     selector = create_selector(config)
 
     anime_titles = options["anime_title"]
@@ -149,7 +147,7 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
         # ---- fetch selected anime ----
         with Progress() as progress:
             progress.add_task("Fetching Anime...", total=None)
-            anime = provider.get(AnimeParams(id=anime_result.id))
+            anime = provider.get(AnimeParams(id=anime_result.id, query=anime_title))
 
         if not anime:
             raise FastAnimeError(f"Failed to fetch anime {anime_result.title}")
@@ -184,7 +182,13 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
 
             for episode in episodes_range:
                 download_anime(
-                    config, options, provider, selector, player, anime, episode
+                    config,
+                    options,
+                    provider,
+                    selector,
+                    anime,
+                    episode,
+                    anime_title,
                 )
         else:
             episode = selector.choose(
@@ -193,7 +197,9 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
             )
             if not episode:
                 raise FastAnimeError("No episode selected")
-            download_anime(config, options, provider, selector, player, anime, episode)
+            download_anime(
+                config, options, provider, selector, anime, episode, anime_title
+            )
 
 
 def download_anime(
@@ -201,15 +207,14 @@ def download_anime(
     download_options: "Options",
     provider: "BaseAnimeProvider",
     selector: "BaseSelector",
-    player: "BasePlayer",
     anime: "Anime",
     episode: str,
+    anime_title: str,
 ):
     from rich import print
     from rich.progress import Progress
 
     from ...core.downloader import DownloadParams, create_downloader
-    from ...libs.players.params import PlayerParams
     from ...libs.providers.anime.params import EpisodeStreamsParams
 
     downloader = create_downloader(config.downloads)
@@ -219,6 +224,7 @@ def download_anime(
         streams = provider.episode_streams(
             EpisodeStreamsParams(
                 anime_id=anime.id,
+                query=anime_title,
                 episode=episode,
                 translation_type=config.stream.translation_type,
             )

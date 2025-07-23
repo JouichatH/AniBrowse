@@ -46,7 +46,6 @@ def search(config: AppConfig, **options: "Unpack[Options]"):
     from rich.progress import Progress
 
     from ...core.exceptions import FastAnimeError
-    from ...libs.players.player import create_player
     from ...libs.providers.anime.params import (
         AnimeParams,
         SearchParams,
@@ -55,7 +54,6 @@ def search(config: AppConfig, **options: "Unpack[Options]"):
     from ...libs.selectors.selector import create_selector
 
     provider = create_provider(config.general.provider)
-    player = create_player(config)
     selector = create_selector(config)
 
     anime_titles = options["anime_title"]
@@ -88,7 +86,7 @@ def search(config: AppConfig, **options: "Unpack[Options]"):
         # ---- fetch selected anime ----
         with Progress() as progress:
             progress.add_task("Fetching Anime...", total=None)
-            anime = provider.get(AnimeParams(id=anime_result.id))
+            anime = provider.get(AnimeParams(id=anime_result.id, query=anime_title))
 
         if not anime:
             raise FastAnimeError(f"Failed to fetch anime {anime_result.title}")
@@ -122,7 +120,7 @@ def search(config: AppConfig, **options: "Unpack[Options]"):
             episodes_range = iter(episodes_range)
 
             for episode in episodes_range:
-                stream_anime(config, provider, selector, player, anime, episode)
+                stream_anime(config, provider, selector, anime, episode, anime_title)
         else:
             episode = selector.choose(
                 "Select Episode",
@@ -130,28 +128,32 @@ def search(config: AppConfig, **options: "Unpack[Options]"):
             )
             if not episode:
                 raise FastAnimeError("No episode selected")
-            stream_anime(config, provider, selector, player, anime, episode)
+            stream_anime(config, provider, selector, anime, episode, anime_title)
 
 
 def stream_anime(
     config: AppConfig,
     provider: "BaseAnimeProvider",
     selector: "BaseSelector",
-    player: "BasePlayer",
     anime: "Anime",
     episode: str,
+    anime_title: str,
 ):
     from rich import print
     from rich.progress import Progress
 
     from ...libs.players.params import PlayerParams
+    from ...libs.players.player import create_player
     from ...libs.providers.anime.params import EpisodeStreamsParams
+
+    player = create_player(config)
 
     with Progress() as progress:
         progress.add_task("Fetching Episode Streams...", total=None)
         streams = provider.episode_streams(
             EpisodeStreamsParams(
                 anime_id=anime.id,
+                query=anime_title,
                 episode=episode,
                 translation_type=config.stream.translation_type,
             )
