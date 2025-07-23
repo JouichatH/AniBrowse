@@ -8,7 +8,7 @@ from ...libs.api.types import (
     MediaItem,
     MediaSearchResult,
     MediaStatus,
-    UserListStatusType,
+    UserListItem,
 )
 from ...libs.players.types import PlayerResult
 from ...libs.providers.anime.types import Anime, SearchResults, Server
@@ -80,7 +80,7 @@ class MediaApiState(BaseModel):
     search_results_type: Optional[Literal["MEDIA_LIST", "USER_MEDIA_LIST"]] = None
     sort: Optional[str] = None
     query: Optional[str] = None
-    user_media_status: Optional[UserListStatusType] = None
+    user_media_status: Optional[UserListItem] = None
     media_status: Optional[MediaStatus] = None
     anime: Optional[MediaItem] = None
 

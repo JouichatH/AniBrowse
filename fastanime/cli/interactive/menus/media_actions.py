@@ -1,6 +1,5 @@
 from typing import Callable, Dict
 
-import click
 from rich.console import Console
 
 from ....libs.api.params import UpdateListEntryParams
@@ -152,7 +151,7 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
         console = Console()
         title = Text(anime.title.english or anime.title.romaji or "", style="bold cyan")
         description = Text(anime.description or "NO description")
-        genres = Text(f"Genres: {', '.join(anime.genres)}")
+        genres = Text(f"Genres: {', '.join([v.value for v in anime.genres])}")
 
         panel_content = f"{genres}\n\n{description}"
 

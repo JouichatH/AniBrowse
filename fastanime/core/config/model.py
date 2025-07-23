@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field, PrivateAttr, computed_field, field_validator
 
@@ -11,7 +11,7 @@ from ...core.constants import (
     ROFI_THEME_MAIN,
     ROFI_THEME_PREVIEW,
 )
-from ...libs.api.anilist.constants import MEDIA_LIST_SORTS, SORTS_AVAILABLE
+from ...libs.api.types import MediaSort, UserMediaListSort
 from ...libs.providers.anime import PROVIDERS_AVAILABLE, SERVERS_AVAILABLE
 from ..constants import APP_ASCII_ART
 from . import defaults
@@ -21,12 +21,6 @@ from . import descriptions as desc
 class GeneralConfig(BaseModel):
     """Configuration for general application behavior and integrations."""
 
-    per_page: int = Field(
-        default=defaults.ANILIST_PER_PAGE,
-        gt=0,
-        le=50,
-        description=desc.ANILIST_PER_PAGE,
-    )
     pygment_style: str = Field(
         default=defaults.GENERAL_PYGMENT_STYLE, description=desc.GENERAL_PYGMENT_STYLE
     )
@@ -311,44 +305,41 @@ class AnilistConfig(OtherConfig):
         le=50,
         description=desc.ANILIST_PER_PAGE,
     )
-    sort_by: str = Field(
-        default=defaults.ANILIST_SORT_BY,
+    sort_by: MediaSort = Field(
+        default=MediaSort.SEARCH_MATCH,
         description=desc.ANILIST_SORT_BY,
-        examples=SORTS_AVAILABLE,
     )
-    media_list_sort_by: str = Field(
-        default=defaults.ANILIST_MEDIA_LIST_SORT_BY,
+    media_list_sort_by: UserMediaListSort = Field(
+        default=UserMediaListSort.MEDIA_POPULARITY_DESC,
         description=desc.ANILIST_MEDIA_LIST_SORT_BY,
-        examples=MEDIA_LIST_SORTS,
     )
     preferred_language: Literal["english", "romaji"] = Field(
         default=defaults.ANILIST_PREFERRED_LANGUAGE,
         description=desc.ANILIST_PREFERRED_LANGUAGE,
     )
 
-    @field_validator("sort_by")
-    @classmethod
-    def validate_sort_by(cls, v: str) -> str:
-        if v not in SORTS_AVAILABLE:
-            raise ValueError(
-                f"'{v}' is not a valid sort option. See documentation for available options."
-            )
-        return v
-
-    @field_validator("media_list_sort_by")
-    @classmethod
-    def validate_media_list_sort_by(cls, v: str) -> str:
-        if v not in MEDIA_LIST_SORTS:
-            raise ValueError(
-                f"'{v}' is not a valid sort option. See documentation for available options."
-            )
-        return v
-
 
 class JikanConfig(OtherConfig):
     """Configuration for the Jikan API (currently none)."""
 
-    pass
+    per_page: int = Field(
+        default=defaults.ANILIST_PER_PAGE,
+        gt=0,
+        le=50,
+        description=desc.ANILIST_PER_PAGE,
+    )
+    sort_by: MediaSort = Field(
+        default=MediaSort.SEARCH_MATCH,
+        description=desc.ANILIST_SORT_BY,
+    )
+    media_list_sort_by: UserMediaListSort = Field(
+        default=UserMediaListSort.MEDIA_POPULARITY_DESC,
+        description=desc.ANILIST_MEDIA_LIST_SORT_BY,
+    )
+    preferred_language: Literal["english", "romaji"] = Field(
+        default=defaults.ANILIST_PREFERRED_LANGUAGE,
+        description=desc.ANILIST_PREFERRED_LANGUAGE,
+    )
 
 
 class DownloadsConfig(OtherConfig):

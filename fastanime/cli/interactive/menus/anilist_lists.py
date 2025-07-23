@@ -18,7 +18,7 @@ from rich.table import Table
 from rich.text import Text
 
 from ....libs.api.params import UpdateListEntryParams, UserListParams
-from ....libs.api.types import MediaItem, MediaSearchResult, UserListStatusType
+from ....libs.api.types import MediaItem, MediaSearchResult, UserListItem
 from ...utils.feedback import create_feedback_manager, execute_with_feedback
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State
@@ -373,7 +373,7 @@ def _display_anime_list_details(console: Console, anime: MediaItem, icons: bool)
     console.print(panel)
 
 
-def _navigate_to_list(ctx: Context, list_status: UserListStatusType) -> State:
+def _navigate_to_list(ctx: Context, list_status: UserListItem) -> State:
     """Navigate to a specific list view."""
     return State(
         menu_name="ANILIST_LIST_VIEW", data={"list_status": list_status, "page": 1}

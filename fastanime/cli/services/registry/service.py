@@ -12,7 +12,7 @@ from ....libs.api.types import (
     MediaItem,
     MediaSearchResult,
     PageInfo,
-    UserListStatusType,
+    UserMediaListStatus,
 )
 from .filters import MediaFilter
 from .models import (
@@ -150,7 +150,7 @@ class MediaRegistryService:
         watched: bool = False,
         media_item: Optional[MediaItem] = None,
         progress: Optional[str] = None,
-        status: Optional[UserListStatusType] = None,
+        status: Optional[UserMediaListStatus] = None,
         last_watch_position: Optional[str] = None,
         total_duration: Optional[str] = None,
         score: Optional[float] = None,
@@ -171,7 +171,7 @@ class MediaRegistryService:
             if status:
                 index_entry.status = status
         else:
-            index_entry.status = "watching"
+            index_entry.status = UserMediaListStatus.WATCHING
 
         if last_watch_position:
             index_entry.last_watch_position = last_watch_position

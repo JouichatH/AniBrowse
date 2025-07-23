@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from enum import Enum
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin
 
@@ -129,6 +130,16 @@ def options_from_model(model: type[BaseModel], parent_name: str = "") -> Callabl
 def _get_click_type(field_info: FieldInfo) -> Any:
     """Maps a Pydantic field's type to a corresponding click type."""
     field_type = field_info.annotation
+
+    # check if type is enum
+    if (
+        field_type is not None
+        and isinstance(field_type, type)
+        and issubclass(field_type, Enum)
+    ):
+        # Get the string values of the enum members
+        enum_choices = [member.value for member in field_type]
+        return click.Choice(enum_choices)
 
     # Check if the type is a Literal
     if (

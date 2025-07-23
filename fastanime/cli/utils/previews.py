@@ -1,21 +1,16 @@
 import concurrent.futures
 import logging
 import os
-import shutil
 from hashlib import sha256
-from io import StringIO
 from threading import Thread
 from typing import List
 
 import httpx
-from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
 
 from ...core.config import AppConfig
 from ...core.constants import APP_CACHE_DIR, APP_DIR, PLATFORM
 from ...core.utils.file import AtomicWriter
-from ...libs.api.types import MediaItem, StreamingEpisode
+from ...libs.api.types import MediaItem
 from . import ansi, formatters
 
 logger = logging.getLogger(__name__)
@@ -76,8 +71,8 @@ def _populate_info_template(item: MediaItem, config: AppConfig) -> str:
         # plain text
         #
         "TITLE": formatters.shell_safe(item.title.english or item.title.romaji),
-        "STATUS": formatters.shell_safe(item.status),
-        "FORMAT": formatters.shell_safe(item.format),
+        "STATUS": formatters.shell_safe(item.status.value),
+        "FORMAT": formatters.shell_safe(item.format.value),
         #
         # numerical
         #
@@ -100,10 +95,10 @@ def _populate_info_template(item: MediaItem, config: AppConfig) -> str:
         # list
         #
         "GENRES": formatters.shell_safe(
-            formatters.format_list_with_commas(item.genres)
+            formatters.format_list_with_commas([v.value for v in item.genres])
         ),
         "TAGS": formatters.shell_safe(
-            formatters.format_list_with_commas([t.name for t in item.tags])
+            formatters.format_list_with_commas([t.name.value for t in item.tags])
         ),
         "STUDIOS": formatters.shell_safe(
             formatters.format_list_with_commas([t.name for t in item.studios if t.name])
@@ -115,7 +110,9 @@ def _populate_info_template(item: MediaItem, config: AppConfig) -> str:
         # user
         #
         "USER_STATUS": formatters.shell_safe(
-            item.user_status.status if item.user_status else "NOT_ON_LIST"
+            item.user_status.status.value
+            if item.user_status and item.user_status.status
+            else "NOT_ON_LIST"
         ),
         "USER_PROGRESS": formatters.shell_safe(
             f"Episode {item.user_status.progress}" if item.user_status else "0"

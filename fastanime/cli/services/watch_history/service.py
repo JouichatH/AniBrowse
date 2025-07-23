@@ -4,7 +4,7 @@ from typing import Optional
 from ....core.config.model import AppConfig
 from ....libs.api.base import BaseApiClient
 from ....libs.api.params import UpdateListEntryParams
-from ....libs.api.types import MediaItem, UserListStatusType
+from ....libs.api.types import MediaItem, UserMediaListStatus
 from ....libs.players.types import PlayerResult
 from ..registry import MediaRegistryService
 
@@ -48,7 +48,7 @@ class WatchHistoryService:
         self,
         media_item: MediaItem,
         progress: Optional[str] = None,
-        status: Optional[UserListStatusType] = None,
+        status: Optional[UserMediaListStatus] = None,
         score: Optional[float] = None,
         notes: Optional[str] = None,
     ):

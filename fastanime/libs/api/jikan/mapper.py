@@ -9,12 +9,12 @@ from ..types import (
     MediaItem,
     MediaSearchResult,
     MediaStatus,
-    MediaTag,
+    MediaTagItem,
     MediaTitle,
     PageInfo,
     StreamingEpisode,
     Studio,
-    UserListStatus,
+    UserListItem,
     UserProfile,
 )
 
@@ -36,7 +36,7 @@ def _to_generic_title(jikan_titles: list[dict]) -> MediaTitle:
     romaji = None
     english = None
     native = None
-    
+
     # Jikan's default title is often the romaji one.
     # We prioritize specific types if available.
     for t in jikan_titles:
@@ -48,12 +48,8 @@ def _to_generic_title(jikan_titles: list[dict]) -> MediaTitle:
             english = title_
         elif type_ == "Japanese":
             native = title_
-    
-    return MediaTitle(
-        romaji=romaji,
-        english=english,
-        native=native
-    )
+
+    return MediaTitle(romaji=romaji, english=english, native=native)
 
 
 def _to_generic_image(jikan_images: dict) -> MediaImage:

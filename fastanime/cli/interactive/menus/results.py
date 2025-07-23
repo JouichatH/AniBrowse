@@ -1,5 +1,5 @@
 from ....libs.api.params import ApiSearchParams, UserListParams
-from ....libs.api.types import MediaItem
+from ....libs.api.types import MediaItem, MediaStatus, UserMediaListStatus
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State
 
@@ -96,10 +96,10 @@ def _format_anime_choice(anime: MediaItem, config) -> str:
 
     # Add a visual indicator for new episodes if applicable
     if (
-        anime.status == "RELEASING"
+        anime.status == MediaStatus.RELEASING
         and anime.next_airing
         and anime.user_status
-        and anime.user_status.status == "CURRENT"
+        and anime.user_status.status == UserMediaListStatus.WATCHING
     ):
         last_aired = anime.next_airing.episode - 1
         unwatched = last_aired - (anime.user_status.progress or 0)

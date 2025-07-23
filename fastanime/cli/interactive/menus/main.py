@@ -3,7 +3,12 @@ import random
 from typing import Callable, Dict, Tuple
 
 from ....libs.api.params import ApiSearchParams, UserListParams
-from ....libs.api.types import MediaSearchResult, MediaStatus, UserListStatusType
+from ....libs.api.types import (
+    MediaSearchResult,
+    MediaSort,
+    MediaStatus,
+    UserMediaListStatus,
+)
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State
 
@@ -28,36 +33,44 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
     options: Dict[str, MenuAction] = {
         # --- Search-based Actions ---
         f"{'🔥 ' if icons else ''}Trending": _create_media_list_action(
-            ctx, "TRENDING_DESC"
+            ctx, MediaSort.TRENDING_DESC
         ),
         f"{'✨ ' if icons else ''}Popular": _create_media_list_action(
-            ctx, "POPULARITY_DESC"
+            ctx, MediaSort.POPULARITY_DESC
         ),
         f"{'💖 ' if icons else ''}Favourites": _create_media_list_action(
-            ctx, "FAVOURITES_DESC"
+            ctx, MediaSort.FAVOURITES_DESC
         ),
         f"{'💯 ' if icons else ''}Top Scored": _create_media_list_action(
-            ctx, "SCORE_DESC"
+            ctx, MediaSort.SCORE_DESC
         ),
         f"{'🎬 ' if icons else ''}Upcoming": _create_media_list_action(
-            ctx, "POPULARITY_DESC", "NOT_YET_RELEASED"
+            ctx, MediaSort.POPULARITY_DESC, MediaStatus.NOT_YET_RELEASED
         ),
         f"{'🔔 ' if icons else ''}Recently Updated": _create_media_list_action(
-            ctx, "UPDATED_AT_DESC"
+            ctx, MediaSort.UPDATED_AT_DESC
         ),
         # --- special case media list --
         f"{'🎲 ' if icons else ''}Random": _create_random_media_list(ctx),
         f"{'🔎 ' if icons else ''}Search": _create_search_media_list(ctx),
         # --- Authenticated User List Actions ---
-        f"{'📺 ' if icons else ''}Watching": _create_user_list_action(ctx, "watching"),
-        f"{'📑 ' if icons else ''}Planned": _create_user_list_action(ctx, "planning"),
-        f"{'✅ ' if icons else ''}Completed": _create_user_list_action(
-            ctx, "completed"
+        f"{'📺 ' if icons else ''}Watching": _create_user_list_action(
+            ctx, UserMediaListStatus.WATCHING
         ),
-        f"{'⏸️ ' if icons else ''}Paused": _create_user_list_action(ctx, "paused"),
-        f"{'🚮 ' if icons else ''}Dropped": _create_user_list_action(ctx, "dropped"),
+        f"{'📑 ' if icons else ''}Planned": _create_user_list_action(
+            ctx, UserMediaListStatus.PLANNING
+        ),
+        f"{'✅ ' if icons else ''}Completed": _create_user_list_action(
+            ctx, UserMediaListStatus.COMPLETED
+        ),
+        f"{'⏸️ ' if icons else ''}Paused": _create_user_list_action(
+            ctx, UserMediaListStatus.PAUSED
+        ),
+        f"{'🚮 ' if icons else ''}Dropped": _create_user_list_action(
+            ctx, UserMediaListStatus.DROPPED
+        ),
         f"{'🔁 ' if icons else ''}Rewatching": _create_user_list_action(
-            ctx, "repeating"
+            ctx, UserMediaListStatus.REPEATING
         ),
         f"{'🔁 ' if icons else ''}Recent": lambda: (
             "RESULTS",
@@ -123,7 +136,7 @@ def main(ctx: Context, state: State) -> State | ControlFlow:
 
 
 def _create_media_list_action(
-    ctx: Context, sort, status: MediaStatus | None = None
+    ctx: Context, sort: MediaSort, status: MediaStatus | None = None
 ) -> MenuAction:
     """A factory to create menu actions for fetching media lists"""
 
@@ -163,7 +176,7 @@ def _create_search_media_list(ctx: Context) -> MenuAction:
     return action
 
 
-def _create_user_list_action(ctx: Context, status: UserListStatusType) -> MenuAction:
+def _create_user_list_action(ctx: Context, status: UserMediaListStatus) -> MenuAction:
     """A factory to create menu actions for fetching user lists, handling authentication."""
 
     def action():

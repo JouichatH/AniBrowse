@@ -1,27 +1,33 @@
 import logging
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field
 
-from ....libs.api.types import MediaItem, UserListStatusType
+from ....libs.api.types import MediaItem, UserMediaListStatus
 from ...utils import converters
 
 logger = logging.getLogger(__name__)
 
-# Type aliases
-DownloadStatus = Literal[
-    "not_downloaded", "queued", "downloading", "completed", "failed", "paused"
-]
+
+class DownloadStatus(Enum):
+    NOT_DOWNLOADED = "not_downloaded"
+    QUEUED = "queued"
+    DOWNLOADING = "downloading"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    PAUSED = "paused"
+
+
 REGISTRY_VERSION = "1.0"
 
 
 class MediaEpisode(BaseModel):
     episode_number: str
 
-    # Download tracking
-    download_status: DownloadStatus = "not_downloaded"
+    download_status: DownloadStatus = DownloadStatus.NOT_DOWNLOADED
     file_path: Path
     download_date: datetime = Field(default_factory=datetime.now)
 
@@ -35,7 +41,7 @@ class MediaRegistryIndexEntry(BaseModel):
     media_id: int
     media_api: Literal["anilist", "NONE", "jikan"] = "NONE"
 
-    status: UserListStatusType = "watching"
+    status: UserMediaListStatus = UserMediaListStatus.WATCHING
     progress: str = "0"
     last_watch_position: Optional[str] = None
     last_watched: datetime = Field(default_factory=datetime.now)

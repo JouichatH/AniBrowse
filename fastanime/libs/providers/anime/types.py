@@ -1,10 +1,10 @@
 from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class BaseAnimeProviderModel(BaseModel):
-    pass
+    model_config = ConfigDict(frozen=True)
 
 
 class PageInfo(BaseAnimeProviderModel):
@@ -35,7 +35,6 @@ class SearchResult(BaseAnimeProviderModel):
 class SearchResults(BaseAnimeProviderModel):
     page_info: PageInfo
     results: list[SearchResult]
-    model_config = {"frozen": True}
 
 
 class AnimeEpisodeInfo(BaseAnimeProviderModel):

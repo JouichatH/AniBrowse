@@ -1,7 +1,17 @@
 from dataclasses import dataclass
-from typing import List, Literal, Optional, Union
+from typing import List, Optional, Union
 
-from .types import UserListStatusType
+from .types import (
+    MediaFormat,
+    MediaGenre,
+    MediaSeason,
+    MediaSort,
+    MediaStatus,
+    MediaTag,
+    MediaType,
+    UserMediaListSort,
+    UserMediaListStatus,
+)
 
 
 @dataclass(frozen=True)
@@ -9,23 +19,23 @@ class ApiSearchParams:
     query: Optional[str] = None
     page: int = 1
     per_page: Optional[int] = None
-    sort: Optional[Union[str, List[str]]] = None
+    sort: Optional[Union[MediaSort, List[MediaSort]]] = None
 
     # IDs
     id_in: Optional[List[int]] = None
 
     # Genres
-    genre_in: Optional[List[str]] = None
-    genre_not_in: Optional[List[str]] = None
+    genre_in: Optional[List[MediaGenre]] = None
+    genre_not_in: Optional[List[MediaGenre]] = None
 
     # Tags
-    tag_in: Optional[List[str]] = None
-    tag_not_in: Optional[List[str]] = None
+    tag_in: Optional[List[MediaTag]] = None
+    tag_not_in: Optional[List[MediaTag]] = None
 
     # Status
-    status_in: Optional[List[str]] = None  # Corresponds to [MediaStatus]
-    status: Optional[str] = None  # Corresponds to MediaStatus
-    status_not_in: Optional[List[str]] = None  # Corresponds to [MediaStatus]
+    status_in: Optional[List[MediaStatus]] = None  # Corresponds to [MediaStatus]
+    status: Optional[MediaStatus] = None  # Corresponds to MediaStatus
+    status_not_in: Optional[List[MediaStatus]] = None  # Corresponds to [MediaStatus]
 
     # Popularity
     popularity_greater: Optional[int] = None
@@ -37,7 +47,7 @@ class ApiSearchParams:
 
     # Season and Year
     seasonYear: Optional[int] = None
-    season: Optional[str] = None
+    season: Optional[MediaSeason] = None
 
     # Start Date (FuzzyDateInt is often an integer representation like YYYYMMDD)
     startDate_greater: Optional[int] = None
@@ -49,8 +59,8 @@ class ApiSearchParams:
     endDate_lesser: Optional[int] = None
 
     # Format and Type
-    format_in: Optional[List[str]] = None  # Corresponds to [MediaFormat]
-    type: Optional[str] = None  # Corresponds to MediaType (e.g., "ANIME", "MANGA")
+    format_in: Optional[List[MediaFormat]] = None
+    type: Optional[MediaType] = None
 
     # On List
     on_list: Optional[bool] = None
@@ -58,16 +68,16 @@ class ApiSearchParams:
 
 @dataclass(frozen=True)
 class UserListParams:
-    status: UserListStatusType
+    status: UserMediaListStatus
     page: int = 1
-    type: Optional[str] = None
-    sort: Optional[str] = None
+    type: Optional[MediaType] = None
+    sort: Optional[UserMediaListSort] = None
     per_page: Optional[int] = None
 
 
 @dataclass(frozen=True)
 class UpdateListEntryParams:
     media_id: int
-    status: Optional[UserListStatusType] = None
+    status: Optional[UserMediaListStatus] = None
     progress: Optional[str] = None
     score: Optional[float] = None

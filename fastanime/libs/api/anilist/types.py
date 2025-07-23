@@ -1,9 +1,3 @@
-"""
-This module defines the shape of the anilist data that can be received in order to enhance dev experience
-"""
-
-# TODO: rename this module to types
-
 from typing import Literal, TypedDict
 
 

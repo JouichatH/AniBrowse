@@ -1,5 +1,6 @@
 import logging
-from typing import Optional
+from enum import Enum
+from typing import List, Optional
 
 from httpx import Client
 
@@ -8,20 +9,20 @@ from ....core.utils.graphql import (
     execute_graphql,
 )
 from ..base import ApiSearchParams, BaseApiClient, UpdateListEntryParams, UserListParams
-from ..types import MediaSearchResult, UserProfile
+from ..types import MediaSearchResult, UserMediaListStatus, UserProfile
 from . import gql, mapper
 
 logger = logging.getLogger(__name__)
 ANILIST_ENDPOINT = "https://graphql.anilist.co"
 
 
-status_map = {
-    "watching": "CURRENT",
-    "planning": "PLANNING",
-    "completed": "COMPLETED",
-    "dropped": "DROPPED",
-    "paused": "PAUSED",
-    "repeating": "REPEATING",
+user_list_status_map = {
+    UserMediaListStatus.WATCHING: "CURRENT",
+    UserMediaListStatus.PLANNING: "PLANNING",
+    UserMediaListStatus.COMPLETED: "COMPLETED",
+    UserMediaListStatus.DROPPED: "DROPPED",
+    UserMediaListStatus.PAUSED: "PAUSED",
+    UserMediaListStatus.REPEATING: "REPEATING",
 }
 
 # TODO: Just remove and have consistent variable naming between the two
@@ -86,15 +87,40 @@ class AniListApi(BaseApiClient):
 
     def search_media(self, params: ApiSearchParams) -> Optional[MediaSearchResult]:
         variables = {
-            search_params_map[k]: v for k, v in params.__dict__.items() if v is not None
+            search_params_map[k]: v
+            for k, v in params.__dict__.items()
+            if v is not None and not isinstance(v, Enum)
         }
+
+        # handle case where value is an enum
+        variables.update(
+            {
+                search_params_map[k]: v.value
+                for k, v in params.__dict__.items()
+                if v is not None and isinstance(v, Enum)
+            }
+        )
+
+        # handle case where is a list of enums
+        variables.update(
+            {
+                search_params_map[k]: list(map(lambda item: item.value, v))
+                for k, v in params.__dict__.items()
+                if v is not None and isinstance(v, list)
+            }
+        )
+
         variables["per_page"] = params.per_page or self.config.per_page
 
         # ignore hentai by default
-        variables["genre_not_in"] = params.genre_not_in or ["Hentai"]
+        variables["genre_not_in"] = (
+            list(map(lambda item: item.value, params.genre_not_in))
+            if params.genre_not_in
+            else ["Hentai"]
+        )
 
         # anime by default
-        variables["type"] = params.type or "ANIME"
+        variables["type"] = params.type.value if params.type else "ANIME"
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.SEARCH_MEDIA, variables
         )
@@ -108,12 +134,14 @@ class AniListApi(BaseApiClient):
         # TODO: use consistent variable naming btw graphql and params
         # so variables can be dynamically filled
         variables = {
-            "sort": params.sort or self.config.media_list_sort_by,
+            "sort": params.sort.value
+            if params.sort
+            else self.config.media_list_sort_by,
             "userId": self.user_profile.id,
-            "status": status_map[params.status] if params.status else None,
+            "status": user_list_status_map[params.status] if params.status else None,
             "page": params.page,
             "perPage": params.per_page or self.config.per_page,
-            "type": params.type or "ANIME",
+            "type": params.type.value if params.type else "ANIME",
         }
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_USER_MEDIA_LIST, variables
@@ -126,7 +154,7 @@ class AniListApi(BaseApiClient):
         score_raw = int(params.score * 10) if params.score is not None else None
         variables = {
             "mediaId": params.media_id,
-            "status": status_map[params.status] if params.status else None,
+            "status": user_list_status_map[params.status] if params.status else None,
             "progress": int(float(params.progress)) if params.progress else None,
             "scoreRaw": score_raw,
         }

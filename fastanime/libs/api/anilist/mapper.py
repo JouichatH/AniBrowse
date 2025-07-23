@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from ....core.utils.formatting import renumber_titles, strip_original_episode_prefix
 from ..types import (
@@ -8,13 +8,15 @@ from ..types import (
     MediaImage,
     MediaItem,
     MediaSearchResult,
-    MediaTag,
+    MediaStatus,
+    MediaTagItem,
     MediaTitle,
     MediaTrailer,
     PageInfo,
     StreamingEpisode,
     Studio,
-    UserListStatus,
+    UserListItem,
+    UserMediaListStatus,
     UserProfile,
 )
 from .types import (
@@ -25,7 +27,6 @@ from .types import (
     AnilistImage,
     AnilistMediaList,
     AnilistMediaLists,
-    AnilistMediaListStatus,
     AnilistMediaNextAiringEpisode,
     AnilistMediaTag,
     AnilistMediaTitle,
@@ -40,13 +41,19 @@ from .types import (
 
 logger = logging.getLogger(__name__)
 
+user_list_status_map = {
+    "CURRENT": UserMediaListStatus.WATCHING,
+    "PLANNING": UserMediaListStatus.PLANNING,
+    "COMPLETED": UserMediaListStatus.COMPLETED,
+    "PAUSED": UserMediaListStatus.PAUSED,
+    "REPEATING": UserMediaListStatus.REPEATING,
+}
 status_map = {
-    "CURRENT": "watching",
-    "PLANNING": "planning",
-    "COMPLETED": "completed",
-    "DROPPED": "dropped",
-    "PAUSED": "paused",
-    "REPEATING": "repeating",
+    "FINISHED": MediaStatus.FINISHED,
+    "RELEASING": MediaStatus.RELEASING,
+    "NOT_YET_RELEASED": MediaStatus.NOT_YET_RELEASED,
+    "CANCELLED": MediaStatus.CANCELLED,
+    "HIATUS": MediaStatus.HIATUS,
 }
 
 
@@ -123,10 +130,10 @@ def _to_generic_studios(anilist_studios: AnilistStudioNodes) -> List[Studio]:
     ]
 
 
-def _to_generic_tags(anilist_tags: list[AnilistMediaTag]) -> List[MediaTag]:
+def _to_generic_tags(anilist_tags: list[AnilistMediaTag]) -> List[MediaTagItem]:
     """Maps a list of AniList tags to generic MediaTag objects."""
     return [
-        MediaTag(name=t["name"], rank=t.get("rank"))
+        MediaTagItem(name=t["name"], rank=t.get("rank"))
         for t in anilist_tags
         if t.get("name")
     ]
@@ -200,11 +207,11 @@ def _to_generic_streaming_episodes(
 def _to_generic_user_status(
     anilist_media: AnilistBaseMediaDataSchema,
     anilist_list_entry: Optional[AnilistMediaList],
-) -> Optional[UserListStatus]:
+) -> Optional[UserListItem]:
     """Maps an AniList mediaListEntry to a generic UserListStatus."""
     if anilist_list_entry:
-        return UserListStatus(
-            status=status_map[anilist_list_entry["status"]],  # pyright: ignore
+        return UserListItem(
+            status=user_list_status_map[anilist_list_entry["status"]],
             progress=anilist_list_entry["progress"],
             score=anilist_list_entry["score"],
             repeat=anilist_list_entry["repeat"],
@@ -218,9 +225,9 @@ def _to_generic_user_status(
         if not anilist_media["mediaListEntry"]:
             return
 
-        return UserListStatus(
+        return UserListItem(
             id=anilist_media["mediaListEntry"]["id"],
-            status=status_map[anilist_media["mediaListEntry"]["status"]]  # pyright: ignore
+            status=user_list_status_map[anilist_media["mediaListEntry"]["status"]]
             if anilist_media["mediaListEntry"]["status"]
             else None,
             progress=anilist_media["mediaListEntry"]["progress"],
@@ -236,7 +243,7 @@ def _to_generic_media_item(
         id_mal=data.get("idMal"),
         type=data.get("type", "ANIME"),
         title=_to_generic_media_title(data["title"]),
-        status=data["status"],
+        status=status_map[data["status"]],
         format=data.get("format"),
         cover_image=_to_generic_media_image(data["coverImage"]),
         banner_image=data.get("bannerImage"),
