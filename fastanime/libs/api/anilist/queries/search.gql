@@ -85,6 +85,7 @@ query (
       }
       favourites
       averageScore
+      duration
       episodes
       genres
       synonyms

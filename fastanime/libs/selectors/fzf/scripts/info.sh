@@ -69,6 +69,7 @@ draw_rule
 
 print_kv "Episodes" "{EPISODES}"
 print_kv "Next Episode" "{NEXT_EPISODE}"
+print_kv "Duration" "{DURATION}"
 
 draw_rule
 

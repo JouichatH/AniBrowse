@@ -5,10 +5,13 @@ from typing import List, Optional
 from ....core.utils.formatting import renumber_titles, strip_original_episode_prefix
 from ..types import (
     AiringSchedule,
+    MediaFormat,
+    MediaGenre,
     MediaImage,
     MediaItem,
     MediaSearchResult,
     MediaStatus,
+    MediaTag,
     MediaTagItem,
     MediaTitle,
     MediaTrailer,
@@ -133,7 +136,7 @@ def _to_generic_studios(anilist_studios: AnilistStudioNodes) -> List[Studio]:
 def _to_generic_tags(anilist_tags: list[AnilistMediaTag]) -> List[MediaTagItem]:
     """Maps a list of AniList tags to generic MediaTag objects."""
     return [
-        MediaTagItem(name=t["name"], rank=t.get("rank"))
+        MediaTagItem(name=MediaTag(t["name"]), rank=t.get("rank"))
         for t in anilist_tags
         if t.get("name")
     ]
@@ -244,14 +247,14 @@ def _to_generic_media_item(
         type=data.get("type", "ANIME"),
         title=_to_generic_media_title(data["title"]),
         status=status_map[data["status"]],
-        format=data.get("format"),
+        format=MediaFormat(data["format"]),
         cover_image=_to_generic_media_image(data["coverImage"]),
         banner_image=data.get("bannerImage"),
         trailer=_to_generic_media_trailer(data["trailer"]),
         description=data.get("description"),
         episodes=data.get("episodes"),
         duration=data.get("duration"),
-        genres=data.get("genres", []),
+        genres=[MediaGenre(genre) for genre in data["genres"]],
         tags=_to_generic_tags(data.get("tags")),
         studios=_to_generic_studios(data.get("studios")),
         synonymns=data.get("synonyms", []),

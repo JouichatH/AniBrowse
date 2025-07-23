@@ -82,6 +82,9 @@ def _populate_info_template(item: MediaItem, config: AppConfig) -> str:
             else "N/A"
         ),
         "EPISODES": formatters.shell_safe(str(item.episodes)),
+        "DURATION": formatters.shell_safe(
+            formatters.format_media_duration(item.duration)
+        ),
         "SCORE": formatters.shell_safe(
             formatters.format_score_stars_full(item.average_score)
         ),
