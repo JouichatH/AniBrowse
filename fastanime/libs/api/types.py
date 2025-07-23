@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional
@@ -62,6 +64,141 @@ class MediaFormat(Enum):
     ONE_SHOT = "ONE_SHOT"
 
 
+# MODELS
+class BaseMediaApiModel(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+
+class MediaImage(BaseMediaApiModel):
+    """A generic representation of media imagery URLs."""
+
+    large: str
+    medium: Optional[str] = None
+    extra_large: Optional[str] = None
+
+
+class MediaTitle(BaseMediaApiModel):
+    """A generic representation of media titles."""
+
+    english: str
+    romaji: Optional[str] = None
+    native: Optional[str] = None
+
+
+class MediaTrailer(BaseMediaApiModel):
+    """A generic representation of a media trailer."""
+
+    id: str
+    site: str  # e.g., "youtube"
+    thumbnail_url: Optional[str] = None
+
+
+class AiringSchedule(BaseMediaApiModel):
+    """A generic representation of the next airing episode."""
+
+    episode: int
+    airing_at: Optional[datetime] = None
+
+
+class Studio(BaseMediaApiModel):
+    """A generic representation of an animation studio."""
+
+    id: Optional[int] = None
+    name: Optional[str] = None
+    favourites: Optional[int] = None
+    is_animation_studio: Optional[bool] = None
+
+
+class MediaTagItem(BaseMediaApiModel):
+    """A generic representation of a descriptive tag."""
+
+    name: MediaTag
+    rank: Optional[int] = None  # Percentage relevance from 0-100
+
+
+class StreamingEpisode(BaseMediaApiModel):
+    """A generic representation of a streaming episode."""
+
+    title: str
+    thumbnail: Optional[str] = None
+
+
+class UserListItem(BaseMediaApiModel):
+    """Generic representation of a user's list status for a media item."""
+
+    id: Optional[int] = None
+    status: Optional[UserMediaListStatus] = None
+    progress: Optional[int] = None
+    score: Optional[float] = None
+    repeat: Optional[int] = None
+    notes: Optional[str] = None
+    start_date: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: Optional[str] = None
+
+
+class MediaItem(BaseMediaApiModel):
+    id: int
+    title: MediaTitle
+    id_mal: Optional[int] = None
+    type: MediaType = MediaType.ANIME
+    status: MediaStatus = MediaStatus.FINISHED
+    format: MediaFormat = MediaFormat.TV
+
+    cover_image: Optional[MediaImage] = None
+    banner_image: Optional[str] = None
+    trailer: Optional[MediaTrailer] = None
+
+    description: Optional[str] = None
+    episodes: Optional[int] = None
+    duration: Optional[int] = None  # In minutes
+    genres: List[MediaGenre] = Field(default_factory=list)
+    tags: List[MediaTagItem] = Field(default_factory=list)
+    studios: List[Studio] = Field(default_factory=list)
+    synonymns: List[str] = Field(default_factory=list)
+
+    average_score: Optional[float] = None
+    popularity: Optional[int] = None
+    favourites: Optional[int] = None
+
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+    next_airing: Optional[AiringSchedule] = None
+
+    # streaming episodes
+    streaming_episodes: List[StreamingEpisode] = Field(default_factory=list)
+
+    # user related
+    user_status: Optional[UserListItem] = None
+
+
+class PageInfo(BaseMediaApiModel):
+    """Generic pagination information."""
+
+    total: int = 1
+    current_page: int = 1
+    has_next_page: bool = False
+    per_page: int = 15
+
+
+class MediaSearchResult(BaseMediaApiModel):
+    """A generic representation of a page of media search results."""
+
+    page_info: PageInfo
+    media: List[MediaItem] = Field(default_factory=list)
+
+
+class UserProfile(BaseMediaApiModel):
+    """A generic representation of a user's profile."""
+
+    id: int
+    name: str
+    avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
+
+
+# ENUMS
 class MediaTag(Enum):
     # Cast
     POLYAMOROUS = "Polyamorous"
@@ -91,6 +228,7 @@ class MediaTag(Enum):
     ARRANGED_MARRIAGE = "Arranged Marriage"
     ARTIFICIAL_INTELLIGENCE = "Artificial Intelligence"
     ASEXUAL = "Asexual"
+    BISEXUAL = "Bisexual"
     BUTLER = "Butler"
     CENTAUR = "Centaur"
     CHIMERA = "Chimera"
@@ -109,7 +247,6 @@ class MediaTag(Enum):
     DRAGONS = "Dragons"
     DULLAHAN = "Dullahan"
     ELF = "Elf"
-    EXHIBITIONISM = "Exhibitionism"
     FAIRY = "Fairy"
     FEMBOY = "Femboy"
     GHOST = "Ghost"
@@ -119,7 +256,6 @@ class MediaTag(Enum):
     HIKIKOMORI = "Hikikomori"
     HOMELESS = "Homeless"
     IDOL = "Idol"
-    INSEKI = "Inseki"
     KEMONOMIMI = "Kemonomimi"
     KUUDERE = "Kuudere"
     MAIDS = "Maids"
@@ -150,13 +286,12 @@ class MediaTag(Enum):
     VETERINARIAN = "Veterinarian"
     VIKINGS = "Vikings"
     VILLAINESS = "Villainess"
-    VIRGINITY = "Virginity"
     VTUBER = "VTuber"
     WEREWOLF = "Werewolf"
     WITCH = "Witch"
     YANDERE = "Yandere"
+    YOUKAI = "Youkai"
     ZOMBIE = "Zombie"
-    YOUKAI = "Youkai"  # Added
 
     # Demographic
     JOSEI = "Josei"
@@ -171,6 +306,7 @@ class MediaTag(Enum):
     # Setting Scene
     BAR = "Bar"
     BOARDING_SCHOOL = "Boarding School"
+    CAMPING = "Camping"
     CIRCUS = "Circus"
     COASTAL = "Coastal"
     COLLEGE = "College"
@@ -181,7 +317,7 @@ class MediaTag(Enum):
     KONBINI = "Konbini"
     NATURAL_DISASTER = "Natural Disaster"
     OFFICE = "Office"
-    OUTDOOR = "Outdoor"
+    OUTDOOR_ACTIVITIES = "Outdoor Activities"
     PRISON = "Prison"
     RESTAURANT = "Restaurant"
     RURAL = "Rural"
@@ -189,6 +325,7 @@ class MediaTag(Enum):
     SCHOOL_CLUB = "School Club"
     SNOWSCAPE = "Snowscape"
     URBAN = "Urban"
+    WILDERNESS = "Wilderness"
     WORK = "Work"
 
     # Setting Time
@@ -197,6 +334,7 @@ class MediaTag(Enum):
     ANCIENT_CHINA = "Ancient China"
     DYSTOPIAN = "Dystopian"
     HISTORICAL = "Historical"
+    MEDIEVAL = "Medieval"
     TIME_SKIP = "Time Skip"
 
     # Setting Universe
@@ -209,6 +347,72 @@ class MediaTag(Enum):
     URBAN_FANTASY = "Urban Fantasy"
     VIRTUAL_WORLD = "Virtual World"
 
+    # Sexual Content
+    AHEGAO = "Ahegao"
+    AMPUTATION = "Amputation"
+    ANAL_SEX = "Anal Sex"
+    ARMPITS = "Armpits"
+    ASHIKOKI = "Ashikoki"
+    ASPHYXIATION = "Asphyxiation"
+    BONDAGE = "Bondage"
+    BOOBJOB = "Boobjob"
+    CERVIX_PENETRATION = "Cervix Penetration"
+    CHEATING = "Cheating"
+    CUMFLATION = "Cumflation"
+    CUNNILINGUS = "Cunnilingus"
+    DEEPTHROAT = "Deepthroat"
+    DEFLORATION = "Defloration"
+    DILF = "DILF"
+    DOUBLE_PENETRATION = "Double Penetration"
+    EROTIC_PIERCINGS = "Erotic Piercings"
+    EXHIBITIONISM = "Exhibitionism"
+    FACIAL = "Facial"
+    FEET = "Feet"
+    FELLATIO = "Fellatio"
+    FEMDOM = "Femdom"
+    FISTING = "Fisting"
+    FLAT_CHEST = "Flat Chest"
+    FUTANARI = "Futanari"
+    GROUP_SEX = "Group Sex"
+    HAIR_PULLING = "Hair Pulling"
+    HANDJOB = "Handjob"
+    HUMAN_PET = "Human Pet"
+    HYPERSEXUALITY = "Hypersexuality"
+    INCEST = "Incest"
+    INSEKI = "Inseki"
+    IRRUMATIO = "Irrumatio"
+    LACTATION = "Lactation"
+    LARGE_BREASTS = "Large Breasts"
+    MALE_PREGNANCY = "Male Pregnancy"
+    MASOCHISM = "Masochism"
+    MASTURBATION = "Masturbation"
+    MATING_PRESS = "Mating Press"
+    MILF = "MILF"
+    NAKADASHI = "Nakadashi"
+    NETORARE = "Netorare"
+    NETORASE = "Netorase"
+    NETORI = "Netori"
+    PET_PLAY = "Pet Play"
+    PROSTITUTION = "Prostitution"
+    PUBLIC_SEX = "Public Sex"
+    RAPE = "Rape"
+    RIMJOB = "Rimjob"
+    SADISM = "Sadism"
+    SCAT = "Scat"
+    SCISSORING = "Scissoring"
+    SEX_TOYS = "Sex Toys"
+    SHIMAIDON = "Shimaidon"
+    SQUIRTING = "Squirting"
+    SUMATA = "Sumata"
+    SWEAT = "Sweat"
+    TENTACLES = "Tentacles"
+    THREESOME = "Threesome"
+    VIRGINITY = "Virginity"
+    VORE = "Vore"
+    VOYEUR = "Voyeur"
+    WATERSPORTS = "Watersports"
+    ZOOPHILIA = "Zoophilia"
+
     # Technical
     _4_KOMA = "4-koma"
     ACHROMATIC = "Achromatic"
@@ -219,12 +423,15 @@ class MediaTag(Enum):
     FLASH = "Flash"
     FULL_CGI = "Full CGI"
     FULL_COLOR = "Full Color"
+    LONG_STRIP = "Long Strip"
+    MIXED_MEDIA = "Mixed Media"
     NO_DIALOGUE = "No Dialogue"
     NON_FICTION = "Non-fiction"
     POV = "POV"
     PUPPETRY = "Puppetry"
     ROTOSCOPING = "Rotoscoping"
     STOP_MOTION = "Stop Motion"
+    VERTICAL_VIDEO = "Vertical Video"
 
     # Theme Action
     ARCHERY = "Archery"
@@ -272,9 +479,6 @@ class MediaTag(Enum):
     ECO_HORROR = "Eco-Horror"
     FAKE_RELATIONSHIP = "Fake Relationship"
     KINGDOM_MANAGEMENT = "Kingdom Management"
-    MASTURBATION = "Masturbation"
-    PREGNANCY = "Pregnancy"
-    RAPE = "Rape"
     REHABILITATION = "Rehabilitation"
     REVENGE = "Revenge"
     SUICIDE = "Suicide"
@@ -283,8 +487,8 @@ class MediaTag(Enum):
     # Theme Fantasy
     ALCHEMY = "Alchemy"
     BODY_SWAPPING = "Body Swapping"
-    CURSES = "Curses"
     CULTIVATION = "Cultivation"
+    CURSES = "Curses"
     EXORCISM = "Exorcism"
     FAIRY_TALE = "Fairy Tale"
     HENSHIN = "Henshin"
@@ -292,7 +496,6 @@ class MediaTag(Enum):
     KAIJU = "Kaiju"
     MAGIC = "Magic"
     MYTHOLOGY = "Mythology"
-    MEDIEVAL = "Medieval"
     NECROMANCY = "Necromancy"
     SHAPESHIFTING = "Shapeshifting"
     STEAMPUNK = "Steampunk"
@@ -352,18 +555,17 @@ class MediaTag(Enum):
     ASTRONOMY = "Astronomy"
     AUTOBIOGRAPHICAL = "Autobiographical"
     BIOGRAPHICAL = "Biographical"
+    BLACKMAIL = "Blackmail"
     BODY_HORROR = "Body Horror"
     BODY_IMAGE = "Body Image"
     CANNIBALISM = "Cannibalism"
     CHIBI = "Chibi"
-    COHABITATION = "Cohabitation"
     COSMIC_HORROR = "Cosmic Horror"
     CREATURE_TAMING = "Creature Taming"
     CRIME = "Crime"
     CROSSOVER = "Crossover"
     DEATH_GAME = "Death Game"
     DENPA = "Denpa"
-    DEFLORATION = "Defloration"
     DRUGS = "Drugs"
     ECONOMICS = "Economics"
     EDUCATIONAL = "Educational"
@@ -374,23 +576,21 @@ class MediaTag(Enum):
     GAMBLING = "Gambling"
     GENDER_BENDING = "Gender Bending"
     GORE = "Gore"
-    HYPERSEXUALITY = "Hypersexuality"
+    INDIGENOUS_CULTURES = "Indigenous Cultures"
     LANGUAGE_BARRIER = "Language Barrier"
-    LARGE_BREASTS = "Large Breasts"
     LGBTQ_PLUS_THEMES = "LGBTQ+ Themes"
     LOST_CIVILIZATION = "Lost Civilization"
     MARRIAGE = "Marriage"
     MEDICINE = "Medicine"
     MEMORY_MANIPULATION = "Memory Manipulation"
     META = "Meta"
-    MIXED_MEDIA = "Mixed Media"
     MOUNTAINEERING = "Mountaineering"
     NOIR = "Noir"
     OTAKU_CULTURE = "Otaku Culture"
-    OUTDOOR_ACTIVITIES = "Outdoor Activities"
     PANDEMIC = "Pandemic"
     PHILOSOPHY = "Philosophy"
     POLITICS = "Politics"
+    PREGNANCY = "Pregnancy"
     PROXY_BATTLE = "Proxy Battle"
     PSYCHOSEXUAL = "Psychosexual"
     REINCARNATION = "Reincarnation"
@@ -401,12 +601,10 @@ class MediaTag(Enum):
     SOFTWARE_DEVELOPMENT = "Software Development"
     SURVIVAL = "Survival"
     TERRORISM = "Terrorism"
-    THREESOME = "Threesome"
     TORTURE = "Torture"
     TRAVEL = "Travel"
+    VOCAL_SYNTH = "Vocal Synth"
     WAR = "War"
-    WILDERNESS = "Wilderness"
-    VORE = "Vore"  # Added
 
     # Theme Other-Organisations
     ASSASSINS = "Assassins"
@@ -431,28 +629,26 @@ class MediaTag(Enum):
 
     # Theme Romance
     AGE_GAP = "Age Gap"
-    BISEXUAL = "Bisexual"
     BOYS_LOVE = "Boys' Love"
+    COHABITATION = "Cohabitation"
     FEMALE_HAREM = "Female Harem"
     HETEROSEXUAL = "Heterosexual"
-    INCEST = "Incest"
     LOVE_TRIANGLE = "Love Triangle"
     MALE_HAREM = "Male Harem"
     MATCHMAKING = "Matchmaking"
     MIXED_GENDER_HAREM = "Mixed Gender Harem"
-    PUBLIC_SEX = "Public Sex"
     TEENS_LOVE = "Teens' Love"
     UNREQUITED_LOVE = "Unrequited Love"
     YURI = "Yuri"
 
-    # Theme Sci Fi
+    # Theme Sci-Fi
     CYBERPUNK = "Cyberpunk"
     SPACE_OPERA = "Space Opera"
     TIME_LOOP = "Time Loop"
     TIME_MANIPULATION = "Time Manipulation"
     TOKUSATSU = "Tokusatsu"
 
-    # Theme Sci Fi-Mecha
+    # Theme Sci-Fi-Mecha
     REAL_ROBOT = "Real Robot"
     SUPER_ROBOT = "Super Robot"
 
@@ -466,141 +662,6 @@ class MediaTag(Enum):
     PARENTHOOD = "Parenthood"
 
 
-# MODELS
-class BaseApiModel(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-
-class MediaImage(BaseApiModel):
-    """A generic representation of media imagery URLs."""
-
-    large: str
-    medium: Optional[str] = None
-    extra_large: Optional[str] = None
-
-
-class MediaTitle(BaseApiModel):
-    """A generic representation of media titles."""
-
-    english: str
-    romaji: Optional[str] = None
-    native: Optional[str] = None
-
-
-class MediaTrailer(BaseApiModel):
-    """A generic representation of a media trailer."""
-
-    id: str
-    site: str  # e.g., "youtube"
-    thumbnail_url: Optional[str] = None
-
-
-class AiringSchedule(BaseApiModel):
-    """A generic representation of the next airing episode."""
-
-    episode: int
-    airing_at: Optional[datetime] = None
-
-
-class Studio(BaseApiModel):
-    """A generic representation of an animation studio."""
-
-    id: Optional[int] = None
-    name: Optional[str] = None
-    favourites: Optional[int] = None
-    is_animation_studio: Optional[bool] = None
-
-
-class MediaTagItem(BaseApiModel):
-    """A generic representation of a descriptive tag."""
-
-    name: MediaTag
-    rank: Optional[int] = None  # Percentage relevance from 0-100
-
-
-class StreamingEpisode(BaseApiModel):
-    """A generic representation of a streaming episode."""
-
-    title: str
-    thumbnail: Optional[str] = None
-
-
-class UserListItem(BaseApiModel):
-    """Generic representation of a user's list status for a media item."""
-
-    id: Optional[int] = None
-    status: Optional[UserMediaListStatus] = None
-    progress: Optional[int] = None
-    score: Optional[float] = None
-    repeat: Optional[int] = None
-    notes: Optional[str] = None
-    start_date: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    created_at: Optional[str] = None
-
-
-class MediaItem(BaseApiModel):
-    id: int
-    title: MediaTitle
-    id_mal: Optional[int] = None
-    type: MediaType = MediaType.ANIME
-    status: MediaStatus = MediaStatus.FINISHED
-    format: MediaFormat = MediaFormat.TV
-
-    cover_image: Optional[MediaImage] = None
-    banner_image: Optional[str] = None
-    trailer: Optional[MediaTrailer] = None
-
-    description: Optional[str] = None
-    episodes: Optional[int] = None
-    duration: Optional[int] = None  # In minutes
-    genres: List[MediaGenre] = Field(default_factory=list)
-    tags: List[MediaTagItem] = Field(default_factory=list)
-    studios: List[Studio] = Field(default_factory=list)
-    synonymns: List[str] = Field(default_factory=list)
-
-    average_score: Optional[float] = None
-    popularity: Optional[int] = None
-    favourites: Optional[int] = None
-
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-
-    next_airing: Optional[AiringSchedule] = None
-
-    # streaming episodes
-    streaming_episodes: List[StreamingEpisode] = Field(default_factory=list)
-
-    # user related
-    user_status: Optional[UserListItem] = None
-
-
-class PageInfo(BaseApiModel):
-    """Generic pagination information."""
-
-    total: int = 1
-    current_page: int = 1
-    has_next_page: bool = False
-    per_page: int = 15
-
-
-class MediaSearchResult(BaseApiModel):
-    """A generic representation of a page of media search results."""
-
-    page_info: PageInfo
-    media: List[MediaItem] = Field(default_factory=list)
-
-
-class UserProfile(BaseApiModel):
-    """A generic representation of a user's profile."""
-
-    id: int
-    name: str
-    avatar_url: Optional[str] = None
-    banner_url: Optional[str] = None
-
-
-# ENUMS
 class MediaSort(Enum):
     ID = "ID"
     ID_DESC = "ID_DESC"

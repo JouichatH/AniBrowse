@@ -111,7 +111,7 @@ class AniListApi(BaseApiClient):
             {
                 search_params_map[k]: list(map(lambda item: item.value, v))
                 for k, v in params.__dict__.items()
-                if v is not None and isinstance(v, list)
+                if v is not None and isinstance(v, list) and isinstance(v[0], Enum)
             }
         )
 
@@ -143,7 +143,7 @@ class AniListApi(BaseApiClient):
         variables = {
             "sort": params.sort.value
             if params.sort
-            else self.config.media_list_sort_by,
+            else self.config.media_list_sort_by.value,
             "userId": self.user_profile.id,
             "status": user_list_status_map[params.status] if params.status else None,
             "page": params.page,

@@ -91,7 +91,7 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
         console.print(
             f"[bold red]No stream of quality '{config.stream.quality}' found on server '{selected_server.name}'.[/bold red]"
         )
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
 
     # --- Launch Player ---
     final_title = f"{provider_anime.title} - Ep {episode_number}"

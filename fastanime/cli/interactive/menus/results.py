@@ -1,108 +1,103 @@
+from dataclasses import asdict
+from typing import Callable, Dict, Union
+
 from ....libs.api.params import MediaSearchParams, UserMediaListSearchParams
 from ....libs.api.types import MediaItem, MediaStatus, UserMediaListStatus
 from ..session import Context, session
-from ..state import InternalDirective, MediaApiState, State
+from ..state import InternalDirective, MediaApiState, MenuName, State
 
 
 @session.menu
 def results(ctx: Context, state: State) -> State | InternalDirective:
-    search_results = state.media_api.search_results
     feedback = ctx.services.feedback
     feedback.clear_console()
 
-    if not search_results or not search_results.media:
+    search_result = state.media_api.search_result
+    page_info = state.media_api.page_info
+
+    if not search_result:
         feedback.info("No anime found for the given criteria")
         return InternalDirective.BACK
 
-    anime_items = search_results.media
-    formatted_titles = [
-        _format_anime_choice(anime, ctx.config) for anime in anime_items
-    ]
-
-    anime_map = dict(zip(formatted_titles, anime_items))
+    _formatted_titles = [_format_title(ctx, anime) for anime in search_result.values()]
 
     preview_command = None
     if ctx.config.general.preview != "none":
         from ...utils.previews import get_anime_preview
 
-        preview_command = get_anime_preview(anime_items, formatted_titles, ctx.config)
-
-    choices = formatted_titles
-    page_info = search_results.page_info
-
-    # Add pagination controls if available with more descriptive text
-    if page_info.has_next_page:
-        choices.append(
-            f"{'➡️ ' if ctx.config.general.icons else ''}Next Page (Page {page_info.current_page + 1})"
+        preview_command = get_anime_preview(
+            list(search_result.values()), _formatted_titles, ctx.config
         )
-    if page_info.current_page > 1:
-        choices.append(
-            f"{'⬅️ ' if ctx.config.general.icons else ''}Previous Page (Page {page_info.current_page - 1})"
-        )
-    choices.append("Back")
 
-    # Create header with auth status and pagination info
-    pagination_info = f"Page {page_info.current_page}"
-    if page_info.total > 0 and page_info.per_page > 0:
-        total_pages = (page_info.total + page_info.per_page - 1) // page_info.per_page
-        pagination_info += f" of ~{total_pages}"
+    choices: Dict[str, Callable[[], Union[int, State, InternalDirective]]] = dict(
+        zip(_formatted_titles, [lambda: item for item in search_result.keys()])
+    )
 
-    choice_str = ctx.selector.choose(
+    if page_info:
+        if page_info.has_next_page:
+            choices.update(
+                {
+                    f"{'➡️ ' if ctx.config.general.icons else ''}Next Page (Page {page_info.current_page + 1})": lambda: _handle_pagination(
+                        ctx, state, 1
+                    )
+                }
+            )
+        if page_info.current_page > 1:
+            choices.update(
+                {
+                    f"{'⬅️ ' if ctx.config.general.icons else ''}Previous Page (Page {page_info.current_page - 1})": lambda: _handle_pagination(
+                        ctx, state, -1
+                    )
+                }
+            )
+    choices.update(
+        {"Back": lambda: InternalDirective.MAIN, "Exit": lambda: InternalDirective.EXIT}
+    )
+
+    choice = ctx.selector.choose(
         prompt="Select Anime",
-        choices=choices,
+        choices=list(choices),
         preview=preview_command,
     )
 
-    if not choice_str:
-        return InternalDirective.EXIT
+    if not choice:
+        return InternalDirective.RELOAD
 
-    if choice_str == "Back":
-        return InternalDirective.BACK
-
-    if (
-        choice_str == "Next Page"
-        or choice_str == "Previous Page"
-        or choice_str.startswith("Next Page (")
-        or choice_str.startswith("Previous Page (")
-    ):
-        page_delta = 1 if choice_str.startswith("Next Page") else -1
-
-        return _handle_pagination(ctx, state, page_delta)
-
-    selected_anime = anime_map.get(choice_str)
-    if selected_anime:
+    next_step = choices[choice]()
+    if isinstance(next_step, State) or isinstance(next_step, InternalDirective):
+        return next_step
+    else:
         return State(
-            menu_name="MEDIA_ACTIONS",
+            menu_name=MenuName.MEDIA_ACTIONS,
             media_api=MediaApiState(
-                search_results=state.media_api.search_results,  # Carry over the list
-                anime=selected_anime,  # Set the newly selected item
+                media_id=next_step,
+                search_result=state.media_api.search_result,
+                page_info=state.media_api.page_info,
             ),
-            provider=state.provider,
         )
 
-    # Fallback
-    return InternalDirective.CONTINUE
 
+def _format_title(ctx: Context, media_item: MediaItem) -> str:
+    config = ctx.config
 
-def _format_anime_choice(anime: MediaItem, config) -> str:
-    """Creates a display string for a single anime item for the selector."""
-    title = anime.title.english or anime.title.romaji
+    title = media_item.title.english or media_item.title.romaji
     progress = "0"
-    if anime.user_status:
-        progress = str(anime.user_status.progress or 0)
 
-    episodes_total = str(anime.episodes or "??")
+    if media_item.user_status:
+        progress = str(media_item.user_status.progress or 0)
+
+    episodes_total = str(media_item.episodes or "??")
     display_title = f"{title} ({progress} of {episodes_total})"
 
     # Add a visual indicator for new episodes if applicable
     if (
-        anime.status == MediaStatus.RELEASING
-        and anime.next_airing
-        and anime.user_status
-        and anime.user_status.status == UserMediaListStatus.WATCHING
+        media_item.status == MediaStatus.RELEASING
+        and media_item.next_airing
+        and media_item.user_status
+        and media_item.user_status.status == UserMediaListStatus.WATCHING
     ):
-        last_aired = anime.next_airing.episode - 1
-        unwatched = last_aired - (anime.user_status.progress or 0)
+        last_aired = media_item.next_airing.episode - 1
+        unwatched = last_aired - (media_item.user_status.progress or 0)
         if unwatched > 0:
             icon = "🔹" if config.general.icons else "!"
             display_title += f" {icon}{unwatched} new{icon}"
@@ -113,123 +108,83 @@ def _format_anime_choice(anime: MediaItem, config) -> str:
 def _handle_pagination(
     ctx: Context, state: State, page_delta: int
 ) -> State | InternalDirective:
-    """
-    Handle pagination by fetching the next or previous page of results.
-
-    Args:
-        ctx: The application context
-        state: Current state containing search results and original parameters
-        page_delta: +1 for next page, -1 for previous page
-
-    Returns:
-        New State with updated search results or ControlFlow.CONTINUE on error
-    """
     feedback = ctx.services.feedback
 
-    if not state.media_api.search_results:
-        feedback.error("No search results available for pagination")
-        return InternalDirective.CONTINUE
+    search_params = state.media_api.search_params
 
-    current_page = state.media_api.search_results.page_info.current_page
+    if (
+        not state.media_api.search_result
+        or not state.media_api.page_info
+        or not search_params
+    ):
+        feedback.error("No search results available for pagination")
+        return InternalDirective.RELOAD
+
+    current_page = state.media_api.page_info.current_page
     new_page = current_page + page_delta
 
     # Validate page bounds
     if new_page < 1:
         feedback.warning("Already at the first page")
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
 
-    if page_delta > 0 and not state.media_api.search_results.page_info.has_next_page:
+    if page_delta == -1:
+        return InternalDirective.BACK
+    if page_delta > 0 and not state.media_api.page_info.has_next_page:
         feedback.warning("No more pages available")
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
 
     # Determine which type of search to perform based on stored parameters
-    if state.media_api.original_api_params:
-        # Media search (trending, popular, search, etc.)
-        return _fetch_media_page(ctx, state, new_page, feedback)
-    elif state.media_api.original_user_list_params:
-        # User list search (watching, completed, etc.)
-        return _fetch_user_list_page(ctx, state, new_page, feedback)
+    if isinstance(search_params, UserMediaListSearchParams):
+        if not ctx.media_api.is_authenticated():
+            feedback.error("You haven't logged in")
+            return InternalDirective.RELOAD
+
+        search_params_dict = asdict(search_params)
+        search_params_dict.pop("page")
+
+        loading_message = f"Fetching media list"
+        result = None
+        new_search_params = UserMediaListSearchParams(
+            **search_params_dict, page=new_page
+        )
+        with feedback.progress(loading_message):
+            result = ctx.media_api.search_media_list(new_search_params)
+
+        if result:
+            return State(
+                menu_name=MenuName.RESULTS,
+                media_api=MediaApiState(
+                    search_result={
+                        media_item.id: media_item for media_item in result.media
+                    },
+                    search_params=new_search_params,
+                    page_info=result.page_info,
+                ),
+            )
     else:
-        feedback.error("No original search parameters found for pagination")
-        return InternalDirective.CONTINUE
+        search_params_dict = asdict(search_params)
+        search_params_dict.pop("page")
 
+        loading_message = f"Fetching media list"
+        result = None
+        new_search_params = MediaSearchParams(**search_params_dict, page=new_page)
+        with feedback.progress(loading_message):
+            result = ctx.media_api.search_media(new_search_params)
 
-def _fetch_media_page(
-    ctx: Context, state: State, page: int, feedback
-) -> State | InternalDirective:
-    """Fetch a specific page for media search results."""
-    original_params = state.media_api.original_api_params
-    if not original_params:
-        feedback.error("No original API parameters found")
-        return InternalDirective.CONTINUE
+        if result:
+            return State(
+                menu_name=MenuName.RESULTS,
+                media_api=MediaApiState(
+                    search_result={
+                        media_item.id: media_item for media_item in result.media
+                    },
+                    search_params=new_search_params,
+                    page_info=result.page_info,
+                ),
+            )
 
-    # Create new parameters with updated page number
-    new_params = MediaSearchParams(
-        query=original_params.query,
-        page=page,
-        per_page=original_params.per_page,
-        sort=original_params.sort,
-        id_in=original_params.id_in,
-        genre_in=original_params.genre_in,
-        genre_not_in=original_params.genre_not_in,
-        tag_in=original_params.tag_in,
-        tag_not_in=original_params.tag_not_in,
-        status_in=original_params.status_in,
-        status=original_params.status,
-        status_not_in=original_params.status_not_in,
-        popularity_greater=original_params.popularity_greater,
-        popularity_lesser=original_params.popularity_lesser,
-        averageScore_greater=original_params.averageScore_greater,
-        averageScore_lesser=original_params.averageScore_lesser,
-        seasonYear=original_params.seasonYear,
-        season=original_params.season,
-        startDate_greater=original_params.startDate_greater,
-        startDate_lesser=original_params.startDate_lesser,
-        startDate=original_params.startDate,
-        endDate_greater=original_params.endDate_greater,
-        endDate_lesser=original_params.endDate_lesser,
-        format_in=original_params.format_in,
-        type=original_params.type,
-        on_list=original_params.on_list,
-    )
-
-    result = ctx.media_api.search_media(new_params)
-
-    return State(
-        menu_name="RESULTS",
-        media_api=MediaApiState(
-            search_results=result,
-            original_api_params=original_params,  # Keep original params for further pagination
-            original_user_list_params=state.media_api.original_user_list_params,
-        ),
-        provider=state.provider,  # Preserve provider state if it exists
-    )
-
-
-def _fetch_user_list_page(
-    ctx: Context, state: State, page: int, feedback
-) -> State | InternalDirective:
-    """Fetch a specific page for user list results."""
-    original_params = state.media_api.original_user_list_params
-    if not original_params:
-        feedback.error("No original user list parameters found")
-        return InternalDirective.CONTINUE
-
-    # Create new parameters with updated page number
-    new_params = UserMediaListSearchParams(
-        status=original_params.status,
-        page=page,
-        per_page=original_params.per_page,
-    )
-
-    result = ctx.media_api.search_media_list(new_params)
-
-    return State(
-        menu_name="RESULTS",
-        media_api=MediaApiState(
-            search_results=result,
-            original_api_params=state.media_api.original_api_params,
-            original_user_list_params=original_params,  # Keep original params for further pagination
-        ),
-        provider=state.provider,  # Preserve provider state if it exists
-    )
+    # print(new_search_params)
+    # print(result)
+    feedback.warning("Failed to load page")
+    return InternalDirective.RELOAD

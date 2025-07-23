@@ -192,7 +192,8 @@ class MediaRegistryService:
         index.media_index[f"{self._media_api}_{media_id}"] = index_entry
         self._save_index(index)
 
-    def get_recently_watched(self, limit: int) -> MediaSearchResult:
+    # TODO: standardize params passed to this
+    def get_recently_watched(self, limit: Optional[int] = None) -> MediaSearchResult:
         """Get recently watched anime."""
         index = self._load_index()
 
@@ -205,8 +206,8 @@ class MediaRegistryService:
             record = self.get_media_record(entry.media_id)
             if record:
                 recent_media.append(record.media_item)
-            if len(recent_media) == limit:
-                break
+            # if len(recent_media) == limit:
+            #     break
 
         page_info = PageInfo(
             total=len(sorted_entries),

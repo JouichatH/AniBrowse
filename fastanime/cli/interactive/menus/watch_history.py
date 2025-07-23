@@ -90,7 +90,7 @@ def watch_history(ctx: Context, state: State) -> State | InternalDirective:
     if result == "BACK":
         return InternalDirective.BACK
     else:
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
 
 
 def _display_history_stats(

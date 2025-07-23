@@ -10,6 +10,8 @@ from ...libs.providers.anime.types import Anime, SearchResults, Server
 
 # TODO: is internal directive a good name
 class InternalDirective(Enum):
+    MAIN = "MAIN"
+
     BACK = auto()
 
     BACKX2 = auto()
@@ -20,7 +22,7 @@ class InternalDirective(Enum):
 
     CONFIG_EDIT = auto()
 
-    CONTINUE = auto()
+    RELOAD = auto()
 
 
 class MenuName(Enum):
@@ -34,6 +36,7 @@ class MenuName(Enum):
     PLAYER_CONTROLS = "PLAYER_CONTROLS"
     USER_MEDIA_LIST = "USER_MEDIA_LIST"
     SESSION_MANAGEMENT = "SESSION_MANAGEMENT"
+    MEDIA_ACTIONS = "MEDIA_ACTIONS"
 
 
 class StateModel(BaseModel):

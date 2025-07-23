@@ -57,7 +57,7 @@ def _watch_trailer(ctx: Context, state: State) -> MenuAction:
         feedback = ctx.services.feedback
         anime = state.media_api.anime
         if not anime:
-            return InternalDirective.CONTINUE
+            return InternalDirective.RELOAD
         if not anime.trailer or not anime.trailer.id:
             feedback.warning(
                 "No trailer available for this anime",
@@ -68,7 +68,7 @@ def _watch_trailer(ctx: Context, state: State) -> MenuAction:
 
             ctx.player.play(PlayerParams(url=trailer_url, title=""))
 
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
 
     return action
 
@@ -78,10 +78,10 @@ def _add_to_list(ctx: Context, state: State) -> MenuAction:
         feedback = ctx.services.feedback
         anime = state.media_api.anime
         if not anime:
-            return InternalDirective.CONTINUE
+            return InternalDirective.RELOAD
 
         if not ctx.media_api.is_authenticated():
-            return InternalDirective.CONTINUE
+            return InternalDirective.RELOAD
 
         choices = [
             "watching",
@@ -99,7 +99,7 @@ def _add_to_list(ctx: Context, state: State) -> MenuAction:
                 UpdateListEntryParams(media_id=anime.id, status=status),  # pyright:ignore
                 feedback,
             )
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
 
     return action
 
@@ -109,11 +109,11 @@ def _score_anime(ctx: Context, state: State) -> MenuAction:
         feedback = ctx.services.feedback
         anime = state.media_api.anime
         if not anime:
-            return InternalDirective.CONTINUE
+            return InternalDirective.RELOAD
 
         # Check authentication before proceeding
         if not ctx.media_api.is_authenticated():
-            return InternalDirective.CONTINUE
+            return InternalDirective.RELOAD
 
         score_str = ctx.selector.ask("Enter score (0.0 - 10.0):")
         try:
@@ -130,7 +130,7 @@ def _score_anime(ctx: Context, state: State) -> MenuAction:
             feedback.error(
                 "Invalid score entered", "Please enter a number between 0.0 and 10.0"
             )
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
 
     return action
 
@@ -139,7 +139,7 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
     def action():
         anime = state.media_api.anime
         if not anime:
-            return InternalDirective.CONTINUE
+            return InternalDirective.RELOAD
 
         # TODO: Make this nice and include all other media item fields
         from rich import box
@@ -161,7 +161,7 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
 
         console.print(Panel(panel_content, title=title, box=box.ROUNDED, expand=True))
         ctx.selector.ask("Press Enter to continue...")
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
 
     return action
 
@@ -170,6 +170,6 @@ def _update_user_list(
     ctx: Context, anime: MediaItem, params: UpdateListEntryParams, feedback
 ):
     if ctx.media_api.is_authenticated():
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
 
     ctx.media_api.update_list_entry(params)

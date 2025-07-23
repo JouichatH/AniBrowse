@@ -66,11 +66,11 @@ def auth(ctx: Context, state: State) -> State | InternalDirective:
     elif "View Profile Details" in choice:
         _display_user_profile_details(console, user_profile, icons)
         feedback.pause_for_user("Press Enter to continue")
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
     elif "How to Get Token" in choice:
         _display_token_help(console, icons)
         feedback.pause_for_user("Press Enter to continue")
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
     else:  # Back to Main Menu
         return InternalDirective.BACK
 
@@ -164,7 +164,7 @@ def _handle_login(
         )
         feedback.pause_for_user("Press Enter to continue")
 
-    return InternalDirective.CONTINUE
+    return InternalDirective.RELOAD
 
 
 def _handle_logout(
@@ -176,7 +176,7 @@ def _handle_logout(
         "This will remove your saved AniList token and log you out",
         default=False,
     ):
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
 
     def perform_logout():
         # Clear from auth manager

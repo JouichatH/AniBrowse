@@ -2,8 +2,7 @@ import importlib.util
 import logging
 import os
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Union
 
 import click
 
@@ -23,12 +22,11 @@ from ..services.feedback import FeedbackService
 from ..services.registry import MediaRegistryService
 from ..services.session import SessionsService
 from ..services.watch_history import WatchHistoryService
-from .state import InternalDirective, State
+from .state import InternalDirective, MenuName, State
 
 logger = logging.getLogger(__name__)
 
 # A type alias for the signature all menu functions must follow.
-MenuFunction = Callable[["Context", State], "State | ControlFlow"]
 
 MENUS_DIR = APP_DIR / "cli" / "interactive" / "menus"
 
@@ -52,16 +50,19 @@ class Context:
     services: Services
 
 
+MenuFunction = Callable[[Context, State], Union[State, InternalDirective]]
+
+
 @dataclass(frozen=True)
 class Menu:
-    name: str
+    name: MenuName
     execute: MenuFunction
 
 
 class Session:
     _context: Context
     _history: List[State] = []
-    _menus: dict[str, Menu] = {}
+    _menus: dict[MenuName, Menu] = {}
 
     def _load_context(self, config: AppConfig):
         """Initializes all shared services based on the provided configuration."""
@@ -122,7 +123,7 @@ class Session:
                 logger.warning("Failed to continue from history. No sessions found")
 
         if not self._history:
-            self._history.append(State(menu_name="MAIN"))
+            self._history.append(State(menu_name=MenuName.MAIN))
 
         try:
             self._run_main_loop()
@@ -141,8 +142,12 @@ class Session:
             )
 
             if isinstance(next_step, InternalDirective):
-                if next_step == InternalDirective.EXIT:
-                    break
+                if next_step == InternalDirective.MAIN:
+                    self._history = [self._history[0]]
+                if next_step == InternalDirective.RELOAD:
+                    continue
+                elif next_step == InternalDirective.CONFIG_EDIT:
+                    self._edit_config()
                 elif next_step == InternalDirective.BACK:
                     if len(self._history) > 1:
                         self._history.pop()
@@ -155,21 +160,17 @@ class Session:
                         self._history.pop()
                         self._history.pop()
                         self._history.pop()
-                elif next_step == InternalDirective.CONFIG_EDIT:
-                    self._edit_config()
+                elif next_step == InternalDirective.EXIT:
+                    break
             else:
-                # if the state is main menu we should reset the history
-                if next_step.menu_name == "MAIN":
-                    self._history = [next_step]
-                else:
-                    self._history.append(next_step)
+                self._history.append(next_step)
 
     @property
     def menu(self) -> Callable[[MenuFunction], MenuFunction]:
         """A decorator to register a function as a menu."""
 
         def decorator(func: MenuFunction) -> MenuFunction:
-            menu_name = func.__name__.upper()
+            menu_name = MenuName(func.__name__.upper())
             if menu_name in self._menus:
                 logger.warning(f"Menu '{menu_name}' is being redefined.")
             self._menus[menu_name] = Menu(name=menu_name, execute=func)

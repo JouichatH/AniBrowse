@@ -1,3 +1,4 @@
+import time
 from contextlib import contextmanager
 from typing import Optional
 
@@ -24,6 +25,7 @@ class FeedbackService:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
             console.print(main_msg)
+        time.sleep(5)
 
     def error(self, message: str, details: Optional[str] = None) -> None:
         """Show an error message with optional details."""
@@ -34,6 +36,7 @@ class FeedbackService:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
             console.print(main_msg)
+        time.sleep(5)
 
     def warning(self, message: str, details: Optional[str] = None) -> None:
         """Show a warning message with optional details."""
@@ -44,6 +47,7 @@ class FeedbackService:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
             console.print(main_msg)
+        time.sleep(5)
 
     def info(self, message: str, details: Optional[str] = None) -> None:
         """Show an informational message with optional details."""
@@ -54,24 +58,10 @@ class FeedbackService:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
             console.print(main_msg)
-
-    def notify_operation_result(
-        self,
-        operation_name: str,
-        success: bool,
-        success_msg: Optional[str] = None,
-        error_msg: Optional[str] = None,
-    ) -> None:
-        """Notify user of operation result with standardized messaging."""
-        if success:
-            msg = success_msg or f"{operation_name} completed successfully"
-            self.success(msg)
-        else:
-            msg = error_msg or f"{operation_name} failed"
-            self.error(msg)
+        time.sleep(5)
 
     @contextmanager
-    def loading_operation(
+    def progress(
         self,
         message: str,
         success_msg: Optional[str] = None,
@@ -99,13 +89,6 @@ class FeedbackService:
         """Pause execution and wait for user input."""
         icon = "⏸️ " if self.icons_enabled else ""
         click.pause(f"{icon}{message}...")
-
-    def show_detailed_panel(
-        self, title: str, content: str, style: str = "blue"
-    ) -> None:
-        """Show detailed information in a styled panel."""
-        console.print(Panel(content, title=title, border_style=style, expand=True))
-        self.pause_for_user()
 
     def clear_console(self):
         console.clear()

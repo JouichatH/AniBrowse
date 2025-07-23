@@ -79,7 +79,7 @@ def player_controls(ctx: Context, state: State) -> State | InternalDirective:
                 ),
             )
         console.print("[bold yellow]This is the last available episode.[/bold yellow]")
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
 
     def replay() -> State | InternalDirective:
         # We don't need to change state, just re-trigger the SERVERS menu's logic.
@@ -101,7 +101,7 @@ def player_controls(ctx: Context, state: State) -> State | InternalDirective:
                     update={"selected_server": server_map[new_server_name]}
                 ),
             )
-        return InternalDirective.CONTINUE
+        return InternalDirective.RELOAD
 
     # --- Menu Options ---
     icons = config.general.icons
