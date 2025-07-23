@@ -14,6 +14,8 @@ class InternalDirective(Enum):
 
     BACK = auto()
 
+    BACK_FORCE = auto()
+
     BACKX2 = auto()
 
     BACKX3 = auto()

@@ -1,10 +1,5 @@
-from typing import TYPE_CHECKING
-
-import click
-from rich.console import Console
-
 from ..session import Context, session
-from ..state import InternalDirective, ProviderState, State
+from ..state import InternalDirective, MenuName, State
 
 
 @session.menu
@@ -13,13 +8,14 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
     Displays available episodes for a selected provider anime and handles
     the logic for continuing from watch history or manual selection.
     """
-    provider_anime = state.provider.anime
-    anilist_anime = state.media_api.anime
     config = ctx.config
     feedback = ctx.services.feedback
     feedback.clear_console()
 
-    if not provider_anime or not anilist_anime:
+    provider_anime = state.provider.anime
+    media_item = state.media_api.media_item
+
+    if not provider_anime or not media_item:
         feedback.error("Error: Anime details are missing.")
         return InternalDirective.BACK
 
@@ -46,7 +42,7 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
             from ...utils.previews import get_episode_preview
 
             preview_command = get_episode_preview(
-                available_episodes, anilist_anime, ctx.config
+                available_episodes, media_item, ctx.config
             )
 
         chosen_episode_str = ctx.selector.choose(
@@ -68,7 +64,7 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
         pass
 
     return State(
-        menu_name="SERVERS",
+        menu_name=MenuName.SERVERS,
         media_api=state.media_api,
-        provider=state.provider.model_copy(update={"episode_number": chosen_episode}),
+        provider=state.provider.model_copy(update={"episode": chosen_episode}),
     )
