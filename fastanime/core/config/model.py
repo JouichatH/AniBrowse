@@ -413,10 +413,6 @@ class DownloadsConfig(OtherConfig):
         default=defaults.DOWNLOADS_DOWNLOAD_SUBTITLES,
         description=desc.DOWNLOADS_DOWNLOAD_SUBTITLES,
     )
-    subtitle_languages: List[str] = Field(
-        default=defaults.DOWNLOADS_SUBTITLE_LANGUAGES,
-        description=desc.DOWNLOADS_SUBTITLE_LANGUAGES,
-    )
 
     # Queue management
     queue_max_size: int = Field(
