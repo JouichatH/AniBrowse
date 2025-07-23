@@ -17,7 +17,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from ....libs.api.params import UpdateListEntryParams, UserListParams
+from ....libs.api.params import UpdateUserMediaListEntryParams, UserListParams
 from ....libs.api.types import MediaItem, MediaSearchResult, UserListItem
 from ...utils.feedback import create_feedback_manager, execute_with_feedback
 from ..session import Context, session
@@ -451,7 +451,7 @@ def _edit_anime_progress(
         # Update via API
         def update_progress():
             return ctx.media_api.update_list_entry(
-                UpdateListEntryParams(media_id=anime.id, progress=new_progress)
+                UpdateUserMediaListEntryParams(media_id=anime.id, progress=new_progress)
             )
 
         success, _ = execute_with_feedback(
@@ -509,7 +509,7 @@ def _edit_anime_rating(
         # Update via API
         def update_score():
             return ctx.media_api.update_list_entry(
-                UpdateListEntryParams(media_id=anime.id, score=new_score)
+                UpdateUserMediaListEntryParams(media_id=anime.id, score=new_score)
             )
 
         success, _ = execute_with_feedback(
@@ -571,7 +571,7 @@ def _edit_anime_status(
     # Update via API
     def update_status():
         return ctx.media_api.update_list_entry(
-            UpdateListEntryParams(media_id=anime.id, status=new_status)
+            UpdateUserMediaListEntryParams(media_id=anime.id, status=new_status)
         )
 
     success, _ = execute_with_feedback(

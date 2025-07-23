@@ -11,7 +11,7 @@ from ....core.utils.graphql import (
 from ..base import (
     BaseApiClient,
     MediaSearchParams,
-    UpdateListEntryParams,
+    UpdateUserMediaListEntryParams,
     UserMediaListSearchParams,
 )
 from ..types import MediaSearchResult, UserMediaListStatus, UserProfile
@@ -155,7 +155,7 @@ class AniListApi(BaseApiClient):
         )
         return mapper.to_generic_user_list_result(response.json()) if response else None
 
-    def update_list_entry(self, params: UpdateListEntryParams) -> bool:
+    def update_list_entry(self, params: UpdateUserMediaListEntryParams) -> bool:
         if not self.token:
             return False
         score_raw = int(params.score * 10) if params.score is not None else None

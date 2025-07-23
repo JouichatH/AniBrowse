@@ -76,7 +76,7 @@ class UserMediaListSearchParams:
 
 
 @dataclass(frozen=True)
-class UpdateListEntryParams:
+class UpdateUserMediaListEntryParams:
     media_id: int
     status: Optional[UserMediaListStatus] = None
     progress: Optional[str] = None

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, List, Optional
 from ..base import (
     BaseApiClient,
     MediaSearchParams,
-    UpdateListEntryParams,
+    UpdateUserMediaListEntryParams,
     UserMediaListSearchParams,
 )
 from ..types import MediaItem, MediaSearchResult, UserProfile
@@ -93,7 +93,7 @@ class JikanApi(BaseApiClient):
         logger.warning("Jikan API does not support fetching user lists.")
         return None
 
-    def update_list_entry(self, params: UpdateListEntryParams) -> bool:
+    def update_list_entry(self, params: UpdateUserMediaListEntryParams) -> bool:
         logger.warning("Jikan API does not support updating list entries.")
         return False
 

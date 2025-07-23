@@ -3,7 +3,7 @@ from typing import Optional
 
 from ....core.config.model import AppConfig
 from ....libs.api.base import BaseApiClient
-from ....libs.api.params import UpdateListEntryParams
+from ....libs.api.params import UpdateUserMediaListEntryParams
 from ....libs.api.types import MediaItem, UserMediaListStatus
 from ....libs.players.types import PlayerResult
 from ..registry import MediaRegistryService
@@ -37,7 +37,7 @@ class WatchHistoryService:
 
         if self.media_api and self.media_api.is_authenticated():
             self.media_api.update_list_entry(
-                UpdateListEntryParams(
+                UpdateUserMediaListEntryParams(
                     media_id=media_item.id,
                     progress=episode,
                     status=status,
@@ -63,7 +63,7 @@ class WatchHistoryService:
 
         if self.media_api and self.media_api.is_authenticated():
             self.media_api.update_list_entry(
-                UpdateListEntryParams(
+                UpdateUserMediaListEntryParams(
                     media_id=media_item.id,
                     status=status,
                     score=score,

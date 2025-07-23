@@ -4,7 +4,11 @@ from typing import Any, Optional
 from httpx import Client
 
 from ...core.config import AnilistConfig
-from .params import MediaSearchParams, UpdateListEntryParams, UserMediaListSearchParams
+from .params import (
+    MediaSearchParams,
+    UpdateUserMediaListEntryParams,
+    UserMediaListSearchParams,
+)
 from .types import MediaSearchResult, UserProfile
 
 
@@ -41,7 +45,7 @@ class BaseApiClient(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def update_list_entry(self, params: UpdateListEntryParams) -> bool:
+    def update_list_entry(self, params: UpdateUserMediaListEntryParams) -> bool:
         pass
 
     @abc.abstractmethod

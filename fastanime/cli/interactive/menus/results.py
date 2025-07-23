@@ -19,20 +19,25 @@ def results(ctx: Context, state: State) -> State | InternalDirective:
         feedback.info("No anime found for the given criteria")
         return InternalDirective.BACK
 
-    _formatted_titles = [_format_title(ctx, anime) for anime in search_result.values()]
+    search_result_dict = {
+        _format_title(ctx, media_item): media_item
+        for media_item in search_result.values()
+    }
 
     preview_command = None
     if ctx.config.general.preview != "none":
         from ...utils.previews import get_anime_preview
 
         preview_command = get_anime_preview(
-            list(search_result.values()), _formatted_titles, ctx.config
+            list(search_result_dict.values()),
+            list(search_result_dict.keys()),
+            ctx.config,
         )
 
-    choices: Dict[str, Callable[[], Union[int, State, InternalDirective]]] = dict(
-        zip(_formatted_titles, [lambda: item for item in search_result.keys()])
-    )
-
+    choices: Dict[str, Callable[[], Union[int, State, InternalDirective]]] = {
+        title: lambda media_id=item.id: media_id
+        for title, item in search_result_dict.items()
+    }
     if page_info:
         if page_info.has_next_page:
             choices.update(
@@ -184,7 +189,5 @@ def _handle_pagination(
                 ),
             )
 
-    # print(new_search_params)
-    # print(result)
     feedback.warning("Failed to load page")
     return InternalDirective.RELOAD
