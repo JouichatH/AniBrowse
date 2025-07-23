@@ -21,6 +21,7 @@ query ($id: Int) {
         }
         description
         episodes
+        duration 
         trailer {
           site
           id

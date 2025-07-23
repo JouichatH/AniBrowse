@@ -81,3 +81,27 @@ class UpdateUserMediaListEntryParams:
     status: Optional[UserMediaListStatus] = None
     progress: Optional[str] = None
     score: Optional[float] = None
+
+
+@dataclass(frozen=True)
+class MediaRecommendationParams:
+    id: int
+    page: Optional[int] = 1
+    per_page: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class MediaCharactersParams:
+    id: int
+
+
+@dataclass(frozen=True)
+class MediaRelationsParams:
+    id: int
+    # page: Optional[int] = 1
+    # per_page: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class MediaAiringScheduleParams:
+    id: int

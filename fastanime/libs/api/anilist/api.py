@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from httpx import Client
 
@@ -8,8 +8,12 @@ from ....core.config import AnilistConfig
 from ....core.utils.graphql import (
     execute_graphql,
 )
-from ..base import (
-    BaseApiClient,
+from ..base import BaseApiClient
+from ..params import (
+    MediaAiringScheduleParams,
+    MediaCharactersParams,
+    MediaRecommendationParams,
+    MediaRelationsParams,
     MediaSearchParams,
     UpdateUserMediaListEntryParams,
     UserMediaListSearchParams,
@@ -202,6 +206,32 @@ class AniListApi(BaseApiClient):
             .get("deleted", False)
             if response
             else False
+        )
+
+    def get_recommendation_for(self, params: MediaRecommendationParams):
+        variables = {"mediaRecommendationId": params.id, "page": params.page}
+        response = execute_graphql(
+            ANILIST_ENDPOINT, self.http_client, gql.GET_RECOMMENDATIONS, variables
+        )
+        return response
+
+    def get_characters_of(self, params: MediaCharactersParams):
+        variables = {"id": params.id}
+        response = execute_graphql(
+            ANILIST_ENDPOINT, self.http_client, gql.GET_CHARACTERS, variables
+        )
+        return response
+
+    def get_related_anime_for(self, params: MediaRelationsParams):
+        variables = {"id": params.id}
+        response = execute_graphql(
+            ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_RELATIONS, variables
+        )
+
+    def get_airing_schedule_for(self, params: MediaAiringScheduleParams):
+        variables = {"id": params.id}
+        response = execute_graphql(
+            ANILIST_ENDPOINT, self.http_client, gql.GET_AIRING_SCHEDULE, variables
         )
 
 

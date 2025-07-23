@@ -1,6 +1,6 @@
-query ($mediaRecommendationId: Int, $page: Int) {
-  Page(perPage: 50, page: $page) {
-    recommendations(mediaRecommendationId: $mediaRecommendationId) {
+query ($id: Int, $page: Int,$per_page:Int) {
+  Page(perPage: $per_page, page: $page) {
+    recommendations(mediaRecommendationId: $id) {
       media {
         id
         idMal
@@ -18,13 +18,9 @@ query ($mediaRecommendationId: Int, $page: Int) {
           medium
           large
         }
-        mediaListEntry {
-          status
-          id
-          progress
-        }
         description
         episodes
+        duration # Added duration here
         trailer {
           site
           id
