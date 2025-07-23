@@ -77,7 +77,7 @@ def _populate_info_template(item: MediaItem, config: AppConfig) -> str:
         # numerical
         #
         "NEXT_EPISODE": formatters.shell_safe(
-            f"Episode {item.next_airing.episode} on {formatters.format_date(item.next_airing.airing_at)}"
+            f"Episode {item.next_airing.episode} on {formatters.format_date(item.next_airing.airing_at, '%A, %d %B %Y at %X)')}"
             if item.next_airing
             else "N/A"
         ),
