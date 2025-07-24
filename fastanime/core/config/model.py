@@ -1,0 +1,466 @@
+import os
+from pathlib import Path
+from typing import Literal
+
+from pydantic import BaseModel, Field, PrivateAttr, computed_field
+
+from ...libs.api.types import MediaSort, UserMediaListSort
+from ...libs.providers.anime.types import ProviderName, ProviderServer
+from ..constants import APP_ASCII_ART
+from . import defaults
+from . import descriptions as desc
+
+
+class GeneralConfig(BaseModel):
+    """Configuration for general application behavior and integrations."""
+
+    pygment_style: str = Field(
+        default=defaults.GENERAL_PYGMENT_STYLE, description=desc.GENERAL_PYGMENT_STYLE
+    )
+    media_api: Literal["anilist", "jikan"] = Field(
+        default=defaults.GENERAL_API_CLIENT,
+        description=desc.GENERAL_API_CLIENT,
+    )
+    provider: ProviderName = Field(
+        default=ProviderName.ALLANIME,
+        description=desc.GENERAL_PROVIDER,
+    )
+    selector: Literal["default", "fzf", "rofi"] = Field(
+        default=defaults.GENERAL_SELECTOR,
+        description=desc.GENERAL_SELECTOR,
+    )
+    auto_select_anime_result: bool = Field(
+        default=defaults.GENERAL_AUTO_SELECT_ANIME_RESULT,
+        description=desc.GENERAL_AUTO_SELECT_ANIME_RESULT,
+    )
+    icons: bool = Field(default=defaults.GENERAL_ICONS, description=desc.GENERAL_ICONS)
+    preview: Literal["full", "text", "image", "none"] = Field(
+        default=defaults.GENERAL_PREVIEW,
+        description=desc.GENERAL_PREVIEW,
+    )
+    image_renderer: Literal["icat", "chafa", "imgcat"] = Field(
+        default="icat"
+        if os.environ.get("KITTY_WINDOW_ID")
+        else defaults.GENERAL_IMAGE_RENDERER,
+        description=desc.GENERAL_IMAGE_RENDERER,
+    )
+    manga_viewer: Literal["feh", "icat"] = Field(
+        default=defaults.GENERAL_MANGA_VIEWER,
+        description=desc.GENERAL_MANGA_VIEWER,
+    )
+    check_for_updates: bool = Field(
+        default=defaults.GENERAL_CHECK_FOR_UPDATES,
+        description=desc.GENERAL_CHECK_FOR_UPDATES,
+    )
+    cache_requests: bool = Field(
+        default=defaults.GENERAL_CACHE_REQUESTS,
+        description=desc.GENERAL_CACHE_REQUESTS,
+    )
+    max_cache_lifetime: str = Field(
+        default=defaults.GENERAL_MAX_CACHE_LIFETIME,
+        description=desc.GENERAL_MAX_CACHE_LIFETIME,
+    )
+    normalize_titles: bool = Field(
+        default=defaults.GENERAL_NORMALIZE_TITLES,
+        description=desc.GENERAL_NORMALIZE_TITLES,
+    )
+    discord: bool = Field(
+        default=defaults.GENERAL_DISCORD,
+        description=desc.GENERAL_DISCORD,
+    )
+    recent: int = Field(
+        default=defaults.GENERAL_RECENT,
+        ge=0,
+        description=desc.GENERAL_RECENT,
+    )
+
+
+class StreamConfig(BaseModel):
+    """Configuration specific to video streaming and playback."""
+
+    player: Literal["mpv", "vlc"] = Field(
+        default=defaults.STREAM_PLAYER,
+        description=desc.STREAM_PLAYER,
+    )
+    quality: Literal["360", "480", "720", "1080"] = Field(
+        default=defaults.STREAM_QUALITY,
+        description=desc.STREAM_QUALITY,
+    )
+    translation_type: Literal["sub", "dub"] = Field(
+        default=defaults.STREAM_TRANSLATION_TYPE,
+        description=desc.STREAM_TRANSLATION_TYPE,
+    )
+    server: ProviderServer = Field(
+        default=ProviderServer.TOP,
+        description=desc.STREAM_SERVER,
+    )
+    auto_next: bool = Field(
+        default=defaults.STREAM_AUTO_NEXT,
+        description=desc.STREAM_AUTO_NEXT,
+    )
+    continue_from_watch_history: bool = Field(
+        default=defaults.STREAM_CONTINUE_FROM_WATCH_HISTORY,
+        description=desc.STREAM_CONTINUE_FROM_WATCH_HISTORY,
+    )
+    preferred_watch_history: Literal["local", "remote"] = Field(
+        default=defaults.STREAM_PREFERRED_WATCH_HISTORY,
+        description=desc.STREAM_PREFERRED_WATCH_HISTORY,
+    )
+    auto_skip: bool = Field(
+        default=defaults.STREAM_AUTO_SKIP,
+        description=desc.STREAM_AUTO_SKIP,
+    )
+    episode_complete_at: int = Field(
+        default=defaults.STREAM_EPISODE_COMPLETE_AT,
+        ge=0,
+        le=100,
+        description=desc.STREAM_EPISODE_COMPLETE_AT,
+    )
+    ytdlp_format: str = Field(
+        default=defaults.STREAM_YTDLP_FORMAT,
+        description=desc.STREAM_YTDLP_FORMAT,
+    )
+    force_forward_tracking: bool = Field(
+        default=defaults.STREAM_FORCE_FORWARD_TRACKING,
+        description=desc.STREAM_FORCE_FORWARD_TRACKING,
+    )
+    default_media_list_tracking: Literal["track", "disabled", "prompt"] = Field(
+        default=defaults.STREAM_DEFAULT_MEDIA_LIST_TRACKING,
+        description=desc.STREAM_DEFAULT_MEDIA_LIST_TRACKING,
+    )
+    sub_lang: str = Field(
+        default=defaults.STREAM_SUB_LANG,
+        description=desc.STREAM_SUB_LANG,
+    )
+
+
+class ServiceConfig(BaseModel):
+    """Configuration for the background download service."""
+
+    enabled: bool = Field(
+        default=defaults.SERVICE_ENABLED,
+        description=desc.SERVICE_ENABLED,
+    )
+    watchlist_check_interval: int = Field(
+        default=defaults.SERVICE_WATCHLIST_CHECK_INTERVAL,
+        ge=5,
+        le=180,
+        description=desc.SERVICE_WATCHLIST_CHECK_INTERVAL,
+    )
+    queue_process_interval: int = Field(
+        default=defaults.SERVICE_QUEUE_PROCESS_INTERVAL,
+        ge=1,
+        le=60,
+        description=desc.SERVICE_QUEUE_PROCESS_INTERVAL,
+    )
+    max_concurrent_downloads: int = Field(
+        default=defaults.SERVICE_MAX_CONCURRENT_DOWNLOADS,
+        ge=1,
+        le=10,
+        description=desc.SERVICE_MAX_CONCURRENT_DOWNLOADS,
+    )
+    auto_retry_count: int = Field(
+        default=defaults.SERVICE_AUTO_RETRY_COUNT,
+        ge=0,
+        le=10,
+        description=desc.SERVICE_AUTO_RETRY_COUNT,
+    )
+    cleanup_completed_days: int = Field(
+        default=defaults.SERVICE_CLEANUP_COMPLETED_DAYS,
+        ge=1,
+        le=30,
+        description=desc.SERVICE_CLEANUP_COMPLETED_DAYS,
+    )
+    notification_enabled: bool = Field(
+        default=defaults.SERVICE_NOTIFICATION_ENABLED,
+        description=desc.SERVICE_NOTIFICATION_ENABLED,
+    )
+
+
+class OtherConfig(BaseModel):
+    pass
+
+
+class SessionsConfig(OtherConfig):
+    dir: Path = Field(
+        default_factory=lambda: defaults.SESSIONS_DIR,
+        description=desc.SESSIONS_DIR,
+    )
+
+
+class FzfConfig(OtherConfig):
+    """Configuration specific to the FZF selector."""
+
+    _opts: str = PrivateAttr(
+        default_factory=lambda: defaults.FZF_OPTS.read_text(encoding="utf-8")
+    )
+    header_color: str = Field(
+        default=defaults.FZF_HEADER_COLOR, description=desc.FZF_HEADER_COLOR
+    )
+    _header_ascii_art: str = PrivateAttr(
+        default_factory=lambda: APP_ASCII_ART.read_text(encoding="utf-8")
+    )
+    preview_header_color: str = Field(
+        default=defaults.FZF_PREVIEW_HEADER_COLOR,
+        description=desc.FZF_PREVIEW_HEADER_COLOR,
+    )
+    preview_separator_color: str = Field(
+        default=defaults.FZF_PREVIEW_SEPARATOR_COLOR,
+        description=desc.FZF_PREVIEW_SEPARATOR_COLOR,
+    )
+
+    def __init__(self, **kwargs):
+        opts = kwargs.pop("opts", None)
+        header_ascii_art = kwargs.pop("header_ascii_art", None)
+
+        super().__init__(**kwargs)
+        if opts:
+            self._opts = opts
+        if header_ascii_art:
+            self._header_ascii_art = header_ascii_art
+
+    @computed_field(description=desc.FZF_OPTS)
+    @property
+    def opts(self) -> str:
+        return "\n" + "\n".join([f"\t{line}" for line in self._opts.split()])
+
+    @computed_field(description=desc.FZF_HEADER_ASCII_ART)
+    @property
+    def header_ascii_art(self) -> str:
+        return "\n" + "\n".join(
+            [f"\t{line}" for line in self._header_ascii_art.split()]
+        )
+
+
+class RofiConfig(OtherConfig):
+    """Configuration specific to the Rofi selector."""
+
+    theme_main: Path = Field(
+        default_factory=lambda: Path(str(defaults.ROFI_THEME_MAIN)),
+        description=desc.ROFI_THEME_MAIN,
+    )
+    theme_preview: Path = Field(
+        default_factory=lambda: Path(str(defaults.ROFI_THEME_PREVIEW)),
+        description=desc.ROFI_THEME_PREVIEW,
+    )
+    theme_confirm: Path = Field(
+        default_factory=lambda: Path(str(defaults.ROFI_THEME_CONFIRM)),
+        description=desc.ROFI_THEME_CONFIRM,
+    )
+    theme_input: Path = Field(
+        default_factory=lambda: Path(str(defaults.ROFI_THEME_INPUT)),
+        description=desc.ROFI_THEME_INPUT,
+    )
+
+
+class MpvConfig(OtherConfig):
+    """Configuration specific to the MPV player integration."""
+
+    args: str = Field(default=defaults.MPV_ARGS, description=desc.MPV_ARGS)
+    pre_args: str = Field(
+        default=defaults.MPV_PRE_ARGS,
+        description=desc.MPV_PRE_ARGS,
+    )
+    disable_popen: bool = Field(
+        default=defaults.MPV_DISABLE_POPEN,
+        description=desc.MPV_DISABLE_POPEN,
+    )
+    use_python_mpv: bool = Field(
+        default=defaults.MPV_USE_PYTHON_MPV,
+        description=desc.MPV_USE_PYTHON_MPV,
+    )
+
+
+class VlcConfig(OtherConfig):
+    """Configuration specific to the vlc player integration."""
+
+    args: str = Field(default=defaults.VLC_ARGS, description=desc.VLC_ARGS)
+
+
+class AnilistConfig(OtherConfig):
+    """Configuration for interacting with the AniList API."""
+
+    per_page: int = Field(
+        default=defaults.ANILIST_PER_PAGE,
+        gt=0,
+        le=50,
+        description=desc.ANILIST_PER_PAGE,
+    )
+    sort_by: MediaSort = Field(
+        default=MediaSort.SEARCH_MATCH,
+        description=desc.ANILIST_SORT_BY,
+    )
+    media_list_sort_by: UserMediaListSort = Field(
+        default=UserMediaListSort.MEDIA_POPULARITY_DESC,
+        description=desc.ANILIST_MEDIA_LIST_SORT_BY,
+    )
+    preferred_language: Literal["english", "romaji"] = Field(
+        default=defaults.ANILIST_PREFERRED_LANGUAGE,
+        description=desc.ANILIST_PREFERRED_LANGUAGE,
+    )
+
+
+class JikanConfig(OtherConfig):
+    """Configuration for the Jikan API (currently none)."""
+
+    per_page: int = Field(
+        default=defaults.ANILIST_PER_PAGE,
+        gt=0,
+        le=50,
+        description=desc.ANILIST_PER_PAGE,
+    )
+    sort_by: MediaSort = Field(
+        default=MediaSort.SEARCH_MATCH,
+        description=desc.ANILIST_SORT_BY,
+    )
+    media_list_sort_by: UserMediaListSort = Field(
+        default=UserMediaListSort.MEDIA_POPULARITY_DESC,
+        description=desc.ANILIST_MEDIA_LIST_SORT_BY,
+    )
+    preferred_language: Literal["english", "romaji"] = Field(
+        default=defaults.ANILIST_PREFERRED_LANGUAGE,
+        description=desc.ANILIST_PREFERRED_LANGUAGE,
+    )
+
+
+class DownloadsConfig(OtherConfig):
+    """Configuration for download related options"""
+
+    downloader: Literal["auto", "default", "yt-dlp"] = Field(
+        default=defaults.DOWNLOADS_DOWNLOADER, description=desc.DOWNLOADS_DOWNLOADER
+    )
+
+    downloads_dir: Path = Field(
+        default_factory=lambda: defaults.DOWNLOADS_DOWNLOADS_DIR,
+        description=desc.DOWNLOADS_DOWNLOADS_DIR,
+    )
+
+    # Download tracking configuration
+    enable_tracking: bool = Field(
+        default=defaults.DOWNLOADS_ENABLE_TRACKING,
+        description=desc.DOWNLOADS_ENABLE_TRACKING,
+    )
+    auto_organize: bool = Field(
+        default=defaults.DOWNLOADS_AUTO_ORGANIZE,
+        description=desc.DOWNLOADS_AUTO_ORGANIZE,
+    )
+    max_concurrent: int = Field(
+        default=defaults.DOWNLOADS_MAX_CONCURRENT,
+        gt=0,
+        le=10,
+        description=desc.DOWNLOADS_MAX_CONCURRENT,
+    )
+    auto_cleanup_failed: bool = Field(
+        default=defaults.DOWNLOADS_AUTO_CLEANUP_FAILED,
+        description=desc.DOWNLOADS_AUTO_CLEANUP_FAILED,
+    )
+    retention_days: int = Field(
+        default=defaults.DOWNLOADS_RETENTION_DAYS,
+        gt=0,
+        description=desc.DOWNLOADS_RETENTION_DAYS,
+    )
+
+    # Integration with watch history
+    sync_with_watch_history: bool = Field(
+        default=defaults.DOWNLOADS_SYNC_WITH_WATCH_HISTORY,
+        description=desc.DOWNLOADS_SYNC_WITH_WATCH_HISTORY,
+    )
+    auto_mark_offline: bool = Field(
+        default=defaults.DOWNLOADS_AUTO_MARK_OFFLINE,
+        description=desc.DOWNLOADS_AUTO_MARK_OFFLINE,
+    )
+
+    # File organization
+    naming_template: str = Field(
+        default=defaults.DOWNLOADS_NAMING_TEMPLATE,
+        description=desc.DOWNLOADS_NAMING_TEMPLATE,
+    )
+
+    # Quality and subtitles
+    preferred_quality: Literal["360", "480", "720", "1080", "best"] = Field(
+        default=defaults.DOWNLOADS_PREFERRED_QUALITY,
+        description=desc.DOWNLOADS_PREFERRED_QUALITY,
+    )
+    download_subtitles: bool = Field(
+        default=defaults.DOWNLOADS_DOWNLOAD_SUBTITLES,
+        description=desc.DOWNLOADS_DOWNLOAD_SUBTITLES,
+    )
+
+    # Queue management
+    queue_max_size: int = Field(
+        default=defaults.DOWNLOADS_QUEUE_MAX_SIZE,
+        gt=0,
+        description=desc.DOWNLOADS_QUEUE_MAX_SIZE,
+    )
+    auto_start_downloads: bool = Field(
+        default=defaults.DOWNLOADS_AUTO_START_DOWNLOADS,
+        description=desc.DOWNLOADS_AUTO_START_DOWNLOADS,
+    )
+    retry_attempts: int = Field(
+        default=defaults.DOWNLOADS_RETRY_ATTEMPTS,
+        ge=0,
+        description=desc.DOWNLOADS_RETRY_ATTEMPTS,
+    )
+    retry_delay: int = Field(
+        default=defaults.DOWNLOADS_RETRY_DELAY,
+        ge=0,
+        description=desc.DOWNLOADS_RETRY_DELAY,
+    )
+
+
+class MediaRegistryConfig(OtherConfig):
+    """Configuration for registry related options"""
+
+    media_dir: Path = Field(
+        default=defaults.MEDIA_REGISTRY_DIR,
+        description=desc.MEDIA_REGISTRY_DIR,
+    )
+
+    index_dir: Path = Field(
+        default=defaults.MEDIA_REGISTRY_INDEX_DIR,
+        description=desc.MEDIA_REGISTRY_INDEX_DIR,
+    )
+
+
+class AppConfig(BaseModel):
+    """The root configuration model for the FastAnime application."""
+
+    general: GeneralConfig = Field(
+        default_factory=GeneralConfig,
+        description=desc.APP_GENERAL,
+    )
+    stream: StreamConfig = Field(
+        default_factory=StreamConfig,
+        description=desc.APP_STREAM,
+    )
+    downloads: DownloadsConfig = Field(
+        default_factory=DownloadsConfig, description=desc.APP_DOWNLOADS
+    )
+    anilist: AnilistConfig = Field(
+        default_factory=AnilistConfig,
+        description=desc.APP_ANILIST,
+    )
+    service: ServiceConfig = Field(
+        default_factory=ServiceConfig,
+        description=desc.APP_SERVICE,
+    )
+
+    fzf: FzfConfig = Field(
+        default_factory=FzfConfig,
+        description=desc.APP_FZF,
+    )
+    rofi: RofiConfig = Field(
+        default_factory=RofiConfig,
+        description=desc.APP_ROFI,
+    )
+    mpv: MpvConfig = Field(default_factory=MpvConfig, description=desc.APP_MPV)
+    service: ServiceConfig = Field(
+        default_factory=ServiceConfig,
+        description=desc.APP_SERVICE,
+    )
+    media_registry: MediaRegistryConfig = Field(
+        default_factory=MediaRegistryConfig, description=desc.APP_MEDIA_REGISTRY
+    )
+    sessions: SessionsConfig = Field(
+        default_factory=SessionsConfig, description=desc.APP_SESSIONS
+    )

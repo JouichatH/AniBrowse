@@ -1,0 +1,137 @@
+query ($id: Int) {
+  Page {
+    media(id: $id) {
+      id
+      idMal
+      title {
+        romaji
+        english
+      }
+      mediaListEntry {
+        status
+        id
+        progress
+      }
+      nextAiringEpisode {
+        timeUntilAiring
+        airingAt
+        episode
+      }
+      coverImage {
+        extraLarge
+      }
+      characters(perPage: 5, sort: FAVOURITES_DESC) {
+        edges {
+          node {
+            name {
+              full
+            }
+            gender
+            dateOfBirth {
+              year
+              month
+              day
+            }
+            age
+            image {
+              medium
+              large
+            }
+            description
+          }
+          voiceActors {
+            name {
+              full
+            }
+            image {
+              medium
+              large
+            }
+          }
+        }
+      }
+      studios {
+        nodes {
+          name
+          isAnimationStudio
+        }
+      }
+      season
+      format
+      status
+      seasonYear
+      description
+      genres
+      synonyms
+      startDate {
+        year
+        month
+        day
+      }
+      endDate {
+        year
+        month
+        day
+      }
+      duration
+      countryOfOrigin
+      averageScore
+      popularity
+      streamingEpisodes {
+        title
+        thumbnail
+      }
+
+      favourites
+      source
+      hashtag
+      siteUrl
+      tags {
+        name
+        rank
+      }
+      reviews(sort: SCORE_DESC, perPage: 3) {
+        nodes {
+          summary
+          user {
+            name
+            avatar {
+              medium
+              large
+            }
+          }
+        }
+      }
+      recommendations(sort: RATING_DESC, perPage: 10) {
+        nodes {
+          mediaRecommendation {
+            title {
+              romaji
+              english
+            }
+          }
+        }
+      }
+      relations {
+        nodes {
+          title {
+            romaji
+            english
+            native
+          }
+        }
+      }
+      externalLinks {
+        url
+        site
+        icon
+      }
+      rankings {
+        rank
+        context
+      }
+      bannerImage
+      episodes
+    }
+  }
+}

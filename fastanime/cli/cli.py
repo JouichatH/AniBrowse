@@ -1,0 +1,101 @@
+from typing import TYPE_CHECKING
+
+import click
+from click.core import ParameterSource
+
+from ..core.config import AppConfig
+from ..core.constants import PROJECT_NAME, USER_CONFIG_PATH, __version__
+from .config import ConfigLoader
+from .options import options_from_model
+from .utils.exceptions import setup_exceptions_handler
+from .utils.lazyloader import LazyGroup
+from .utils.logging import setup_logging
+
+if TYPE_CHECKING:
+    from typing import TypedDict
+
+    from typing_extensions import Unpack
+
+    class Options(TypedDict):
+        no_config: bool | None
+        trace: bool | None
+        log_to_file: bool | None
+        dev: bool | None
+        log: bool | None
+        rich_traceback: bool | None
+        rich_traceback_theme: str
+
+
+commands = {
+    "config": "config.config",
+    "search": "search.search",
+    "anilist": "anilist.anilist",
+    "download": "download.download",
+}
+
+
+@click.group(
+    cls=LazyGroup,
+    root="fastanime.cli.commands",
+    lazy_subcommands=commands,
+    context_settings=dict(auto_envvar_prefix=PROJECT_NAME),
+)
+@click.version_option(__version__, "--version")
+@click.option("--no-config", is_flag=True, help="Don't load the user config file.")
+@click.option(
+    "--trace", is_flag=True, help="Controls Whether to display tracebacks or not"
+)
+@click.option("--dev", is_flag=True, help="Controls Whether the app is in dev mode")
+@click.option("--log", is_flag=True, help="Controls Whether to log")
+@click.option("--log-to-file", is_flag=True, help="Controls Whether to log to a file")
+@click.option(
+    "--rich-traceback",
+    is_flag=True,
+    help="Controls Whether to display a rich traceback",
+)
+@click.option(
+    "--rich-traceback-theme",
+    default="github-dark",
+    help="Controls Whether to display a rich traceback",
+)
+@options_from_model(AppConfig)
+@click.pass_context
+def cli(ctx: click.Context, **options: "Unpack[Options]"):
+    """
+    The main entry point for the FastAnime CLI.
+    """
+    setup_logging(options["log"], options["log_to_file"])
+    setup_exceptions_handler(
+        options["trace"],
+        options["dev"],
+        options["rich_traceback"],
+        options["rich_traceback_theme"],
+    )
+
+    loader = ConfigLoader(config_path=USER_CONFIG_PATH)
+    config = AppConfig.model_validate({}) if options["no_config"] else loader.load()
+
+    # update app config with command line parameters
+    for param_name, param_value in ctx.params.items():
+        source = ctx.get_parameter_source(param_name)
+        if (
+            source == ParameterSource.ENVIRONMENT
+            or source == ParameterSource.COMMANDLINE
+        ):
+            parameter = None
+            for param in ctx.command.params:
+                if param.name == param_name:
+                    parameter = param
+                    break
+            if (
+                parameter
+                and hasattr(parameter, "model_name")
+                and hasattr(parameter, "field_name")
+            ):
+                model_name = getattr(parameter, "model_name")
+                field_name = getattr(parameter, "field_name")
+                if hasattr(config, model_name):
+                    model_instance = getattr(config, model_name)
+                    if hasattr(model_instance, field_name):
+                        setattr(model_instance, field_name, param_value)
+    ctx.obj = config

@@ -5,9 +5,9 @@ import termios
 import tty
 from sys import exit
 
+from rich.align import Align
 from rich.console import Console
 from rich.panel import Panel
-from rich.align import Align
 from rich.text import Text
 
 console = Console()
@@ -72,7 +72,8 @@ def icat_manga_viewer(image_links: list[str], window_title: str):
                     "--z-index",
                     "-1",
                     image_links[idx],
-                ]
+                ],
+                check=False,
             )
 
             if show_banner:

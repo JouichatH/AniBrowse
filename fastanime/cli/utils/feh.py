@@ -9,4 +9,4 @@ def feh_manga_viewer(image_links: list[str], window_title: str):
         print("feh not found")
         exit(1)
     commands = [FEH_EXECUTABLE, *image_links, "--title", window_title]
-    subprocess.run(commands)
+    subprocess.run(commands, check=False)
