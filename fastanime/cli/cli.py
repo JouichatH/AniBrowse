@@ -31,6 +31,7 @@ commands = {
     "search": "search.search",
     "anilist": "anilist.anilist",
     "download": "download.download",
+    "update": "update.update",
 }
 
 

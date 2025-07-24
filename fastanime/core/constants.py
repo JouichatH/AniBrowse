@@ -6,6 +6,7 @@ from pathlib import Path
 PLATFORM = sys.platform
 
 PROJECT_NAME = "FASTANIME"
+PROJECT_NAME_LOWER = "fastanime"
 APP_NAME = os.environ.get(f"{PROJECT_NAME}_APP_NAME", PROJECT_NAME.lower())
 
 USER_NAME = os.environ.get("USERNAME", "User")
