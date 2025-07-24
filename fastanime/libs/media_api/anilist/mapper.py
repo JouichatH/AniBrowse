@@ -126,6 +126,8 @@ def _to_generic_airing_schedule(
 
 def _to_generic_studios(anilist_studios: AnilistStudioNodes) -> List[Studio]:
     """Maps AniList studio nodes to a list of generic Studio objects."""
+    if not anilist_studios or not anilist_studios.get("nodes"):
+        return []
     return [
         Studio(
             name=s["name"],
@@ -133,49 +135,19 @@ def _to_generic_studios(anilist_studios: AnilistStudioNodes) -> List[Studio]:
             is_animation_studio=s["isAnimationStudio"],
         )
         for s in anilist_studios["nodes"]
+        if s  # Also check if individual studio object is not None
     ]
 
 
 def _to_generic_tags(anilist_tags: list[AnilistMediaTag]) -> List[MediaTagItem]:
     """Maps a list of AniList tags to generic MediaTag objects."""
+    if not anilist_tags:
+        return []
     return [
         MediaTagItem(name=MediaTag(t["name"]), rank=t.get("rank"))
         for t in anilist_tags
-        if t.get("name")
+        if t and t.get("name")
     ]
-
-
-# def _to_generic_streaming_episodes(
-#     anilist_episodes: list[AnilistStreamingEpisode],
-# ) -> List[StreamingEpisode]:
-#     """Maps a list of AniList streaming episodes to generic StreamingEpisode objects."""
-#     return [
-#         StreamingEpisode(title=episode["title"], thumbnail=episode.get("thumbnail"))
-#         for episode in anilist_episodes
-#         if episode.get("title")
-#     ]
-
-
-# def _to_generic_streaming_episodes(
-#     anilist_episodes: list[dict],
-# ) -> List[StreamingEpisode]:
-#     """Maps a list of AniList streaming episodes to generic StreamingEpisode objects with renumbered episode titles."""
-
-#     # Extract titles
-#     titles = [ep["title"] for ep in anilist_episodes if "title" in ep]
-
-#     # Generate mapping: title -> renumbered_ep
-#     renumbered_map = renumber_titles(titles)
-
-#     # Apply renumbering
-#     return [
-#         StreamingEpisode(
-#             title=f"{renumbered_map[ep['title']]} - {ep['title']}",
-#             thumbnail=ep.get("thumbnail"),
-#         )
-#         for ep in anilist_episodes
-#         if ep.get("title")
-#     ]
 
 
 def _to_generic_streaming_episodes(
@@ -347,13 +319,25 @@ def to_generic_relations(data: dict) -> Optional[List[MediaItem]]:
 
 def to_generic_recommendations(data: dict) -> Optional[List[MediaItem]]:
     """Maps the 'recommendations' part of an API response."""
-    recommendations = (
-        data.get("data", {})
-        .get("Page", {})
-        .get("recommendations", [])
-    )
-    return [
-        _to_generic_media_item(rec.get("media"))
-        for rec in recommendations
-        if rec.get("media")
-    ]
+    if not data or not data.get("data"):
+        return None
+        
+    page_data = data.get("data", {}).get("Page", {})
+    if not page_data:
+        return None
+        
+    recommendations = page_data.get("recommendations", [])
+    if not recommendations:
+        return None
+        
+    result = []
+    for rec in recommendations:
+        if rec and rec.get("media"):
+            try:
+                media_item = _to_generic_media_item(rec["media"])
+                result.append(media_item)
+            except Exception as e:
+                logger.warning(f"Failed to map recommendation media item: {e}")
+                continue
+    
+    return result if result else None
