@@ -1,4 +1,5 @@
 import textwrap
+from enum import Enum
 from pathlib import Path
 
 from ...core.config import AppConfig
@@ -71,6 +72,8 @@ def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
                 value_str = str(field_value)
             elif field_value is None:
                 value_str = ""
+            elif isinstance(field_value, Enum):
+                value_str = field_value.value
             else:
                 value_str = str(field_value)
 

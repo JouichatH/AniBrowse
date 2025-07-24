@@ -72,21 +72,14 @@ def cli(ctx: click.Context, **options: "Unpack[Options]"):
         options["rich_traceback_theme"],
     )
 
-    loader = ConfigLoader(config_path=USER_CONFIG_PATH)
-    config = AppConfig.model_validate({}) if options["no_config"] else loader.load()
+    cli_overrides = {}
+    param_lookup = {p.name: p for p in ctx.command.params}
 
-    # update app config with command line parameters
     for param_name, param_value in ctx.params.items():
         source = ctx.get_parameter_source(param_name)
-        if (
-            source == ParameterSource.ENVIRONMENT
-            or source == ParameterSource.COMMANDLINE
-        ):
-            parameter = None
-            for param in ctx.command.params:
-                if param.name == param_name:
-                    parameter = param
-                    break
+        if source in (ParameterSource.ENVIRONMENT, ParameterSource.COMMANDLINE):
+            parameter = param_lookup.get(param_name)
+
             if (
                 parameter
                 and hasattr(parameter, "model_name")
@@ -94,8 +87,15 @@ def cli(ctx: click.Context, **options: "Unpack[Options]"):
             ):
                 model_name = getattr(parameter, "model_name")
                 field_name = getattr(parameter, "field_name")
-                if hasattr(config, model_name):
-                    model_instance = getattr(config, model_name)
-                    if hasattr(model_instance, field_name):
-                        setattr(model_instance, field_name, param_value)
+
+                if model_name not in cli_overrides:
+                    cli_overrides[model_name] = {}
+                cli_overrides[model_name][field_name] = param_value
+
+    loader = ConfigLoader(config_path=USER_CONFIG_PATH)
+    config = (
+        AppConfig.model_validate(cli_overrides)
+        if options["no_config"]
+        else loader.load(cli_overrides)
+    )
     ctx.obj = config

@@ -1,5 +1,7 @@
 import configparser
+import json
 from pathlib import Path
+from typing import Dict
 
 import click
 from pydantic import ValidationError
@@ -73,7 +75,7 @@ class ConfigLoader:
 
         return app_config
 
-    def load(self) -> AppConfig:
+    def load(self, update: Dict = {}) -> AppConfig:
         """
         Loads the configuration and returns a populated, validated AppConfig object.
 
@@ -99,6 +101,10 @@ class ConfigLoader:
             section: dict(self.parser.items(section))
             for section in self.parser.sections()
         }
+        if update:
+            for key in config_dict:
+                if key in update:
+                    config_dict[key].update(update[key])
         try:
             app_config = AppConfig.model_validate(config_dict)
             return app_config
