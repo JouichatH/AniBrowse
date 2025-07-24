@@ -162,7 +162,7 @@ def stream_anime(
                 f"Failed to get streams for anime: {anime.title}, episode: {episode}"
             )
 
-    if config.stream.server == "TOP":
+    if config.stream.server.value == "TOP":
         with Progress() as progress:
             progress.add_task("Fetching top server...", total=None)
             server = next(streams, None)

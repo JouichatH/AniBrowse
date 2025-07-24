@@ -2,65 +2,43 @@ from typing import TYPE_CHECKING
 
 import click
 
-from ..completion_functions import anime_titles_shell_complete
+from ...core.config import AppConfig
+from ...core.exceptions import FastAnimeError
+from ..utils.completions import anime_titles_shell_complete
+from . import examples
 
 if TYPE_CHECKING:
-    from ..config import Config
+    from pathlib import Path
+    from typing import TypedDict
+
+    from typing_extensions import Unpack
+
+    from ...libs.providers.anime.base import BaseAnimeProvider
+    from ...libs.providers.anime.types import Anime
+    from ...libs.selectors.base import BaseSelector
+
+    class Options(TypedDict):
+        anime_title: tuple
+        episode_range: str
+        file: Path | None
+        force_unknown_ext: bool
+        silent: bool
+        verbose: bool
+        merge: bool
+        clean: bool
+        wait_time: int
+        prompt: bool
+        force_ffmpeg: bool
+        hls_use_mpegts: bool
+        hls_use_h264: bool
 
 
 @click.command(
     help="Download anime using the anime provider for a specified range",
     short_help="Download anime",
-    epilog="""
-\b
-\b\bExamples:
-  # Download all available episodes
-  # multiple titles can be specified with -t option
-  fastanime download -t <anime-title> -t <anime-title>
-  # -- or --
-  fastanime download -t <anime-title> -t <anime-title> -r ':'
-\b
-  # download latest episode for the two anime titles
-  # the number can be any no of latest episodes but a minus sign
-  # must be present
-  fastanime download -t <anime-title> -t <anime-title> -r '-1'
-\b
-  # latest 5
-  fastanime download -t <anime-title> -t <anime-title> -r '-5'
-\b
-  # Download specific episode range
-  # be sure to observe the range Syntax
-  fastanime download -t <anime-title> -r '<episodes-start>:<episodes-end>:<step>'
-\b
-  fastanime download -t <anime-title> -r '<episodes-start>:<episodes-end>'
-\b
-  fastanime download -t <anime-title> -r '<episodes-start>:'
-\b
-  fastanime download -t <anime-title> -r ':<episodes-end>'
-\b
-  # download specific episode
-  # remember python indexing starts at 0
-  fastanime download -t <anime-title> -r '<episode-1>:<episode>'
-\b
-  # merge subtitles with ffmpeg to mkv format; hianime tends to give subs as separate files
-  # and dont prompt for anything
-  # eg existing file in destination instead remove
-  # and clean
-  # ie remove original files (sub file and vid file)
-  # only keep merged files
-  fastanime download -t <anime-title> --merge --clean --no-prompt
-\b
-  # EOF is used since -t always expects a title
-  # you can supply anime titles from file or -t at the same time
-  # from stdin
-  echo -e "<anime-title>\\n<anime-title>\\n<anime-title>" | fastanime download -t "EOF" -r <range> -f -
-\b
-  # from file
-  fastanime download -t "EOF" -r <range> -f <file-path>
-""",
+    epilog=examples.download,
 )
 @click.option(
-    "--anime-titles",
     "--anime_title",
     "-t",
     required=True,
@@ -103,13 +81,6 @@ if TYPE_CHECKING:
     help="After merging delete the original files",
 )
 @click.option(
-    "--wait-time",
-    "-w",
-    type=int,
-    help="The amount of time to wait after downloading is complete before the screen is completely cleared",
-    default=60,
-)
-@click.option(
     "--prompt/--no-prompt",
     help="Whether to prompt for anything instead just do the best thing",
     default=True,
@@ -129,165 +100,72 @@ if TYPE_CHECKING:
     is_flag=True,
     help="Use H.264 (MP4) for hls streams, resulted in .mp4 file (useful for some streams: see Docs) (this option forces --force-ffmpeg to be True)",
 )
-@click.option(
-    "--no-check-certificates",
-    is_flag=True,
-    help="Suppress HTTPS certificate validation",
-)
 @click.pass_obj
-def download(
-    config: "Config",
-    anime_titles: tuple,
-    episode_range,
-    file,
-    force_unknown_ext,
-    silent,
-    verbose,
-    merge,
-    clean,
-    wait_time,
-    prompt,
-    force_ffmpeg,
-    hls_use_mpegts,
-    hls_use_h264,
-    no_check_certificates,
-):
-    import time
-
+def download(config: AppConfig, **options: "Unpack[Options]"):
     from rich import print
     from rich.progress import Progress
-    from thefuzz import fuzz
 
-    from ...AnimeProvider import AnimeProvider
-    from ...libs.anime_provider.types import Anime
-    from ...libs.fzf import fzf
-    from ...Utility.data import anime_normalizer
-    from ...Utility.downloader.downloader import downloader
-    from ..utils.tools import exit_app
-    from ..utils.utils import (
-        filter_by_quality,
-        fuzzy_inquirer,
-        move_preferred_subtitle_lang_to_top,
+    from ...core.exceptions import FastAnimeError
+    from ...libs.providers.anime.params import (
+        AnimeParams,
+        SearchParams,
     )
+    from ...libs.providers.anime.provider import create_provider
+    from ...libs.selectors.selector import create_selector
 
-    force_ffmpeg |= hls_use_mpegts or hls_use_h264
+    provider = create_provider(config.general.provider)
+    selector = create_selector(config)
 
-    anime_provider = AnimeProvider(config.provider)
-    anilist_anime_info = None
-
-    translation_type = config.translation_type
-    download_dir = config.downloads_dir
-    if file:
-        contents = file.read()
-        anime_titles_from_file = tuple(
-            [title for title in contents.split("\n") if title]
-        )
-        file.close()
-
-        anime_titles = (*anime_titles_from_file, *anime_titles)
-    print(f"[green bold]Queued:[/] {anime_titles}")
+    anime_titles = options["anime_title"]
+    print(f"[green bold]Streaming:[/] {anime_titles}")
     for anime_title in anime_titles:
-        if anime_title == "EOF":
-            break
-        print(f"[green bold]Now Downloading: [/] {anime_title}")
         # ---- search for anime ----
+        print(f"[green bold]Searching for:[/] {anime_title}")
         with Progress() as progress:
             progress.add_task("Fetching Search Results...", total=None)
-            search_results = anime_provider.search_for_anime(
-                anime_title, translation_type=translation_type
+            search_results = provider.search(
+                SearchParams(
+                    query=anime_title, translation_type=config.stream.translation_type
+                )
             )
         if not search_results:
-            print("Search results failed")
-            input("Enter to retry")
-            download(
-                config,
-                anime_title,
-                episode_range,
-                file,
-                force_unknown_ext,
-                silent,
-                verbose,
-                merge,
-                clean,
-                wait_time,
-                prompt,
-                force_ffmpeg,
-                hls_use_mpegts,
-                hls_use_h264,
-                no_check_certificates,
-            )
-            return
-        search_results = search_results["results"]
-        if not search_results:
-            print("Nothing muches your search term")
-            continue
-        search_results_ = {
-            search_result["title"]: search_result for search_result in search_results
+            raise FastAnimeError("No results were found matching your query")
+
+        _search_results = {
+            search_result.title: search_result
+            for search_result in search_results.results
         }
 
-        if config.auto_select:
-            selected_anime_title = max(
-                search_results_.keys(),
-                key=lambda title: fuzz.ratio(
-                    anime_normalizer.get(title, title), anime_title
-                ),
-            )
-            print("[cyan]Auto selecting:[/] ", selected_anime_title)
-        else:
-            choices = list(search_results_.keys())
-            if config.use_fzf:
-                selected_anime_title = fzf.run(
-                    choices, "Please Select title", "FastAnime"
-                )
-            else:
-                selected_anime_title = fuzzy_inquirer(
-                    choices,
-                    "Please Select title",
-                )
+        selected_anime_title = selector.choose(
+            "Select Anime", list(_search_results.keys())
+        )
+        if not selected_anime_title:
+            raise FastAnimeError("No title selected")
+        anime_result = _search_results[selected_anime_title]
 
-        # ---- fetch anime ----
+        # ---- fetch selected anime ----
         with Progress() as progress:
             progress.add_task("Fetching Anime...", total=None)
-            anime: Anime | None = anime_provider.get_anime(
-                search_results_[selected_anime_title]["id"]
-            )
-        if not anime:
-            print("Sth went wring anime no found")
-            input("Enter to continue...")
-            download(
-                config,
-                anime_title,
-                episode_range,
-                file,
-                force_unknown_ext,
-                silent,
-                verbose,
-                merge,
-                clean,
-                wait_time,
-                prompt,
-                force_ffmpeg,
-                hls_use_mpegts,
-                hls_use_h264,
-                no_check_certificates,
-            )
-            return
+            anime = provider.get(AnimeParams(id=anime_result.id, query=anime_title))
 
-        episodes = sorted(
-            anime["availableEpisodesDetail"][config.translation_type], key=float
+        if not anime:
+            raise FastAnimeError(f"Failed to fetch anime {anime_result.title}")
+        episodes_range = []
+        episodes: list[str] = sorted(
+            getattr(anime.episodes, config.stream.translation_type), key=float
         )
-        # where the magic happens
-        if episode_range:
-            if ":" in episode_range:
-                ep_range_tuple = episode_range.split(":")
-                if len(ep_range_tuple) == 2 and all(ep_range_tuple):
-                    episodes_start, episodes_end = ep_range_tuple
-                    episodes_range = episodes[int(episodes_start) : int(episodes_end)]
-                elif len(ep_range_tuple) == 3 and all(ep_range_tuple):
+        if options["episode_range"]:
+            if ":" in options["episode_range"]:
+                ep_range_tuple = options["episode_range"].split(":")
+                if len(ep_range_tuple) == 3 and all(ep_range_tuple):
                     episodes_start, episodes_end, step = ep_range_tuple
                     episodes_range = episodes[
                         int(episodes_start) : int(episodes_end) : int(step)
                     ]
+
+                elif len(ep_range_tuple) == 2 and all(ep_range_tuple):
+                    episodes_start, episodes_end = ep_range_tuple
+                    episodes_range = episodes[int(episodes_start) : int(episodes_end)]
                 else:
                     episodes_start, episodes_end = ep_range_tuple
                     if episodes_start.strip():
@@ -297,122 +175,111 @@ def download(
                     else:
                         episodes_range = episodes
             else:
-                episodes_range = episodes[int(episode_range) :]
-            print(f"[green bold]Downloading: [/] {episodes_range}")
+                episodes_range = episodes[int(options["episode_range"]) :]
 
+            episodes_range = iter(episodes_range)
+
+            for episode in episodes_range:
+                download_anime(
+                    config, options, provider, selector, anime, anime_title, episode
+                )
         else:
-            episodes_range = sorted(episodes, key=float)
-            print(f"[green bold]Downloading: [/] {episodes_range}")
+            episode = selector.choose(
+                "Select Episode",
+                getattr(anime.episodes, config.stream.translation_type),
+            )
+            if not episode:
+                raise FastAnimeError("No episode selected")
+            download_anime(
+                config, options, provider, selector, anime, anime_title, episode
+            )
 
-        if config.normalize_titles:
-            from ...libs.common.mini_anilist import get_basic_anime_info_by_title
 
-            anilist_anime_info = get_basic_anime_info_by_title(anime["title"])
+def download_anime(
+    config: AppConfig,
+    download_options: "Options",
+    provider: "BaseAnimeProvider",
+    selector: "BaseSelector",
+    anime: "Anime",
+    anime_title: str,
+    episode: str,
+):
+    from rich import print
+    from rich.progress import Progress
 
-        # lets download em
-        for episode in episodes_range:
-            try:
-                episode = str(episode)
-                if episode not in episodes:
-                    print(f"[cyan]Warning[/]: Episode {episode} not found, skipping")
-                    continue
-                with Progress() as progress:
-                    progress.add_task("Fetching Episode Streams...", total=None)
-                    streams = anime_provider.get_episode_streams(
-                        anime["id"], episode, config.translation_type
-                    )
-                    if not streams:
-                        print("No streams skipping")
-                        continue
-                # ---- fetch servers ----
-                if config.server == "top":
-                    with Progress() as progress:
-                        progress.add_task("Fetching top server...", total=None)
-                        server_name = next(streams, None)
-                        if not server_name:
-                            print("Sth went wrong when fetching the server")
-                            continue
-                    stream_link = filter_by_quality(
-                        config.quality, server_name["links"]
-                    )
-                    if not stream_link:
-                        print("[yellow bold]WARNING:[/] No streams found")
-                        time.sleep(1)
-                        print("Continuing...")
-                        continue
-                    link = stream_link["link"]
-                    provider_headers = server_name["headers"]
-                    episode_title = server_name["episode_title"]
-                    subtitles = server_name["subtitles"]
-                else:
-                    with Progress() as progress:
-                        progress.add_task("Fetching servers", total=None)
-                        # prompt for server selection
-                        servers = {server["server"]: server for server in streams}
-                    servers_names = list(servers.keys())
-                    if config.server in servers_names:
-                        server_name = config.server
-                    else:
-                        if config.use_fzf:
-                            server_name = fzf.run(servers_names, "Select an link")
-                        else:
-                            server_name = fuzzy_inquirer(
-                                servers_names,
-                                "Select link",
-                            )
-                    stream_link = filter_by_quality(
-                        config.quality, servers[server_name]["links"]
-                    )
-                    if not stream_link:
-                        print("[yellow bold]WARNING:[/] No streams found")
-                        time.sleep(1)
-                        print("Continuing...")
-                        continue
-                    link = stream_link["link"]
-                    provider_headers = servers[server_name]["headers"]
+    from ...core.downloader import DownloadParams, create_downloader
+    from ...libs.providers.anime.params import EpisodeStreamsParams
 
-                    subtitles = servers[server_name]["subtitles"]
-                    episode_title = servers[server_name]["episode_title"]
+    downloader = create_downloader(config.downloads)
 
-                if anilist_anime_info:
-                    selected_anime_title = (
-                        anilist_anime_info["title"][config.preferred_language]
-                        or anilist_anime_info["title"]["romaji"]
-                        or anilist_anime_info["title"]["english"]
-                    )
-                    import re
+    with Progress() as progress:
+        progress.add_task("Fetching Episode Streams...", total=None)
+        streams = provider.episode_streams(
+            EpisodeStreamsParams(
+                anime_id=anime.id,
+                episode=episode,
+                query=anime_title,
+                translation_type=config.stream.translation_type,
+            )
+        )
+        if not streams:
+            raise FastAnimeError(
+                f"Failed to get streams for anime: {anime.title}, episode: {episode}"
+            )
 
-                    for episode_detail in anilist_anime_info["episodes"]:
-                        if re.match(f"Episode {episode} ", episode_detail["title"]):
-                            episode_title = episode_detail["title"]
-                            break
-                print(f"[purple]Now Downloading:[/] {episode_title}")
-                subtitles = move_preferred_subtitle_lang_to_top(
-                    subtitles, config.sub_lang
+    with Progress() as progress:
+        progress.add_task("Fetching Episode Streams...", total=None)
+        streams = provider.episode_streams(
+            EpisodeStreamsParams(
+                anime_id=anime.id,
+                query=anime_title,
+                episode=episode,
+                translation_type=config.stream.translation_type,
+            )
+        )
+        if not streams:
+            raise FastAnimeError(
+                f"Failed to get streams for anime: {anime.title}, episode: {episode}"
+            )
+
+    if config.stream.server.value == "TOP":
+        with Progress() as progress:
+            progress.add_task("Fetching top server...", total=None)
+            server = next(streams, None)
+            if not server:
+                raise FastAnimeError(
+                    f"Failed to get server for anime: {anime.title}, episode: {episode}"
                 )
-                downloader._download_file(
-                    link,
-                    selected_anime_title,
-                    episode_title,
-                    download_dir,
-                    silent,
-                    vid_format=config.format,
-                    force_unknown_ext=force_unknown_ext,
-                    verbose=verbose,
-                    headers=provider_headers,
-                    sub=subtitles[0]["url"] if subtitles else "",
-                    merge=merge,
-                    clean=clean,
-                    prompt=prompt,
-                    force_ffmpeg=force_ffmpeg,
-                    hls_use_mpegts=hls_use_mpegts,
-                    hls_use_h264=hls_use_h264,
-                    nocheckcertificate=no_check_certificates,
-                )
-            except Exception as e:
-                print(e)
-                time.sleep(1)
-                print("Continuing...")
-    print("Done Downloading")
-    time.sleep(wait_time)
-    exit_app()
+    else:
+        with Progress() as progress:
+            progress.add_task("Fetching servers", total=None)
+            servers = {server.name: server for server in streams}
+        servers_names = list(servers.keys())
+        if config.stream.server in servers_names:
+            server = servers[config.stream.server.value]
+        else:
+            server_name = selector.choose("Select Server", servers_names)
+            if not server_name:
+                raise FastAnimeError("Server not selected")
+            server = servers[server_name]
+    stream_link = server.links[0].link
+    if not stream_link:
+        raise FastAnimeError(
+            f"Failed to get stream link for anime: {anime.title}, episode: {episode}"
+        )
+    print(f"[green bold]Now Downloading:[/] {anime.title} Episode: {episode}")
+    downloader.download(
+        DownloadParams(
+            url=stream_link,
+            anime_title=anime.title,
+            episode_title=f"{anime.title}; Episode {episode}",
+            subtitles=[sub.url for sub in server.subtitles],
+            headers=server.headers,
+            vid_format=config.stream.ytdlp_format,
+            force_unknown_ext=download_options["force_unknown_ext"],
+            verbose=download_options["verbose"],
+            hls_use_mpegts=download_options["hls_use_mpegts"],
+            hls_use_h264=download_options["hls_use_h264"],
+            silent=download_options["silent"],
+        )
+    )
