@@ -3,7 +3,7 @@ Common helper functions for anilist subcommands.
 """
 
 import json
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import click
 from rich.progress import Progress
@@ -11,7 +11,6 @@ from rich.progress import Progress
 if TYPE_CHECKING:
     from fastanime.core.config import AppConfig
     from fastanime.libs.api.base import BaseApiClient
-    from fastanime.libs.api.types import MediaSearchResult
 
 
 def get_authenticated_api_client(config: "AppConfig") -> "BaseApiClient":

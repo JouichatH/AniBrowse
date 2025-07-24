@@ -101,7 +101,7 @@ class Session:
 
     def _edit_config(self):
         click.edit(filename=str(USER_CONFIG_PATH))
-        logger.debug(f"Config changed; Reloading context")
+        logger.debug("Config changed; Reloading context")
         loader = ConfigLoader()
         config = loader.load()
         self._load_context(config)
@@ -127,7 +127,7 @@ class Session:
 
         try:
             self._run_main_loop()
-        except Exception as e:
+        except Exception:
             self._context.services.session.create_crash_backup(self._history)
             raise
         self._context.services.session.save_session(self._history)

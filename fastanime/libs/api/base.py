@@ -1,5 +1,5 @@
 import abc
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional
 
 from ...core.config import AnilistConfig
 from .params import (

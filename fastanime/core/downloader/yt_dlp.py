@@ -6,10 +6,9 @@ import tempfile
 from pathlib import Path
 
 import httpx
+import yt_dlp
 from rich import print
 from rich.prompt import Confirm
-
-import yt_dlp
 from yt_dlp.utils import sanitize_filename
 
 from ..exceptions import FastAnimeError
@@ -121,7 +120,7 @@ class YtDLPDownloader(BaseDownloader):
             response = self.client.get(sub)
             try:
                 response.raise_for_status()
-            except httpx.HTTPError as e:
+            except httpx.HTTPError:
                 raise FastAnimeError("Failed to download sub: {e}")
 
             filename = get_remote_filename(response)

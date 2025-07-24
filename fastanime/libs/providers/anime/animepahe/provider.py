@@ -1,8 +1,6 @@
 import logging
-import random
-import time
 from functools import lru_cache
-from typing import TYPE_CHECKING, Iterator, Optional, Union
+from typing import Iterator, Optional
 
 from yt_dlp.utils import (
     extract_attributes,
@@ -23,7 +21,7 @@ from .constants import (
 )
 from .extractors import process_animepahe_embed_page
 from .parser import map_to_anime_result, map_to_search_results, map_to_server
-from .types import AnimePaheAnimePage, AnimePaheSearchPage, AnimePaheSearchResult
+from .types import AnimePaheAnimePage, AnimePaheSearchPage
 
 logger = logging.getLogger(__name__)
 

@@ -148,7 +148,7 @@ def _handle_pagination(
         search_params_dict = asdict(search_params)
         search_params_dict.pop("page")
 
-        loading_message = f"Fetching media list"
+        loading_message = "Fetching media list"
         result = None
         new_search_params = UserMediaListSearchParams(
             **search_params_dict, page=new_page
@@ -171,7 +171,7 @@ def _handle_pagination(
         search_params_dict = asdict(search_params)
         search_params_dict.pop("page")
 
-        loading_message = f"Fetching media list"
+        loading_message = "Fetching media list"
         result = None
         new_search_params = MediaSearchParams(**search_params_dict, page=new_page)
         with feedback.progress(loading_message):

@@ -85,7 +85,7 @@ def _create_media_list_action(
         feedback = ctx.services.feedback
         search_params = MediaSearchParams(sort=sort, status=status)
 
-        loading_message = f"Fetching media list"
+        loading_message = "Fetching media list"
         result = None
         with feedback.progress(loading_message):
             result = ctx.media_api.search_media(search_params)
@@ -112,7 +112,7 @@ def _create_random_media_list(ctx: Context, state: State) -> MenuAction:
         feedback = ctx.services.feedback
         search_params = MediaSearchParams(id_in=random.sample(range(1, 15000), k=50))
 
-        loading_message = f"Fetching media list"
+        loading_message = "Fetching media list"
         result = None
         with feedback.progress(loading_message):
             result = ctx.media_api.search_media(search_params)
@@ -144,7 +144,7 @@ def _create_search_media_list(ctx: Context, state: State) -> MenuAction:
 
         search_params = MediaSearchParams(query=query)
 
-        loading_message = f"Fetching media list"
+        loading_message = "Fetching media list"
         result = None
         with feedback.progress(loading_message):
             result = ctx.media_api.search_media(search_params)
@@ -179,7 +179,7 @@ def _create_user_list_action(
 
         search_params = UserMediaListSearchParams(status=status)
 
-        loading_message = f"Fetching media list"
+        loading_message = "Fetching media list"
         result = None
         with feedback.progress(loading_message):
             result = ctx.media_api.search_media_list(search_params)

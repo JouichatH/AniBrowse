@@ -161,7 +161,7 @@ def download(
 
     from ....anilist import AniList
 
-    force_ffmpeg |= (hls_use_mpegts or hls_use_h264)
+    force_ffmpeg |= hls_use_mpegts or hls_use_h264
 
     success, anilist_search_results = AniList.search(
         query=title,

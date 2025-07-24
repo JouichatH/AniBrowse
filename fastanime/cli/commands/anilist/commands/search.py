@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 import click
+
 from fastanime.cli.utils.completions import anime_titles_shell_complete
 
 from .data import (
@@ -95,11 +96,12 @@ def search(
 ):
     import json
 
+    from rich.progress import Progress
+
     from fastanime.cli.utils.feedback import create_feedback_manager
     from fastanime.core.exceptions import FastAnimeError
     from fastanime.libs.api.factory import create_api_client
     from fastanime.libs.api.params import MediaSearchParams
-    from rich.progress import Progress
 
     feedback = create_feedback_manager(config.general.icons)
 

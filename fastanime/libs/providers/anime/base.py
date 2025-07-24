@@ -18,7 +18,7 @@ class BaseAnimeProvider(ABC):
         super().__init_subclass__(**kwargs)
         if not hasattr(cls, "HEADERS"):
             raise TypeError(
-                f"Subclasses of BaseAnimeProvider must define a 'HEADERS' class attribute."
+                "Subclasses of BaseAnimeProvider must define a 'HEADERS' class attribute."
             )
 
     def __init__(self, client: "Client") -> None:

@@ -25,7 +25,6 @@ from .models import (
     DownloadQueueItem,
     EpisodeDownload,
     MediaDownloadRecord,
-    MediaIndexEntry,
 )
 
 logger = logging.getLogger(__name__)

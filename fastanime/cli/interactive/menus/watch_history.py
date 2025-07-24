@@ -4,12 +4,10 @@ Provides comprehensive watch history viewing, editing, and management capabiliti
 """
 
 import logging
-from pathlib import Path
 from typing import Callable, Dict, List
 
 from rich.console import Console
 from rich.table import Table
-from rich.text import Text
 
 from ....core.constants import APP_DATA_DIR
 from ...utils.feedback import create_feedback_manager

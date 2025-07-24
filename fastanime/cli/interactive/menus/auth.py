@@ -6,7 +6,6 @@ Implements Step 5: AniList Authentication Flow
 import webbrowser
 from typing import Optional
 
-import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -115,7 +114,7 @@ def _handle_login(
                     "Browser opened",
                     "Complete the authorization process in your browser",
                 )
-            except Exception as e:
+            except Exception:
                 feedback.warning(
                     "Could not open browser automatically",
                     f"Please manually visit: {oauth_url}",
@@ -151,9 +150,9 @@ def _handle_login(
         feedback,
         "authenticate",
         loading_msg="Validating token with AniList",
-        success_msg=f"Successfully logged in! 🎉"
+        success_msg="Successfully logged in! 🎉"
         if icons
-        else f"Successfully logged in!",
+        else "Successfully logged in!",
         error_msg="Login failed",
         show_loading=True,
     )

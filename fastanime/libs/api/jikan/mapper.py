@@ -1,21 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 from ..types import (
-    AiringSchedule,
     MediaImage,
     MediaItem,
     MediaSearchResult,
-    MediaStatus,
-    MediaTagItem,
     MediaTitle,
     PageInfo,
-    StreamingEpisode,
     Studio,
-    UserListItem,
-    UserProfile,
 )
 
 if TYPE_CHECKING:

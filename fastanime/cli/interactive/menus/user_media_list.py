@@ -10,12 +10,10 @@ Provides comprehensive AniList list management including:
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
 from ....libs.api.params import UpdateUserMediaListEntryParams, UserListParams
 from ....libs.api.types import MediaItem, MediaSearchResult, UserListItem
@@ -334,7 +332,7 @@ def _display_list_contents(
 
     # Show pagination info
     if result.page_info.has_next_page:
-        console.print(f"[dim]More results available on next page[/dim]")
+        console.print("[dim]More results available on next page[/dim]")
 
 
 def _display_anime_list_details(console: Console, anime: MediaItem, icons: bool):
@@ -360,7 +358,7 @@ def _display_anime_list_details(console: Console, anime: MediaItem, icons: bool)
     # Add list-specific information if available
     if hasattr(anime, "media_list_entry") and anime.media_list_entry:
         entry = anime.media_list_entry
-        details_text += f"\n\n[bold cyan]Your List Info:[/bold cyan]\n"
+        details_text += "\n\n[bold cyan]Your List Info:[/bold cyan]\n"
         details_text += f"Progress: {entry.progress or 0} episodes\n"
         details_text += f"Score: {entry.score or 'Not rated'}\n"
         details_text += f"Status: {_status_to_display_name(entry.status) if hasattr(entry, 'status') else 'Unknown'}\n"

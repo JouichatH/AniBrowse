@@ -62,8 +62,8 @@ def config(
     user_config: AppConfig, path, view, view_json, desktop_entry, update, interactive
 ):
     from ...core.constants import USER_CONFIG_PATH
-    from ..config.generate import generate_config_ini_from_app_model
     from ..config.editor import InteractiveConfigEditor
+    from ..config.generate import generate_config_ini_from_app_model
 
     if path:
         print(USER_CONFIG_PATH)

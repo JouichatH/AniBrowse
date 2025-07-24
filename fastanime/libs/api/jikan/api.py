@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 from ..base import (
     BaseApiClient,
@@ -9,13 +9,12 @@ from ..base import (
     UpdateUserMediaListEntryParams,
     UserMediaListSearchParams,
 )
-from ..types import MediaItem, MediaSearchResult, UserProfile
+from ..types import MediaSearchResult, UserProfile
 from . import mapper
 
 if TYPE_CHECKING:
-    from httpx import Client
 
-    from ....core.config import AppConfig
+    pass
 
 logger = logging.getLogger(__name__)
 

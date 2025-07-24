@@ -12,12 +12,13 @@ def stats(config: "AppConfig"):
     import shutil
     import subprocess
 
-    from fastanime.cli.utils.feedback import create_feedback_manager
-    from fastanime.core.exceptions import FastAnimeError
-    from fastanime.libs.api.factory import create_api_client
     from rich.console import Console
     from rich.markdown import Markdown
     from rich.panel import Panel
+
+    from fastanime.cli.utils.feedback import create_feedback_manager
+    from fastanime.core.exceptions import FastAnimeError
+    from fastanime.libs.api.factory import create_api_client
 
     feedback = create_feedback_manager(config.general.icons)
     console = Console()

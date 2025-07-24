@@ -1,10 +1,10 @@
 import re
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 from yt_dlp.utils import clean_html as ytdlp_clean_html
 
-from ...libs.api.types import AiringSchedule, MediaItem
+from ...libs.api.types import AiringSchedule
 
 COMMA_REGEX = re.compile(r"([0-9]{3})(?=\d)")
 
