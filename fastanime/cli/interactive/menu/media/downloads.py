@@ -2,7 +2,7 @@ import logging
 import random
 from typing import Callable, Dict
 
-from .....libs.media_api.params import MediaSearchParams, UserMediaListSearchParams
+from .....libs.media_api.params import MediaSearchParams
 from .....libs.media_api.types import (
     MediaSort,
     MediaStatus,
@@ -16,82 +16,82 @@ MenuAction = Callable[[], State | InternalDirective]
 
 
 @session.menu
-def main(ctx: Context, state: State) -> State | InternalDirective:
+def downloads(ctx: Context, state: State) -> State | InternalDirective:
+    """Downloads menu showing locally stored media from registry."""
     icons = ctx.config.general.icons
     feedback = ctx.service.feedback
     feedback.clear_console()
 
     options: Dict[str, MenuAction] = {
-        f"{'🔥 ' if icons else ''}Trending": _create_media_list_action(
+        f"{'🔥 ' if icons else ''}Trending (Local)": _create_local_media_list_action(
             ctx, state, MediaSort.TRENDING_DESC
         ),
-        f"{'🎞️ ' if icons else ''}Recent": _create_recent_media_action(ctx, state),
-        f"{'📺 ' if icons else ''}Watching": _create_user_list_action(
+        f"{'🎞️ ' if icons else ''}Recent (Local)": _create_local_recent_media_action(ctx, state),
+        f"{'📺 ' if icons else ''}Watching (Local)": _create_local_status_action(
             ctx, state, UserMediaListStatus.WATCHING
         ),
-        f"{'🔁 ' if icons else ''}Rewatching": _create_user_list_action(
+        f"{'🔁 ' if icons else ''}Rewatching (Local)": _create_local_status_action(
             ctx, state, UserMediaListStatus.REPEATING
         ),
-        f"{'⏸️ ' if icons else ''}Paused": _create_user_list_action(
+        f"{'⏸️ ' if icons else ''}Paused (Local)": _create_local_status_action(
             ctx, state, UserMediaListStatus.PAUSED
         ),
-        f"{'📑 ' if icons else ''}Planned": _create_user_list_action(
+        f"{'📑 ' if icons else ''}Planned (Local)": _create_local_status_action(
             ctx, state, UserMediaListStatus.PLANNING
         ),
-        f"{'🔎 ' if icons else ''}Search": _create_search_media_list(ctx, state),
-        f"{'� ' if icons else ''}Downloads": _create_downloads_action(ctx, state),
-        f"{'�🔔 ' if icons else ''}Recently Updated": _create_media_list_action(
+        f"{'🔎 ' if icons else ''}Search (Local)": _create_local_search_media_list(ctx, state),
+        f"{'🔔 ' if icons else ''}Recently Updated (Local)": _create_local_media_list_action(
             ctx, state, MediaSort.UPDATED_AT_DESC
         ),
-        f"{'✨ ' if icons else ''}Popular": _create_media_list_action(
+        f"{'✨ ' if icons else ''}Popular (Local)": _create_local_media_list_action(
             ctx, state, MediaSort.POPULARITY_DESC
         ),
-        f"{'💯 ' if icons else ''}Top Scored": _create_media_list_action(
+        f"{'💯 ' if icons else ''}Top Scored (Local)": _create_local_media_list_action(
             ctx, state, MediaSort.SCORE_DESC
         ),
-        f"{'💖 ' if icons else ''}Favourites": _create_media_list_action(
+        f"{'💖 ' if icons else ''}Favourites (Local)": _create_local_media_list_action(
             ctx, state, MediaSort.FAVOURITES_DESC
         ),
-        f"{'🎲 ' if icons else ''}Random": _create_random_media_list(ctx, state),
-        f"{'🎬 ' if icons else ''}Upcoming": _create_media_list_action(
+        f"{'🎲 ' if icons else ''}Random (Local)": _create_local_random_media_list(ctx, state),
+        f"{'🎬 ' if icons else ''}Upcoming (Local)": _create_local_media_list_action(
             ctx, state, MediaSort.POPULARITY_DESC, MediaStatus.NOT_YET_RELEASED
         ),
-        f"{'✅ ' if icons else ''}Completed": _create_user_list_action(
+        f"{'✅ ' if icons else ''}Completed (Local)": _create_local_status_action(
             ctx, state, UserMediaListStatus.COMPLETED
         ),
-        f"{'🚮 ' if icons else ''}Dropped": _create_user_list_action(
+        f"{'🚮 ' if icons else ''}Dropped (Local)": _create_local_status_action(
             ctx, state, UserMediaListStatus.DROPPED
         ),
-        f"{'📝 ' if icons else ''}Edit Config": lambda: InternalDirective.CONFIG_EDIT,
+        f"{'↩️ ' if icons else ''}Back to Main": lambda: InternalDirective.BACK,
         f"{'❌ ' if icons else ''}Exit": lambda: InternalDirective.EXIT,
     }
 
     choice = ctx.selector.choose(
-        prompt="Select Category",
+        prompt="Select Downloads Category",
         choices=list(options.keys()),
     )
     if not choice:
-        return InternalDirective.MAIN
+        return InternalDirective.BACK
 
     selected_action = options[choice]
-
     next_step = selected_action()
     return next_step
 
 
-def _create_media_list_action(
+def _create_local_media_list_action(
     ctx: Context, state: State, sort: MediaSort, status: MediaStatus | None = None
 ) -> MenuAction:
+    """Create action for searching local media with sorting and optional status filter."""
     def action():
         feedback = ctx.service.feedback
         search_params = MediaSearchParams(sort=sort, status=status)
 
-        loading_message = "Fetching media list"
+        loading_message = "Searching local media registry"
         result = None
         with feedback.progress(loading_message):
-            result = ctx.media_api.search_media(search_params)
+            result = ctx.service.media_registry.search_for_media(search_params)
 
-        if result:
+        if result and result.media:
             return State(
                 menu_name=MenuName.RESULTS,
                 media_api=MediaApiState(
@@ -103,22 +103,34 @@ def _create_media_list_action(
                 ),
             )
         else:
-            return InternalDirective.MAIN
+            feedback.info("No media found in local registry")
+            return InternalDirective.BACK
 
     return action
 
 
-def _create_random_media_list(ctx: Context, state: State) -> MenuAction:
+def _create_local_random_media_list(ctx: Context, state: State) -> MenuAction:
+    """Create action for getting random local media."""
     def action():
         feedback = ctx.service.feedback
-        search_params = MediaSearchParams(id_in=random.sample(range(1, 15000), k=50))
-
-        loading_message = "Fetching media list"
-        result = None
+        
+        loading_message = "Getting random local media"
         with feedback.progress(loading_message):
-            result = ctx.media_api.search_media(search_params)
+            # Get all records and pick random ones
+            all_records = list(ctx.service.media_registry.get_all_media_records())
+            
+        if not all_records:
+            feedback.info("No media found in local registry")
+            return InternalDirective.BACK
+            
+        # Get up to 50 random records
+        random_records = random.sample(all_records, min(50, len(all_records)))
+        random_ids = [record.media_item.id for record in random_records]
+        
+        search_params = MediaSearchParams(id_in=random_ids)
+        result = ctx.service.media_registry.search_for_media(search_params)
 
-        if result:
+        if result and result.media:
             return State(
                 menu_name=MenuName.RESULTS,
                 media_api=MediaApiState(
@@ -130,27 +142,29 @@ def _create_random_media_list(ctx: Context, state: State) -> MenuAction:
                 ),
             )
         else:
-            return InternalDirective.MAIN
+            feedback.info("No media found in local registry")
+            return InternalDirective.BACK
 
     return action
 
 
-def _create_search_media_list(ctx: Context, state: State) -> MenuAction:
+def _create_local_search_media_list(ctx: Context, state: State) -> MenuAction:
+    """Create action for searching local media by query."""
     def action():
         feedback = ctx.service.feedback
 
-        query = ctx.selector.ask("Search for Anime")
+        query = ctx.selector.ask("Search Local Anime")
         if not query:
-            return InternalDirective.MAIN
+            return InternalDirective.BACK
 
         search_params = MediaSearchParams(query=query)
 
-        loading_message = "Fetching media list"
+        loading_message = "Searching local media registry"
         result = None
         with feedback.progress(loading_message):
-            result = ctx.media_api.search_media(search_params)
+            result = ctx.service.media_registry.search_for_media(search_params)
 
-        if result:
+        if result and result.media:
             return State(
                 menu_name=MenuName.RESULTS,
                 media_api=MediaApiState(
@@ -162,50 +176,46 @@ def _create_search_media_list(ctx: Context, state: State) -> MenuAction:
                 ),
             )
         else:
-            return InternalDirective.MAIN
+            feedback.info("No media found in local registry")
+            return InternalDirective.BACK
 
     return action
 
 
-def _create_user_list_action(
+def _create_local_status_action(
     ctx: Context, state: State, status: UserMediaListStatus
 ) -> MenuAction:
-    """A factory to create menu actions for fetching user lists, handling authentication."""
-
+    """Create action for getting local media by user status."""
     def action():
         feedback = ctx.service.feedback
-        if not ctx.media_api.is_authenticated():
-            feedback.error("You haven't logged in")
-            return InternalDirective.MAIN
 
-        search_params = UserMediaListSearchParams(status=status)
-
-        loading_message = "Fetching media list"
+        loading_message = f"Getting {status.value} media from local registry"
         result = None
         with feedback.progress(loading_message):
-            result = ctx.media_api.search_media_list(search_params)
+            result = ctx.service.media_registry.get_media_by_status(status)
 
-        if result:
+        if result and result.media:
             return State(
                 menu_name=MenuName.RESULTS,
                 media_api=MediaApiState(
                     search_result={
                         media_item.id: media_item for media_item in result.media
                     },
-                    search_params=search_params,
                     page_info=result.page_info,
                 ),
             )
         else:
-            return InternalDirective.MAIN
+            feedback.info(f"No {status.value} media found in local registry")
+            return InternalDirective.BACK
 
     return action
 
 
-def _create_recent_media_action(ctx: Context, state: State) -> MenuAction:
+def _create_local_recent_media_action(ctx: Context, state: State) -> MenuAction:
+    """Create action for getting recently watched local media."""
     def action():
         result = ctx.service.media_registry.get_recently_watched()
-        if result:
+        if result and result.media:
             return State(
                 menu_name=MenuName.RESULTS,
                 media_api=MediaApiState(
@@ -216,14 +226,7 @@ def _create_recent_media_action(ctx: Context, state: State) -> MenuAction:
                 ),
             )
         else:
-            return InternalDirective.MAIN
+            ctx.service.feedback.info("No recently watched media found in local registry")
+            return InternalDirective.BACK
 
-    return action
-
-
-def _create_downloads_action(ctx: Context, state: State) -> MenuAction:
-    """Create action to navigate to the downloads menu."""
-    def action():
-        return State(menu_name=MenuName.DOWNLOADS)
-    
     return action
