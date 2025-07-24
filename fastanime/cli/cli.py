@@ -7,7 +7,7 @@ from ..core.config import AppConfig
 from ..core.constants import PROJECT_NAME, USER_CONFIG_PATH, __version__
 from .config import ConfigLoader
 from .options import options_from_model
-from .utils.exceptions import setup_exceptions_handler
+from .utils.exception import setup_exceptions_handler
 from .utils.lazyloader import LazyGroup
 from .utils.logging import setup_logging
 

@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, PrivateAttr, computed_field
 
 from ...libs.media_api.types import MediaSort, UserMediaListSort
-from ...libs.providers.anime.types import ProviderName, ProviderServer
+from ...libs.provider.anime.types import ProviderName, ProviderServer
 from ..constants import APP_ASCII_ART
 from . import defaults
 from . import descriptions as desc

@@ -4,7 +4,7 @@ import click
 
 from ...core.config import AppConfig
 from ...core.exceptions import FastAnimeError
-from ..utils.completions import anime_titles_shell_complete
+from ..utils.completion import anime_titles_shell_complete
 from . import examples
 
 if TYPE_CHECKING:
@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Unpack
 
-    from ...libs.providers.anime.base import BaseAnimeProvider
-    from ...libs.providers.anime.types import Anime
+    from ...libs.provider.anime.base import BaseAnimeProvider
+    from ...libs.provider.anime.types import Anime
     from ...libs.selectors.base import BaseSelector
 
     class Options(TypedDict):
@@ -45,11 +45,11 @@ def search(config: AppConfig, **options: "Unpack[Options]"):
     from rich.progress import Progress
 
     from ...core.exceptions import FastAnimeError
-    from ...libs.providers.anime.params import (
+    from ...libs.provider.anime.params import (
         AnimeParams,
         SearchParams,
     )
-    from ...libs.providers.anime.provider import create_provider
+    from ...libs.provider.anime.provider import create_provider
     from ...libs.selectors.selector import create_selector
 
     provider = create_provider(config.general.provider)
@@ -141,9 +141,9 @@ def stream_anime(
     from rich import print
     from rich.progress import Progress
 
-    from ...libs.players.params import PlayerParams
-    from ...libs.players.player import create_player
-    from ...libs.providers.anime.params import EpisodeStreamsParams
+    from ...libs.player.params import PlayerParams
+    from ...libs.player.player import create_player
+    from ...libs.provider.anime.params import EpisodeStreamsParams
 
     player = create_player(config)
 

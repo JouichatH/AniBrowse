@@ -4,7 +4,7 @@ import click
 
 from ...core.config import AppConfig
 from ...core.exceptions import FastAnimeError
-from ..utils.completions import anime_titles_shell_complete
+from ..utils.completion import anime_titles_shell_complete
 from . import examples
 
 if TYPE_CHECKING:
@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Unpack
 
-    from ...libs.providers.anime.base import BaseAnimeProvider
-    from ...libs.providers.anime.types import Anime
+    from ...libs.provider.anime.base import BaseAnimeProvider
+    from ...libs.provider.anime.types import Anime
     from ...libs.selectors.base import BaseSelector
 
     class Options(TypedDict):
@@ -106,11 +106,11 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
     from rich.progress import Progress
 
     from ...core.exceptions import FastAnimeError
-    from ...libs.providers.anime.params import (
+    from ...libs.provider.anime.params import (
         AnimeParams,
         SearchParams,
     )
-    from ...libs.providers.anime.provider import create_provider
+    from ...libs.provider.anime.provider import create_provider
     from ...libs.selectors.selector import create_selector
 
     provider = create_provider(config.general.provider)
@@ -208,7 +208,7 @@ def download_anime(
     from rich.progress import Progress
 
     from ...core.downloader import DownloadParams, create_downloader
-    from ...libs.providers.anime.params import EpisodeStreamsParams
+    from ...libs.provider.anime.params import EpisodeStreamsParams
 
     downloader = create_downloader(config.downloads)
 

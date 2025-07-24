@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 import click
 
-from fastanime.cli.utils.completions import anime_titles_shell_complete
+from fastanime.cli.utils.completion import anime_titles_shell_complete
 
 from .data import (
     genres_available,

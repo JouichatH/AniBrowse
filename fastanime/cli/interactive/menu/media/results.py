@@ -26,7 +26,7 @@ def results(ctx: Context, state: State) -> State | InternalDirective:
 
     preview_command = None
     if ctx.config.general.preview != "none":
-        from ....utils.previews import get_anime_preview
+        from ....utils.preview import get_anime_preview
 
         preview_command = get_anime_preview(
             list(search_result_dict.values()),

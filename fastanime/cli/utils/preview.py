@@ -9,7 +9,7 @@ from typing import List
 
 import httpx
 
-from ...core.utils import formatters
+from ...core.utils import formatter
 
 from ...core.config import AppConfig
 from ...core.constants import APP_CACHE_DIR, PLATFORM, SCRIPTS_DIR
@@ -102,64 +102,64 @@ def _populate_info_template(media_item: MediaItem, config: AppConfig) -> str:
     Takes the info.sh template and injects formatted, shell-safe data.
     """
     info_script = TEMPLATE_INFO_SCRIPT
-    description = formatters.clean_html(
+    description = formatter.clean_html(
         media_item.description or "No description available."
     )
 
     # Escape all variables before injecting them into the script
     replacements = {
-        "TITLE": formatters.shell_safe(
+        "TITLE": formatter.shell_safe(
             media_item.title.english or media_item.title.romaji
         ),
-        "STATUS": formatters.shell_safe(media_item.status.value),
-        "FORMAT": formatters.shell_safe(media_item.format.value),
-        "NEXT_EPISODE": formatters.shell_safe(
-            f"Episode {media_item.next_airing.episode} on {formatters.format_date(media_item.next_airing.airing_at, '%A, %d %B %Y at %X)')}"
+        "STATUS": formatter.shell_safe(media_item.status.value),
+        "FORMAT": formatter.shell_safe(media_item.format.value),
+        "NEXT_EPISODE": formatter.shell_safe(
+            f"Episode {media_item.next_airing.episode} on {formatter.format_date(media_item.next_airing.airing_at, '%A, %d %B %Y at %X)')}"
             if media_item.next_airing
             else "N/A"
         ),
-        "EPISODES": formatters.shell_safe(str(media_item.episodes)),
-        "DURATION": formatters.shell_safe(
-            formatters.format_media_duration(media_item.duration)
+        "EPISODES": formatter.shell_safe(str(media_item.episodes)),
+        "DURATION": formatter.shell_safe(
+            formatter.format_media_duration(media_item.duration)
         ),
-        "SCORE": formatters.shell_safe(
-            formatters.format_score_stars_full(media_item.average_score)
+        "SCORE": formatter.shell_safe(
+            formatter.format_score_stars_full(media_item.average_score)
         ),
-        "FAVOURITES": formatters.shell_safe(
-            formatters.format_number_with_commas(media_item.favourites)
+        "FAVOURITES": formatter.shell_safe(
+            formatter.format_number_with_commas(media_item.favourites)
         ),
-        "POPULARITY": formatters.shell_safe(
-            formatters.format_number_with_commas(media_item.popularity)
+        "POPULARITY": formatter.shell_safe(
+            formatter.format_number_with_commas(media_item.popularity)
         ),
-        "GENRES": formatters.shell_safe(
-            formatters.format_list_with_commas([v.value for v in media_item.genres])
+        "GENRES": formatter.shell_safe(
+            formatter.format_list_with_commas([v.value for v in media_item.genres])
         ),
-        "TAGS": formatters.shell_safe(
-            formatters.format_list_with_commas([t.name.value for t in media_item.tags])
+        "TAGS": formatter.shell_safe(
+            formatter.format_list_with_commas([t.name.value for t in media_item.tags])
         ),
-        "STUDIOS": formatters.shell_safe(
-            formatters.format_list_with_commas(
+        "STUDIOS": formatter.shell_safe(
+            formatter.format_list_with_commas(
                 [t.name for t in media_item.studios if t.name]
             )
         ),
-        "SYNONYMNS": formatters.shell_safe(
-            formatters.format_list_with_commas(media_item.synonymns)
+        "SYNONYMNS": formatter.shell_safe(
+            formatter.format_list_with_commas(media_item.synonymns)
         ),
-        "USER_STATUS": formatters.shell_safe(
+        "USER_STATUS": formatter.shell_safe(
             media_item.user_status.status.value
             if media_item.user_status and media_item.user_status.status
             else "NOT_ON_LIST"
         ),
-        "USER_PROGRESS": formatters.shell_safe(
+        "USER_PROGRESS": formatter.shell_safe(
             f"Episode {media_item.user_status.progress}"
             if media_item.user_status
             else "0"
         ),
-        "START_DATE": formatters.shell_safe(
-            formatters.format_date(media_item.start_date)
+        "START_DATE": formatter.shell_safe(
+            formatter.format_date(media_item.start_date)
         ),
-        "END_DATE": formatters.shell_safe(formatters.format_date(media_item.end_date)),
-        "SYNOPSIS": formatters.shell_safe(description),
+        "END_DATE": formatter.shell_safe(formatter.format_date(media_item.end_date)),
+        "SYNOPSIS": formatter.shell_safe(description),
     }
 
     for key, value in replacements.items():
@@ -253,29 +253,29 @@ def _populate_episode_info_template(
     episode_info_script = TEMPLATE_EPISODE_INFO_SCRIPT
 
     replacements = {
-        "TITLE": formatters.shell_safe(title),
-        "NEXT_EPISODE": formatters.shell_safe(
-            f"Episode {media_item.next_airing.episode} on {formatters.format_date(media_item.next_airing.airing_at, '%A, %d %B %Y at %X)')}"
+        "TITLE": formatter.shell_safe(title),
+        "NEXT_EPISODE": formatter.shell_safe(
+            f"Episode {media_item.next_airing.episode} on {formatter.format_date(media_item.next_airing.airing_at, '%A, %d %B %Y at %X)')}"
             if media_item.next_airing
             else "N/A"
         ),
-        "DURATION": formatters.format_media_duration(media_item.duration),
-        "STATUS": formatters.shell_safe(media_item.status.value),
-        "EPISODES": formatters.shell_safe(str(media_item.episodes)),
-        "USER_STATUS": formatters.shell_safe(
+        "DURATION": formatter.format_media_duration(media_item.duration),
+        "STATUS": formatter.shell_safe(media_item.status.value),
+        "EPISODES": formatter.shell_safe(str(media_item.episodes)),
+        "USER_STATUS": formatter.shell_safe(
             media_item.user_status.status.value
             if media_item.user_status and media_item.user_status.status
             else "NOT_ON_LIST"
         ),
-        "USER_PROGRESS": formatters.shell_safe(
+        "USER_PROGRESS": formatter.shell_safe(
             f"Episode {media_item.user_status.progress}"
             if media_item.user_status
             else "0"
         ),
-        "START_DATE": formatters.shell_safe(
-            formatters.format_date(media_item.start_date)
+        "START_DATE": formatter.shell_safe(
+            formatter.format_date(media_item.start_date)
         ),
-        "END_DATE": formatters.shell_safe(formatters.format_date(media_item.end_date)),
+        "END_DATE": formatter.shell_safe(formatter.format_date(media_item.end_date)),
     }
 
     for key, value in replacements.items():

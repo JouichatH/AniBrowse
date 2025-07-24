@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ...libs.media_api.params import MediaSearchParams, UserMediaListSearchParams
 from ...libs.media_api.types import MediaItem, PageInfo
-from ...libs.providers.anime.types import Anime, SearchResults, Server
+from ...libs.provider.anime.types import Anime, SearchResults, Server
 
 
 # TODO: is internal directive a good name

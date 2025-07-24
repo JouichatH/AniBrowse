@@ -5,7 +5,7 @@ from ....core.config.model import AppConfig
 from ....libs.media_api.base import BaseApiClient
 from ....libs.media_api.params import UpdateUserMediaListEntryParams
 from ....libs.media_api.types import MediaItem, UserMediaListStatus
-from ....libs.players.types import PlayerResult
+from ....libs.player.types import PlayerResult
 from ..registry import MediaRegistryService
 
 logger = logging.getLogger(__name__)

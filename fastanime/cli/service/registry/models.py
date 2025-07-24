@@ -7,7 +7,7 @@ from typing import Dict, Literal, Optional
 from pydantic import BaseModel, Field, computed_field
 
 from ....libs.media_api.types import MediaItem, UserMediaListStatus
-from ....core.utils import converters
+from ....core.utils import converter
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +64,8 @@ class MediaRegistryIndexEntry(BaseModel):
         """Watch completion percentage."""
         if self.total_duration and self.last_watch_position:
             return (
-                converters.time_to_seconds(self.last_watch_position)
-                / converters.time_to_seconds(self.total_duration)
+                converter.time_to_seconds(self.last_watch_position)
+                / converter.time_to_seconds(self.total_duration)
             ) * 100
         return 0.0
 
