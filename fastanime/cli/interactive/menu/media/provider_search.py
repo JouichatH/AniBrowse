@@ -9,7 +9,7 @@ from ...state import InternalDirective, MenuName, ProviderState, State
 
 @session.menu
 def provider_search(ctx: Context, state: State) -> State | InternalDirective:
-    feedback = ctx.services.feedback
+    feedback = ctx.service.feedback
     media_item = state.media_api.media_item
     if not media_item:
         feedback.error("No AniList anime to search for", "Please select an anime first")

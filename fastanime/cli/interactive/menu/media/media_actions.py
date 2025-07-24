@@ -13,7 +13,7 @@ MenuAction = Callable[[], State | InternalDirective]
 
 @session.menu
 def media_actions(ctx: Context, state: State) -> State | InternalDirective:
-    feedback = ctx.services.feedback
+    feedback = ctx.service.feedback
 
     icons = ctx.config.general.icons
 
@@ -55,7 +55,7 @@ def _stream(ctx: Context, state: State) -> MenuAction:
 
 def _watch_trailer(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.services.feedback
+        feedback = ctx.service.feedback
         media_item = state.media_api.media_item
 
         if not media_item:
@@ -78,7 +78,7 @@ def _watch_trailer(ctx: Context, state: State) -> MenuAction:
 
 def _manage_user_media_list(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.services.feedback
+        feedback = ctx.service.feedback
         media_item = state.media_api.media_item
 
         if not media_item:
@@ -95,7 +95,7 @@ def _manage_user_media_list(ctx: Context, state: State) -> MenuAction:
         )
         if status:
             # local
-            ctx.services.media_registry.update_media_index_entry(
+            ctx.service.media_registry.update_media_index_entry(
                 media_id=media_item.id,
                 media_item=media_item,
                 status=UserMediaListStatus(status),
@@ -113,7 +113,7 @@ def _manage_user_media_list(ctx: Context, state: State) -> MenuAction:
 
 def _score_anime(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.services.feedback
+        feedback = ctx.service.feedback
         media_item = state.media_api.media_item
 
         if not media_item:
@@ -128,7 +128,7 @@ def _score_anime(ctx: Context, state: State) -> MenuAction:
             if not 0.0 <= score <= 10.0:
                 raise ValueError("Score out of range.")
             # local
-            ctx.services.media_registry.update_media_index_entry(
+            ctx.service.media_registry.update_media_index_entry(
                 media_id=media_item.id, media_item=media_item, score=score
             )
             # remote

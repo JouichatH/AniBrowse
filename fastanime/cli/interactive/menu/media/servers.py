@@ -9,7 +9,7 @@ from ...state import InternalDirective, MenuName, State
 
 @session.menu
 def servers(ctx: Context, state: State) -> State | InternalDirective:
-    feedback = ctx.services.feedback
+    feedback = ctx.service.feedback
 
     config = ctx.config
     provider = ctx.provider
@@ -85,7 +85,7 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
         )
     )
     if media_item and episode_number:
-        ctx.services.watch_history.track(media_item, episode_number, player_result)
+        ctx.service.watch_history.track(media_item, episode_number, player_result)
 
     return State(
         menu_name=MenuName.PLAYER_CONTROLS,

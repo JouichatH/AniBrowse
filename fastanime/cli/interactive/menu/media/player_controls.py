@@ -8,7 +8,7 @@ MenuAction = Callable[[], Union[State, InternalDirective]]
 
 @session.menu
 def player_controls(ctx: Context, state: State) -> Union[State, InternalDirective]:
-    feedback = ctx.services.feedback
+    feedback = ctx.service.feedback
     feedback.clear_console()
 
     config = ctx.config
@@ -80,7 +80,7 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
 
 def _next_episode(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.services.feedback
+        feedback = ctx.service.feedback
         feedback.clear_console()
 
         config = ctx.config
@@ -131,7 +131,7 @@ def _replay(ctx: Context, state: State) -> MenuAction:
 
 def _change_server(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.services.feedback
+        feedback = ctx.service.feedback
         feedback.clear_console()
 
         selector = ctx.selector

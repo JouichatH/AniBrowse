@@ -12,22 +12,22 @@ from ...libs.media_api.base import BaseApiClient
 from ...libs.player.base import BasePlayer
 from ...libs.provider.anime.base import BaseAnimeProvider
 from ...libs.selectors.base import BaseSelector
-from ..services.auth import AuthService
-from ..services.feedback import FeedbackService
-from ..services.registry import MediaRegistryService
-from ..services.session import SessionsService
-from ..services.watch_history import WatchHistoryService
+from ..service.auth import AuthService
+from ..service.feedback import FeedbackService
+from ..service.registry import MediaRegistryService
+from ..service.session import SessionsService
+from ..service.watch_history import WatchHistoryService
 from .state import InternalDirective, MenuName, State
 
 logger = logging.getLogger(__name__)
 
 # A type alias for the signature all menu functions must follow.
 
-MENUS_DIR = APP_DIR / "cli" / "interactive" / "menus"
+MENUS_DIR = APP_DIR / "cli" / "interactive" / "menu"
 
 
 @dataclass(frozen=True)
-class Services:
+class Service:
     feedback: FeedbackService
     media_registry: MediaRegistryService
     watch_history: WatchHistoryService
@@ -42,7 +42,7 @@ class Context:
     selector: BaseSelector
     player: BasePlayer
     media_api: BaseApiClient
-    services: Services
+    service: Service
 
 
 MenuFunction = Callable[[Context, State], Union[State, InternalDirective]]
@@ -60,7 +60,7 @@ class Session:
     _menus: dict[MenuName, Menu] = {}
 
     def _load_context(self, config: AppConfig):
-        """Initializes all shared services based on the provided configuration."""
+        """Initializes all shared service based on the provided configuration."""
         from ...libs.media_api.api import create_api_client
         from ...libs.player import create_player
         from ...libs.provider.anime.provider import create_provider
@@ -70,7 +70,7 @@ class Session:
             media_api=config.general.media_api, config=config.media_registry
         )
         auth = AuthService(config.general.media_api)
-        services = Services(
+        service = Service(
             feedback=FeedbackService(config.general.icons),
             media_registry=media_registry,
             watch_history=WatchHistoryService(config, media_registry),
@@ -95,7 +95,7 @@ class Session:
             selector=create_selector(config),
             player=create_player(config),
             media_api=media_api,
-            services=services,
+            service=service,
         )
         logger.info("Application context reloaded.")
 
@@ -118,7 +118,7 @@ class Session:
         if resume:
             if (
                 history
-                := self._context.services.session.get_most_recent_session_history()
+                := self._context.service.session.get_most_recent_session_history()
             ):
                 self._history = history
             else:
@@ -130,9 +130,9 @@ class Session:
         try:
             self._run_main_loop()
         except Exception:
-            self._context.services.session.create_crash_backup(self._history)
+            self._context.service.session.create_crash_backup(self._history)
             raise
-        self._context.services.session.save_session(self._history)
+        self._context.service.session.save_session(self._history)
 
     def _run_main_loop(self):
         """Run the main session loop."""
@@ -189,7 +189,7 @@ class Session:
             if filename.endswith(".py") and not filename.startswith("__"):
                 module_name = filename[:-3]
                 full_module_name = (
-                    f"fastanime.cli.interactive.menus.{package_name}.{module_name}"
+                    f"fastanime.cli.interactive.menu.{package_name}.{module_name}"
                 )
                 file_path = package_path / filename
 

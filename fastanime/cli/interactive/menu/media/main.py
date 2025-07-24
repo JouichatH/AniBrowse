@@ -18,7 +18,7 @@ MenuAction = Callable[[], State | InternalDirective]
 @session.menu
 def main(ctx: Context, state: State) -> State | InternalDirective:
     icons = ctx.config.general.icons
-    feedback = ctx.services.feedback
+    feedback = ctx.service.feedback
     feedback.clear_console()
 
     options: Dict[str, MenuAction] = {
@@ -82,7 +82,7 @@ def _create_media_list_action(
     ctx: Context, state: State, sort: MediaSort, status: MediaStatus | None = None
 ) -> MenuAction:
     def action():
-        feedback = ctx.services.feedback
+        feedback = ctx.service.feedback
         search_params = MediaSearchParams(sort=sort, status=status)
 
         loading_message = "Fetching media list"
@@ -109,7 +109,7 @@ def _create_media_list_action(
 
 def _create_random_media_list(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.services.feedback
+        feedback = ctx.service.feedback
         search_params = MediaSearchParams(id_in=random.sample(range(1, 15000), k=50))
 
         loading_message = "Fetching media list"
@@ -136,7 +136,7 @@ def _create_random_media_list(ctx: Context, state: State) -> MenuAction:
 
 def _create_search_media_list(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.services.feedback
+        feedback = ctx.service.feedback
 
         query = ctx.selector.ask("Search for Anime")
         if not query:
@@ -172,7 +172,7 @@ def _create_user_list_action(
     """A factory to create menu actions for fetching user lists, handling authentication."""
 
     def action():
-        feedback = ctx.services.feedback
+        feedback = ctx.service.feedback
         if not ctx.media_api.is_authenticated():
             feedback.error("You haven't logged in")
             return InternalDirective.MAIN
@@ -203,7 +203,7 @@ def _create_user_list_action(
 
 def _create_recent_media_action(ctx: Context, state: State) -> MenuAction:
     def action():
-        result = ctx.services.media_registry.get_recently_watched()
+        result = ctx.service.media_registry.get_recently_watched()
         if result:
             return State(
                 menu_name=MenuName.RESULTS,

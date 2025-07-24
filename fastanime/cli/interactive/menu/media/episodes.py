@@ -9,7 +9,7 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
     the logic for continuing from watch history or manual selection.
     """
     config = ctx.config
-    feedback = ctx.services.feedback
+    feedback = ctx.service.feedback
     feedback.clear_console()
 
     provider_anime = state.provider.anime

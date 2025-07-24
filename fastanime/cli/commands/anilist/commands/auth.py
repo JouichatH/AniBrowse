@@ -12,8 +12,8 @@ def auth(config: AppConfig, status: bool, logout: bool):
     from .....core.constants import ANILIST_AUTH
     from .....libs.media_api.api import create_api_client
     from .....libs.selectors.selector import create_selector
-    from ....services.auth import AuthService
-    from ....services.feedback import FeedbackService
+    from ....service.auth import AuthService
+    from ....service.feedback import FeedbackService
 
     auth_service = AuthService("anilist")
     feedback = FeedbackService(config.general.icons)
