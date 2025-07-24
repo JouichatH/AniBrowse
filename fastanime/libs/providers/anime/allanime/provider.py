@@ -11,7 +11,7 @@ from .constants import (
     EPISODE_GQL,
     SEARCH_GQL,
 )
-from .parser import (
+from .mappers import (
     map_to_anime_result,
     map_to_search_results,
 )
