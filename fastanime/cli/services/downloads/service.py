@@ -18,7 +18,7 @@ from typing import Dict, List, Optional
 from ....core.config.model import DownloadsConfig
 from ....core.constants import APP_CACHE_DIR, APP_DATA_DIR
 from ....core.downloader import create_downloader
-from ....libs.api.types import MediaItem
+from ....libs.media_api.types import MediaItem
 from .models import (
     DownloadIndex,
     DownloadQueue,

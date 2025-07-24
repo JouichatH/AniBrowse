@@ -10,7 +10,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ....libs.api.types import UserProfile
+from ....libs.media_api.types import UserProfile
 from ...auth.manager import AuthManager
 from ...utils.feedback import create_feedback_manager, execute_with_feedback
 from ..session import Context, session

@@ -1,7 +1,7 @@
 from typing import List
 
-from ....libs.api.params import MediaSearchParams
-from ....libs.api.types import MediaItem
+from ....libs.media_api.params import MediaSearchParams
+from ....libs.media_api.types import MediaItem
 
 
 class MediaFilter:

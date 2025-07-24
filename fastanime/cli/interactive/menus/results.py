@@ -1,8 +1,8 @@
 from dataclasses import asdict
 from typing import Callable, Dict, Union
 
-from ....libs.api.params import MediaSearchParams, UserMediaListSearchParams
-from ....libs.api.types import MediaItem, MediaStatus, UserMediaListStatus
+from ....libs.media_api.params import MediaSearchParams, UserMediaListSearchParams
+from ....libs.media_api.types import MediaItem, MediaStatus, UserMediaListStatus
 from ..session import Context, session
 from ..state import InternalDirective, MediaApiState, MenuName, State
 

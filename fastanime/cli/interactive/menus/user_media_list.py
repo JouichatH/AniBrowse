@@ -15,8 +15,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ....libs.api.params import UpdateUserMediaListEntryParams, UserListParams
-from ....libs.api.types import MediaItem, MediaSearchResult, UserListItem
+from ....libs.media_api.params import UpdateUserMediaListEntryParams, UserListParams
+from ....libs.media_api.types import MediaItem, MediaSearchResult, UserListItem
 from ...utils.feedback import create_feedback_manager, execute_with_feedback
 from ..session import Context, session
 from ..state import ControlFlow, MediaApiState, State

@@ -2,7 +2,7 @@ from typing import Dict
 
 from pydantic import BaseModel, Field
 
-from ....libs.api.types import UserProfile
+from ....libs.media_api.types import UserProfile
 
 AUTH_VERSION = "1.0"
 

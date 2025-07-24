@@ -2,8 +2,8 @@ from typing import Callable, Dict
 
 from rich.console import Console
 
-from ....libs.api.params import UpdateUserMediaListEntryParams
-from ....libs.api.types import UserMediaListStatus
+from ....libs.media_api.params import UpdateUserMediaListEntryParams
+from ....libs.media_api.types import UserMediaListStatus
 from ....libs.players.params import PlayerParams
 from ..session import Context, session
 from ..state import InternalDirective, MenuName, State

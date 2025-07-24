@@ -4,7 +4,7 @@ from typing import Optional
 
 from ....core.constants import APP_DATA_DIR
 from ....core.utils.file import AtomicWriter, FileLock
-from ....libs.api.types import UserProfile
+from ....libs.media_api.types import UserProfile
 from .model import AuthModel, AuthProfile
 
 logger = logging.getLogger(__name__)

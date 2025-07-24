@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from typing import List, Optional
 
-from ...libs.api.types import AiringSchedule
+from ...libs.media_api.types import AiringSchedule
 
 COMMA_REGEX = re.compile(r"([0-9]{3})(?=\d)")
 

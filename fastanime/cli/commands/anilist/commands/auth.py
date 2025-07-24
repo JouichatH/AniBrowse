@@ -10,7 +10,7 @@ from .....core.config.model import AppConfig
 def auth(config: AppConfig, status: bool, logout: bool):
     """Handles user authentication and credential management."""
     from .....core.constants import ANILIST_AUTH
-    from .....libs.api.factory import create_api_client
+    from .....libs.media_api.factory import create_api_client
     from .....libs.selectors.selector import create_selector
     from ....services.auth import AuthService
     from ....services.feedback import FeedbackService

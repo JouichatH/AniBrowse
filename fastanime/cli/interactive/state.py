@@ -3,8 +3,8 @@ from typing import Dict, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ...libs.api.params import MediaSearchParams, UserMediaListSearchParams
-from ...libs.api.types import MediaItem, PageInfo
+from ...libs.media_api.params import MediaSearchParams, UserMediaListSearchParams
+from ...libs.media_api.types import MediaItem, PageInfo
 from ...libs.providers.anime.types import Anime, SearchResults, Server
 
 

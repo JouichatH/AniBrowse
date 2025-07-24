@@ -7,8 +7,8 @@ from typing import Dict, Generator, List, Optional
 from ....core.config.model import MediaRegistryConfig
 from ....core.exceptions import FastAnimeError
 from ....core.utils.file import AtomicWriter, FileLock, check_file_modified
-from ....libs.api.params import MediaSearchParams
-from ....libs.api.types import (
+from ....libs.media_api.params import MediaSearchParams
+from ....libs.media_api.types import (
     MediaItem,
     MediaSearchResult,
     PageInfo,

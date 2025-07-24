@@ -2,8 +2,8 @@ import logging
 import random
 from typing import Callable, Dict
 
-from ....libs.api.params import MediaSearchParams, UserMediaListSearchParams
-from ....libs.api.types import (
+from ....libs.media_api.params import MediaSearchParams, UserMediaListSearchParams
+from ....libs.media_api.types import (
     MediaSort,
     MediaStatus,
     UserMediaListStatus,

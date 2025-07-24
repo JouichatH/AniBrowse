@@ -8,7 +8,7 @@ import click
 
 from ...core.config import AppConfig
 from ...core.constants import APP_DIR, USER_CONFIG_PATH
-from ...libs.api.base import BaseApiClient
+from ...libs.media_api.base import BaseApiClient
 from ...libs.players.base import BasePlayer
 from ...libs.providers.anime.base import BaseAnimeProvider
 from ...libs.selectors.base import BaseSelector
@@ -61,7 +61,7 @@ class Session:
 
     def _load_context(self, config: AppConfig):
         """Initializes all shared services based on the provided configuration."""
-        from ...libs.api.factory import create_api_client
+        from ...libs.media_api.factory import create_api_client
         from ...libs.players import create_player
         from ...libs.providers.anime.provider import create_provider
         from ...libs.selectors import create_selector

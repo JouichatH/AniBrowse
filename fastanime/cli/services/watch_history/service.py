@@ -2,9 +2,9 @@ import logging
 from typing import Optional
 
 from ....core.config.model import AppConfig
-from ....libs.api.base import BaseApiClient
-from ....libs.api.params import UpdateUserMediaListEntryParams
-from ....libs.api.types import MediaItem, UserMediaListStatus
+from ....libs.media_api.base import BaseApiClient
+from ....libs.media_api.params import UpdateUserMediaListEntryParams
+from ....libs.media_api.types import MediaItem, UserMediaListStatus
 from ....libs.players.types import PlayerResult
 from ..registry import MediaRegistryService
 

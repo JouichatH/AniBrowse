@@ -12,7 +12,7 @@ import httpx
 from ...core.config import AppConfig
 from ...core.constants import APP_CACHE_DIR, PLATFORM, SCRIPTS_DIR
 from ...core.utils.file import AtomicWriter
-from ...libs.api.types import MediaItem
+from ...libs.media_api.types import MediaItem
 from . import ansi, formatters
 
 logger = logging.getLogger(__name__)
