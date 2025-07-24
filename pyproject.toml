@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-fastanime = 'fastanime:FastAnime'
+fastanime = 'fastanime:Cli'
 
 [project.optional-dependencies]
 standard = ["fastapi[standard]>=0.115.0", "mpv>=1.0.7", "plyer>=2.1.0"]
