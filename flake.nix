@@ -14,7 +14,7 @@
       pythonPackages = python.pkgs;
       fastanimeEnv = pythonPackages.buildPythonApplication {
         pname = "fastanime";
-        version = "2.8.8";
+        version = "2.9.9";
 
         src = self;
 
