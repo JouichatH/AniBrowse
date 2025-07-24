@@ -313,10 +313,10 @@ class MediaRegistryService:
         
         # Tag filters
         if params.tag_in:
-            media_tags = [tag.name for tag in media.tags]
+            media_tags = [tag.name for media in filtered for tag in media.tags]
             filtered = [media for media in filtered if any(tag in media_tags for tag in params.tag_in)]
         if params.tag_not_in:
-            media_tags = [tag.name for tag in media.tags]
+            media_tags = [tag.name for media in filtered for tag in media.tags]
             filtered = [media for media in filtered if not any(tag in media_tags for tag in params.tag_not_in)]
         
         # Format filter
