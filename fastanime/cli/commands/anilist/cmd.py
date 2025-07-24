@@ -7,7 +7,7 @@ commands = {
     # "trending": "trending.trending",
     # "recent": "recent.recent",
     "search": "search.search",
-    # "download": "download.download",
+    "download": "download.download",
     # "downloads": "downloads.downloads",
     "auth": "auth.auth",
 }

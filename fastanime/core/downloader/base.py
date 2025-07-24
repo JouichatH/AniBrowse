@@ -4,6 +4,7 @@ import httpx
 
 from ..config.model import DownloadsConfig
 from .params import DownloadParams
+from .model import DownloadResult
 
 
 class BaseDownloader(ABC):
@@ -15,5 +16,5 @@ class BaseDownloader(ABC):
         self.client = httpx.Client()
 
     @abstractmethod
-    def download(self, params: DownloadParams):
+    def download(self, params: DownloadParams) -> DownloadResult:
         pass

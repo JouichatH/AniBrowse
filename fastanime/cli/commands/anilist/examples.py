@@ -1,3 +1,44 @@
+download = """
+\b
+\b\bExamples:
+  # Basic download by title
+  fastanime anilist download -t "Attack on Titan"
+\b
+  # Download specific episodes
+  fastanime anilist download -t "One Piece" --episode-range "1-10"
+\b
+  # Download with auto-selection (no prompts)
+  fastanime anilist download -t "Naruto" --auto-select --silent
+\b
+  # Download with quality preference
+  fastanime anilist download -t "Death Note" --quality 1080p --episode-range "1-5"
+\b
+  # Download with multiple filters
+  fastanime anilist download -g Action -T Isekai --score-greater 80 --status RELEASING
+\b
+  # Download recent episodes only
+  fastanime anilist download -t "Demon Slayer" --episode-range "20:"
+\b
+  # Download with subtitle merging
+  fastanime anilist download -t "Your Name" --merge --clean
+\b
+  # Download using FFmpeg with HLS options
+  fastanime anilist download -t "Spirited Away" --force-ffmpeg --hls-use-h264
+\b
+  # Download from a specific season and year
+  fastanime anilist download --season WINTER --year 2024 -s POPULARITY_DESC --auto-select
+\b
+  # Download only completed series
+  fastanime anilist download -g Fantasy --status FINISHED --score-greater 75 --auto-select
+\b
+  # Download with verbose output and no certificate checking
+  fastanime anilist download -t "Akira" --verbose --no-check-certificates
+\b
+  # Download movies only
+  fastanime anilist download -f MOVIE -s SCORE_DESC --auto-select --quality best
+"""
+
+
 search = """
 \b
 \b\bExamples:
