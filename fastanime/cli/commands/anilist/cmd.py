@@ -1,6 +1,5 @@
 import click
 
-from ...interactive.session import session
 from ...utils.lazyloader import LazyGroup
 from . import examples
 
@@ -33,6 +32,7 @@ def anilist(ctx: click.Context, resume: bool):
     The entry point for the 'anilist' command. If no subcommand is invoked,
     it launches the interactive TUI mode.
     """
+    from ...interactive.session import session
 
     config = ctx.obj
 

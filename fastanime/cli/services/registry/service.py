@@ -36,7 +36,6 @@ class MediaRegistryService:
         self._index_file_modified_time = 0
         _lock_file = self.config.media_dir / "registry.lock"
         self._lock = FileLock(_lock_file)
-        self._load_index()
 
     def _ensure_directories(self) -> None:
         """Ensure registry directories exist."""

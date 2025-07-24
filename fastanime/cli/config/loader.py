@@ -2,14 +2,11 @@ import configparser
 from pathlib import Path
 
 import click
-from InquirerPy import inquirer
 from pydantic import ValidationError
 
 from ...core.config import AppConfig
 from ...core.constants import USER_CONFIG_PATH
 from ...core.exceptions import ConfigError
-from .generate import generate_config_ini_from_app_model
-from .editor import InteractiveConfigEditor
 
 
 class ConfigLoader:
@@ -42,7 +39,12 @@ class ConfigLoader:
         click.echo(
             "[bold yellow]Welcome to FastAnime![/bold yellow] No configuration file found."
         )
-        choice = inquirer.select(
+        from InquirerPy import inquirer
+
+        from .editor import InteractiveConfigEditor
+        from .generate import generate_config_ini_from_app_model
+
+        choice = inquirer.select(  # type: ignore
             message="How would you like to proceed?",
             choices=[
                 "Use default settings (Recommended for new users)",

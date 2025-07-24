@@ -1,6 +1,6 @@
 import textwrap
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, get_args, get_origin
+from typing import Any, Literal, get_args, get_origin
 
 from InquirerPy import inquirer
 from InquirerPy.validator import NumberValidator

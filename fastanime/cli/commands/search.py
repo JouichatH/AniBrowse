@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import Unpack
 
-    from ...libs.players.base import BasePlayer
     from ...libs.providers.anime.base import BaseAnimeProvider
     from ...libs.providers.anime.types import Anime
     from ...libs.selectors.base import BaseSelector

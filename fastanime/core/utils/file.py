@@ -3,7 +3,7 @@ import os
 import time
 import uuid
 from pathlib import Path
-from typing import IO, Any, BinaryIO, TextIO, Union
+from typing import IO, Any, Union
 
 logger = logging.getLogger(__name__)
 

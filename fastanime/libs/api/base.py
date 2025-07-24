@@ -1,7 +1,5 @@
 import abc
-from typing import Any, Optional
-
-from httpx import Client
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from ...core.config import AnilistConfig
 from .params import (
@@ -11,13 +9,16 @@ from .params import (
 )
 from .types import MediaSearchResult, UserProfile
 
+if TYPE_CHECKING:
+    from httpx import Client
+
 
 class BaseApiClient(abc.ABC):
     """
     Abstract Base Class defining a generic contract for media database APIs.
     """
 
-    def __init__(self, config: AnilistConfig | Any, client: Client):
+    def __init__(self, config: AnilistConfig | Any, client: "Client"):
         self.config = config
         self.http_client = client
 
