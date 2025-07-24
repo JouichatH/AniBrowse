@@ -9,14 +9,9 @@ import click
 from ...core.config import AppConfig
 from ...core.constants import APP_DIR, USER_CONFIG_PATH
 from ...libs.api.base import BaseApiClient
-from ...libs.api.factory import create_api_client
-from ...libs.players import create_player
 from ...libs.players.base import BasePlayer
 from ...libs.providers.anime.base import BaseAnimeProvider
-from ...libs.providers.anime.provider import create_provider
-from ...libs.selectors import create_selector
 from ...libs.selectors.base import BaseSelector
-from ..config import ConfigLoader
 from ..services.auth import AuthService
 from ..services.feedback import FeedbackService
 from ..services.registry import MediaRegistryService
@@ -66,6 +61,11 @@ class Session:
 
     def _load_context(self, config: AppConfig):
         """Initializes all shared services based on the provided configuration."""
+        from ...libs.api.factory import create_api_client
+        from ...libs.players import create_player
+        from ...libs.providers.anime.provider import create_provider
+        from ...libs.selectors import create_selector
+
         media_registry = MediaRegistryService(
             media_api=config.general.media_api, config=config.media_registry
         )
@@ -100,6 +100,8 @@ class Session:
         logger.info("Application context reloaded.")
 
     def _edit_config(self):
+        from ..config import ConfigLoader
+
         click.edit(filename=str(USER_CONFIG_PATH))
         logger.debug("Config changed; Reloading context")
         loader = ConfigLoader()

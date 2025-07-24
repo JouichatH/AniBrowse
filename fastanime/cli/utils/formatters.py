@@ -2,8 +2,6 @@ import re
 from datetime import datetime
 from typing import List, Optional
 
-from yt_dlp.utils import clean_html as ytdlp_clean_html
-
 from ...libs.api.types import AiringSchedule
 
 COMMA_REGEX = re.compile(r"([0-9]{3})(?=\d)")
@@ -68,9 +66,71 @@ def format_date(dt: Optional[datetime], format_str: str = "%A, %d %B %Y") -> str
     return dt.strftime(format_str)
 
 
-def clean_html(raw_html: str) -> str:
-    """A wrapper around yt-dlp's clean_html to handle None inputs."""
-    return ytdlp_clean_html(raw_html) if raw_html else ""
+def _htmlentity_transform(entity_with_semicolon):
+    import contextlib
+    import html.entities
+    import html.parser
+
+    """Transforms an HTML entity to a character."""
+    entity = entity_with_semicolon[:-1]
+
+    # Known non-numeric HTML entity
+    if entity in html.entities.name2codepoint:
+        return chr(html.entities.name2codepoint[entity])
+
+    # TODO: HTML5 allows entities without a semicolon.
+    # E.g. '&Eacuteric' should be decoded as 'Éric'.
+    if entity_with_semicolon in html.entities.html5:
+        return html.entities.html5[entity_with_semicolon]
+
+    mobj = re.match(r"#(x[0-9a-fA-F]+|[0-9]+)", entity)
+    if mobj is not None:
+        numstr = mobj.group(1)
+        if numstr.startswith("x"):
+            base = 16
+            numstr = f"0{numstr}"
+        else:
+            base = 10
+        # See https://github.com/ytdl-org/youtube-dl/issues/7518
+        with contextlib.suppress(ValueError):
+            return chr(int(numstr, base))
+
+    # Unknown entity in name, return its literal representation
+    return f"&{entity};"
+
+
+def unescapeHTML(s: str):
+    if s is None:
+        return None
+    assert isinstance(s, str)
+
+    return re.sub(r"&([^&;]+;)", lambda m: _htmlentity_transform(m.group(1)), s)
+
+
+def escapeHTML(text):
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#39;")
+    )
+
+
+def clean_html(html: Optional[str]):
+    """Clean an HTML snippet into a readable string"""
+
+    if html is None:  # Convenience for sanitizing descriptions etc.
+        return html
+
+    html = re.sub(r"\s+", " ", html)
+    html = re.sub(r"(?u)\s?<\s?br\s?/?\s?>\s?", "\n", html)
+    html = re.sub(r"(?u)<\s?/\s?p\s?>\s?<\s?p[^>]*>", "\n", html)
+    # Strip html tags
+    html = re.sub("<.*?>", "", html)
+    # Replace html entities
+    html = unescapeHTML(html)
+    return html.strip()
 
 
 def format_number_with_commas(number: Optional[int]) -> str:

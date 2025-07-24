@@ -1,12 +1,6 @@
-
 import click
 
 from .....core.config.model import AppConfig
-from .....core.constants import ANILIST_AUTH
-from .....libs.api.factory import create_api_client
-from .....libs.selectors.selector import create_selector
-from ....services.auth import AuthService
-from ....services.feedback import FeedbackService
 
 
 @click.command(help="Login to your AniList account to enable progress tracking.")
@@ -15,6 +9,12 @@ from ....services.feedback import FeedbackService
 @click.pass_obj
 def auth(config: AppConfig, status: bool, logout: bool):
     """Handles user authentication and credential management."""
+    from .....core.constants import ANILIST_AUTH
+    from .....libs.api.factory import create_api_client
+    from .....libs.selectors.selector import create_selector
+    from ....services.auth import AuthService
+    from ....services.feedback import FeedbackService
+
     auth_service = AuthService("anilist")
     feedback = FeedbackService(config.general.icons)
     selector = create_selector(config)

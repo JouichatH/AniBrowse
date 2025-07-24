@@ -5,7 +5,8 @@ import logging
 from typing import TYPE_CHECKING
 
 from httpx import Client
-from yt_dlp.utils.networking import random_user_agent
+
+from ...core.utils.networking import random_user_agent
 
 if TYPE_CHECKING:
     from ...core.config import AppConfig

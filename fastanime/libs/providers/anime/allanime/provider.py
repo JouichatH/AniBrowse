@@ -11,7 +11,6 @@ from .constants import (
     EPISODE_GQL,
     SEARCH_GQL,
 )
-from .extractors import extract_server
 from .parser import (
     map_to_anime_result,
     map_to_search_results,
@@ -57,6 +56,8 @@ class AllAnime(BaseAnimeProvider):
 
     @debug_provider
     def episode_streams(self, params):
+        from .extractors import extract_server
+
         episode_response = execute_graphql_query_with_get_request(
             API_GRAPHQL_ENDPOINT,
             self.client,

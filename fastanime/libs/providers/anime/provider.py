@@ -2,7 +2,6 @@ import importlib
 import logging
 
 from httpx import Client
-from yt_dlp.utils.networking import random_user_agent
 
 from .base import BaseAnimeProvider
 from .types import ProviderName
@@ -39,6 +38,7 @@ class AnimeProviderFactory:
             ValueError: If the provider_name is not supported.
             ImportError: If the provider module or class cannot be found.
         """
+        from ....core.utils.networking import random_user_agent
 
         # Correctly determine module and class name from the map
         import_path = PROVIDERS_AVAILABLE[provider_name.value.lower()]

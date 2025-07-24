@@ -2,12 +2,6 @@ import logging
 from functools import lru_cache
 from typing import Iterator, Optional
 
-from yt_dlp.utils import (
-    extract_attributes,
-    get_element_by_id,
-    get_elements_html_by_class,
-)
-
 from ..base import BaseAnimeProvider
 from ..params import AnimeParams, EpisodeStreamsParams, SearchParams
 from ..types import Anime, AnimeEpisodeInfo, SearchResult, SearchResults, Server
@@ -112,6 +106,13 @@ class AnimePahe(BaseAnimeProvider):
 
     @debug_provider
     def episode_streams(self, params: EpisodeStreamsParams) -> Iterator[Server] | None:
+        # TODO: replace with custom implementations using default html parser or lxml
+        from yt_dlp.utils import (
+            extract_attributes,
+            get_element_by_id,
+            get_elements_html_by_class,
+        )
+
         episode = self._get_episode_info(params)
         if not episode:
             logger.error(

@@ -28,9 +28,9 @@ def test_anime_provider(AnimeProvider: Type[BaseAnimeProvider]):
     import subprocess
 
     from httpx import Client
-    from yt_dlp.utils.networking import random_user_agent
 
     from .....core.constants import APP_ASCII_ART
+    from .....core.utils.networking import random_user_agent
     from ..params import AnimeParams, EpisodeStreamsParams, SearchParams
 
     anime_provider = AnimeProvider(
