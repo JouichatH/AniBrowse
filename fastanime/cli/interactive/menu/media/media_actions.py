@@ -2,11 +2,15 @@ from typing import Callable, Dict
 
 from rich.console import Console
 
-from .....libs.media_api.params import UpdateUserMediaListEntryParams
+from .....libs.media_api.params import (
+    MediaRecommendationParams,
+    MediaRelationsParams,
+    UpdateUserMediaListEntryParams,
+)
 from .....libs.media_api.types import UserMediaListStatus
 from .....libs.player.params import PlayerParams
 from ...session import Context, session
-from ...state import InternalDirective, MenuName, State
+from ...state import InternalDirective, MediaApiState, MenuName, State
 
 MenuAction = Callable[[], State | InternalDirective]
 
@@ -23,12 +27,13 @@ def media_actions(ctx: Context, state: State) -> State | InternalDirective:
         feedback.error("Media item is not in state")
         return InternalDirective.BACK
 
-    # TODO: Add 'Recommendations' and 'Relations' here later.
     # TODO: Add media list management
     # TODO: cross reference for none implemented features
     options: Dict[str, MenuAction] = {
         f"{'▶️ ' if icons else ''}Stream": _stream(ctx, state),
         f"{'📼 ' if icons else ''}Watch Trailer": _watch_trailer(ctx, state),
+        f"{'🔗 ' if icons else ''}Recommendations": _view_recommendations(ctx, state),
+        f"{'🔄 ' if icons else ''}Related Anime": _view_relations(ctx, state),
         f"{'➕ ' if icons else ''}Add/Update List": _manage_user_media_list(ctx, state),
         f"{'⭐ ' if icons else ''}Score Anime": _score_anime(ctx, state),
         f"{'ℹ️ ' if icons else ''}View Info": _view_info(ctx, state),
@@ -174,5 +179,101 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
         console.print(Panel(panel_content, title=title, box=box.ROUNDED, expand=True))
         ctx.selector.ask("Press Enter to continue...")
         return InternalDirective.RELOAD
+
+    return action
+
+
+def _view_recommendations(ctx: Context, state: State) -> MenuAction:
+    def action():
+        feedback = ctx.service.feedback
+        media_item = state.media_api.media_item
+
+        if not media_item:
+            feedback.error("Media item is not in state")
+            return InternalDirective.RELOAD
+
+        loading_message = "Fetching recommendations..."
+        recommendations = None
+        
+        with feedback.progress(loading_message):
+            recommendations = ctx.media_api.get_recommendation_for(
+                MediaRecommendationParams(id=media_item.id, page=1)
+            )
+
+        if not recommendations:
+            feedback.warning(
+                "No recommendations found", 
+                "This anime doesn't have any recommendations available"
+            )
+            return InternalDirective.RELOAD
+
+        # Convert list of MediaItem to search result format
+        search_result = {item.id: item for item in recommendations}
+        
+        # Create a fake page info since recommendations don't have pagination
+        from .....libs.media_api.types import PageInfo
+        page_info = PageInfo(
+            total=len(recommendations),
+            current_page=1,
+            has_next_page=False,
+            per_page=len(recommendations)
+        )
+
+        return State(
+            menu_name=MenuName.RESULTS,
+            media_api=MediaApiState(
+                search_result=search_result,
+                page_info=page_info,
+                search_params=None,  # No search params for recommendations
+            ),
+        )
+
+    return action
+
+
+def _view_relations(ctx: Context, state: State) -> MenuAction:
+    def action():
+        feedback = ctx.service.feedback
+        media_item = state.media_api.media_item
+
+        if not media_item:
+            feedback.error("Media item is not in state")
+            return InternalDirective.RELOAD
+
+        loading_message = "Fetching related anime..."
+        relations = None
+        
+        with feedback.progress(loading_message):
+            relations = ctx.media_api.get_related_anime_for(
+                MediaRelationsParams(id=media_item.id)
+            )
+
+        if not relations:
+            feedback.warning(
+                "No related anime found", 
+                "This anime doesn't have any related anime available"
+            )
+            return InternalDirective.RELOAD
+
+        # Convert list of MediaItem to search result format
+        search_result = {item.id: item for item in relations}
+        
+        # Create a fake page info since relations don't have pagination
+        from .....libs.media_api.types import PageInfo
+        page_info = PageInfo(
+            total=len(relations),
+            current_page=1,
+            has_next_page=False,
+            per_page=len(relations)
+        )
+
+        return State(
+            menu_name=MenuName.RESULTS,
+            media_api=MediaApiState(
+                search_result=search_result,
+                page_info=page_info,
+                search_params=None,  # No search params for relations
+            ),
+        )
 
     return action

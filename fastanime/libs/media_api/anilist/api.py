@@ -215,14 +215,14 @@ class AniListApi(BaseApiClient):
             "per_page": params.per_page or self.config.per_page
         }
         response = execute_graphql(
-            ANILIST_ENDPOINT, self.http_client, gql.GET_RECOMMENDATIONS, variables
+            ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_RECOMMENDATIONS, variables
         )
         return mapper.to_generic_recommendations(response.json()) if response else None
 
     def get_characters_of(self, params: MediaCharactersParams) -> Optional[Dict]:
         variables = {"id": params.id, "type": "ANIME"}
         response = execute_graphql(
-            ANILIST_ENDPOINT, self.http_client, gql.GET_CHARACTERS, variables
+            ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_CHARACTERS, variables
         )
         return response.json() if response else None
 

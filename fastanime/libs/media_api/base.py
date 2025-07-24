@@ -1,13 +1,17 @@
 import abc
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ...core.config import AnilistConfig
 from .params import (
+    MediaAiringScheduleParams,
+    MediaCharactersParams,
+    MediaRecommendationParams,
+    MediaRelationsParams,
     MediaSearchParams,
     UpdateUserMediaListEntryParams,
     UserMediaListSearchParams,
 )
-from .types import MediaSearchResult, UserProfile
+from .types import MediaItem, MediaSearchResult, UserProfile
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -51,4 +55,20 @@ class BaseApiClient(abc.ABC):
 
     @abc.abstractmethod
     def delete_list_entry(self, media_id: int) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def get_recommendation_for(self, params: MediaRecommendationParams) -> Optional[List[MediaItem]]:
+        pass
+
+    @abc.abstractmethod
+    def get_characters_of(self, params: MediaCharactersParams) -> Optional[Dict]:
+        pass
+
+    @abc.abstractmethod
+    def get_related_anime_for(self, params: MediaRelationsParams) -> Optional[List[MediaItem]]:
+        pass
+
+    @abc.abstractmethod
+    def get_airing_schedule_for(self, params: MediaAiringScheduleParams) -> Optional[Dict]:
         pass
