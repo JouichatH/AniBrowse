@@ -100,7 +100,7 @@ def search(
 
     from fastanime.cli.utils.feedback import create_feedback_manager
     from fastanime.core.exceptions import FastAnimeError
-    from fastanime.libs.media_api.factory import create_api_client
+    from fastanime.libs.media_api.api import create_api_client
     from fastanime.libs.media_api.params import MediaSearchParams
 
     feedback = create_feedback_manager(config.general.icons)

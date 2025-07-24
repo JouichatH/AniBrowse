@@ -27,7 +27,7 @@ def get_authenticated_api_client(config: "AppConfig") -> "BaseApiClient":
         click.Abort: If user is not authenticated
     """
     from fastanime.cli.utils.feedback import create_feedback_manager
-    from fastanime.libs.media_api.factory import create_api_client
+    from fastanime.libs.media_api.api import create_api_client
 
     feedback = create_feedback_manager(config.general.icons)
     api_client = create_api_client(config.general.media_api, config)
@@ -66,7 +66,7 @@ def handle_media_search_command(
     """
     from fastanime.cli.utils.feedback import create_feedback_manager
     from fastanime.core.exceptions import FastAnimeError
-    from fastanime.libs.media_api.factory import create_api_client
+    from fastanime.libs.media_api.api import create_api_client
 
     feedback = create_feedback_manager(config.general.icons)
 
