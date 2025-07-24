@@ -229,6 +229,10 @@ def _episode_cache_worker(
             if not title:
                 title = f"Episode {episode_str}"
 
+            # fallback
+            if not thumbnail and media_item.cover_image:
+                thumbnail = media_item.cover_image.large
+
             # Download thumbnail if available
             if thumbnail:
                 executor.submit(_save_image_from_url, thumbnail, hash_id)
