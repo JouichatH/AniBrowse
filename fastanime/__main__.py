@@ -9,6 +9,6 @@ if __package__ is None and not getattr(sys, "frozen", False):
 
 
 if __name__ == "__main__":
-    from . import FastAnime
+    from . import Cli
 
-    FastAnime()
+    Cli()
