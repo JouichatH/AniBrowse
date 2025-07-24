@@ -106,8 +106,7 @@ class AnimePahe(BaseAnimeProvider):
 
     @debug_provider
     def episode_streams(self, params: EpisodeStreamsParams) -> Iterator[Server] | None:
-        # TODO: replace with custom implementations using default html parser or lxml
-        from yt_dlp.utils import (
+        from ...scraping.html_parser import (
             extract_attributes,
             get_element_by_id,
             get_elements_html_by_class,
@@ -125,6 +124,9 @@ class AnimePahe(BaseAnimeProvider):
         response.raise_for_status()
 
         c = get_element_by_id("resolutionMenu", response.text)
+        if not c:
+            logger.error("Resolution menu not found in the response")
+            return
         resolutionMenuItems = get_elements_html_by_class("dropdown-item", c)
         res_dicts = [extract_attributes(item) for item in resolutionMenuItems]
         quality = None
@@ -133,8 +135,9 @@ class AnimePahe(BaseAnimeProvider):
 
         # TODO: better document the scraping process
         for res_dict in res_dicts:
-            embed_url = res_dict["data-src"]
-            data_audio = "dub" if res_dict["data-audio"] == "eng" else "sub"
+            # the actual attributes are data attributes in the original html 'prefixed with data-'
+            embed_url = res_dict["src"]
+            data_audio = "dub" if res_dict["audio"] == "eng" else "sub"
 
             if data_audio != params.translation_type:
                 continue
@@ -162,7 +165,7 @@ class AnimePahe(BaseAnimeProvider):
                 logger.error("failed to find juicy stream")
                 continue
             juicy_stream = juicy_stream.group(1)
-            quality = res_dict["data-resolution"]
+            quality = res_dict["resolution"]
             translation_type = data_audio
             stream_link = juicy_stream
 

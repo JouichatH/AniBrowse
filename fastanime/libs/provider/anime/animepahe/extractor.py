@@ -2,7 +2,7 @@ import re
 
 
 def animepahe_key_creator(c: int, a: int):
-    from yt_dlp.utils import encode_base_n
+    from ...scraping.utils import encode_base_n
 
     if c < a:
         val_a = ""
@@ -37,17 +37,18 @@ ENCODE_JS_REGEX = re.compile(r"'(.*?);',(\d+),(\d+),'(.*)'\.split")
 
 
 def process_animepahe_embed_page(embed_page: str):
-    from yt_dlp.utils import get_element_text_and_html_by_tag
+    from ...scraping.html_parser import get_element_text_and_html_by_tag
 
     encoded_js_string = ""
     embed_page_content = embed_page
     for _ in range(8):
         text, html = get_element_text_and_html_by_tag("script", embed_page_content)
-        if not text:
+        if not text and html:
             embed_page_content = re.sub(html, "", embed_page_content)
             continue
-        encoded_js_string = text.strip()
-        break
+        if text:
+            encoded_js_string = text.strip()
+            break
     if not encoded_js_string:
         return
     obsfucated_js_parameter_match = PARAMETERS_REGEX.search(encoded_js_string)
