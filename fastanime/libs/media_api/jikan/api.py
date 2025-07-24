@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
-from ..base import (
-    BaseApiClient,
+from ..base import BaseApiClient
+from ..params import (
+    MediaAiringScheduleParams,
+    MediaCharactersParams,
+    MediaRecommendationParams,
+    MediaRelationsParams,
     MediaSearchParams,
     UpdateUserMediaListEntryParams,
     UserMediaListSearchParams,
 )
-from ..types import MediaSearchResult, UserProfile
+from ..types import MediaImage, MediaItem, MediaSearchResult, MediaTitle, UserProfile
 from . import mapper
 
 if TYPE_CHECKING:
@@ -77,6 +81,10 @@ class JikanApi(BaseApiClient):
 
     # --- No-Op Methods (Jikan is Read-Only) ---
 
+    def is_authenticated(self) -> bool:
+        """Jikan is a public API that doesn't require authentication."""
+        return False
+
     def authenticate(self, token: str) -> Optional[UserProfile]:
         logger.warning("Jikan API does not support authentication.")
         return None
@@ -85,7 +93,7 @@ class JikanApi(BaseApiClient):
         logger.warning("Jikan API does not support user profiles.")
         return None
 
-    def fetch_user_list(
+    def search_media_list(
         self, params: UserMediaListSearchParams
     ) -> Optional[MediaSearchResult]:
         logger.warning("Jikan API does not support fetching user lists.")
@@ -98,3 +106,85 @@ class JikanApi(BaseApiClient):
     def delete_list_entry(self, media_id: int) -> bool:
         logger.warning("Jikan API does not support deleting list entries.")
         return False
+
+    def get_recommendation_for(
+        self, params: MediaRecommendationParams
+    ) -> Optional[List[MediaItem]]:
+        """Fetches anime recommendations for a given media ID."""
+        try:
+            endpoint = f"/anime/{params.id}/recommendations"
+            raw_data = self._execute_request(endpoint)
+            if not raw_data or "data" not in raw_data:
+                return None
+            
+            recommendations = []
+            for item in raw_data["data"]:
+                # Jikan recommendation structure has an 'entry' field with anime data
+                entry = item.get("entry", {})
+                if entry:
+                    media_item = mapper._to_generic_media_item(entry)
+                    recommendations.append(media_item)
+            
+            return recommendations
+        except Exception as e:
+            logger.error(f"Failed to fetch recommendations for media {params.id}: {e}")
+            return None
+
+    def get_characters_of(self, params: MediaCharactersParams) -> Optional[Dict]:
+        """Fetches characters for a given anime."""
+        try:
+            endpoint = f"/anime/{params.id}/characters"
+            raw_data = self._execute_request(endpoint)
+            if not raw_data:
+                return None
+            
+            # Return the raw character data as Jikan provides it
+            return raw_data
+        except Exception as e:
+            logger.error(f"Failed to fetch characters for media {params.id}: {e}")
+            return None
+
+    def get_related_anime_for(
+        self, params: MediaRelationsParams
+    ) -> Optional[List[MediaItem]]:
+        """Fetches related anime for a given media ID."""
+        try:
+            endpoint = f"/anime/{params.id}/relations"
+            raw_data = self._execute_request(endpoint)
+            if not raw_data or "data" not in raw_data:
+                return None
+            
+            related_anime = []
+            for relation in raw_data["data"]:
+                entries = relation.get("entry", [])
+                for entry in entries:
+                    if entry.get("type") == "anime":
+                        # Create a minimal MediaItem from the relation data
+                        media_item = MediaItem(
+                            id=entry["mal_id"],
+                            id_mal=entry["mal_id"],
+                            title=MediaTitle(
+                                english=entry["name"],
+                                romaji=entry["name"],
+                                native=None
+                            ),
+                            cover_image=MediaImage(large=""),
+                            description=None,
+                            genres=[],
+                            studios=[],
+                            streaming_episodes={},
+                            user_status=None,
+                        )
+                        related_anime.append(media_item)
+            
+            return related_anime
+        except Exception as e:
+            logger.error(f"Failed to fetch related anime for media {params.id}: {e}")
+            return None
+
+    def get_airing_schedule_for(
+        self, params: MediaAiringScheduleParams
+    ) -> Optional[Dict]:
+        """Jikan doesn't provide a direct airing schedule endpoint per anime."""
+        logger.warning("Jikan API does not support fetching airing schedules for individual anime.")
+        return None

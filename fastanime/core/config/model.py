@@ -440,6 +440,10 @@ class AppConfig(BaseModel):
         default_factory=AnilistConfig,
         description=desc.APP_ANILIST,
     )
+    jikan: JikanConfig = Field(
+        default_factory=JikanConfig,
+        description=desc.APP_JIKAN,
+    )
     service: ServiceConfig = Field(
         default_factory=ServiceConfig,
         description=desc.APP_SERVICE,

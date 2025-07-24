@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # Map the client name to its import path AND the config section it needs.
 API_CLIENTS = {
     "anilist": ("fastanime.libs.media_api.anilist.api.AniListApi", "anilist"),
-    # "jikan": ("fastanime.libs.jikan.api.JikanApi", "jikan"), # For the future
+    "jikan": ("fastanime.libs.media_api.jikan.api.JikanApi", "jikan"), # For the future
 }
 
 
