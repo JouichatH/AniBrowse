@@ -5,6 +5,7 @@ query ($id: Int) {
         id
         idMal
         type
+        format
         title {
           english
           romaji
