@@ -4,8 +4,11 @@ from importlib import metadata, resources
 from pathlib import Path
 
 PLATFORM = sys.platform
-APP_NAME = os.environ.get("FASTANIME_APP_NAME", "fastanime")
+
 PROJECT_NAME = "FASTANIME"
+APP_NAME = os.environ.get(f"{PROJECT_NAME}_APP_NAME", PROJECT_NAME.lower())
+
+USER_NAME = os.environ.get("USERNAME", "User")
 
 __version__ = metadata.version(PROJECT_NAME)
 
@@ -13,7 +16,9 @@ AUTHOR = "Benexl"
 GIT_REPO = "github.com"
 GIT_PROTOCOL = "https://"
 REPO_HOME = f"https://{GIT_REPO}/{AUTHOR}/FastAnime"
+
 DISCORD_INVITE = "https://discord.gg/C4rhMA4mmK"
+
 ANILIST_AUTH = (
     "https://anilist.co/api/v2/oauth/authorize?client_id=20148&response_type=token"
 )
@@ -27,20 +32,13 @@ except ModuleNotFoundError:
     APP_DIR = Path(__file__).resolve().parent.parent
 
 ASSETS_DIR = APP_DIR / "assets"
-DEFAULTS = ASSETS_DIR / "defaults"
+DEFAULTS_DIR = ASSETS_DIR / "defaults"
+SCRIPTS_DIR = ASSETS_DIR / "scripts"
+GRAPHQL_DIR = ASSETS_DIR / "graphql"
 ICONS_DIR = ASSETS_DIR / "icons"
 
-# rofi files
-_ROFI_THEMES_DIR = DEFAULTS / "rofi-themes"
-ROFI_THEME_MAIN = _ROFI_THEMES_DIR / "main.rasi"
-ROFI_THEME_INPUT = _ROFI_THEMES_DIR / "input.rasi"
-ROFI_THEME_CONFIRM = _ROFI_THEMES_DIR / "confirm.rasi"
-ROFI_THEME_PREVIEW = _ROFI_THEMES_DIR / "preview.rasi"
-
-# fzf
-FZF_DEFAULT_OPTS = DEFAULTS / "fzf-opts"
-
-USER_NAME = os.environ.get("USERNAME", "Anime Fan")
+ICON_PATH = ICONS_DIR / ("logo.ico" if PLATFORM == "Win32" else "logo.png")
+APP_ASCII_ART = DEFAULTS_DIR / "ascii-art"
 
 try:
     import click
@@ -83,15 +81,3 @@ USER_VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 
 USER_CONFIG_PATH = APP_DATA_DIR / "config.ini"
 LOG_FILE_PATH = APP_CACHE_DIR / "fastanime.log"
-
-ICON_PATH = ICONS_DIR / ("logo.ico" if PLATFORM == "Win32" else "logo.png")
-
-
-APP_ASCII_ART = """\
-███████╗░█████╗░░██████╗████████╗░█████╗░███╗░░██╗██╗███╗░░░███╗███████╗
-██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗████╗░██║██║████╗░████║██╔════╝
-█████╗░░███████║╚█████╗░░░░██║░░░███████║██╔██╗██║██║██╔████╔██║█████╗░░
-██╔══╝░░██╔══██║░╚═══██╗░░░██║░░░██╔══██║██║╚████║██║██║╚██╔╝██║██╔══╝░░
-██║░░░░░██║░░██║██████╔╝░░░██║░░░██║░░██║██║░╚███║██║██║░╚═╝░██║███████╗
-╚═╝░░░░░╚═╝░░╚═╝╚═════╝░░░░╚═╝░░░╚═╝░░╚═╝╚═╝░░╚══╝╚═╝╚═╝░░░░░╚═╝╚══════╝
-"""

@@ -24,7 +24,7 @@ class FeedbackService:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
             console.print(main_msg)
-        time.sleep(5)
+        # time.sleep(5)
 
     def error(self, message: str, details: Optional[str] = None) -> None:
         """Show an error message with optional details."""
@@ -57,7 +57,7 @@ class FeedbackService:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
             console.print(main_msg)
-        time.sleep(5)
+        # time.sleep(5)
 
     @contextmanager
     def progress(

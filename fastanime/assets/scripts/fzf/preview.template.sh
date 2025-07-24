@@ -1,13 +1,13 @@
 #!/bin/sh
 #
-# FastAnime FZF Preview Script Template
+# FZF Preview Script Template
 #
-# This script is a template. The placeholders in curly braces, like
-# placeholder, are filled in by the Python application at runtime.
-# It is executed by `sh -c "..."` for each item fzf previews.
-# The first argument ($1) is the item string from fzf (the sanitized title).
+# This script is a template. The placeholders in curly braces, like {NAME}
+#  are dynamically filled by python using .replace()
 
-IMAGE_RENDERER="{image_renderer}"
+WIDTH=${FZF_PREVIEW_COLUMNS:-80} # Set a fallback width of 80
+IMAGE_RENDERER="{IMAGE_RENDERER}"
+
 generate_sha256() {
   local input
 
@@ -30,6 +30,7 @@ generate_sha256() {
     echo -n "$input" | base64 | tr '/+' '_-' | tr -d '\n'
   fi
 }
+
 fzf_preview() {
   file=$1
 
@@ -74,13 +75,59 @@ fzf_preview() {
     echo either icat for kitty terminal and wezterm or imgcat or chafa
   fi
 }
+
+
+# --- Helper function for printing a key-value pair, aligning the value to the right ---
+print_kv() {
+    local key="$1"
+    local value="$2"
+    local key_len=${#key}
+    local value_len=${#value}
+    local multiplier="${3:-1}"
+
+    # Correctly calculate padding by accounting for the key, the ": ", and the value.
+    local padding_len=$((WIDTH - key_len - 2 - value_len * multiplier))
+
+    # If the text is too long to fit, just add a single space for separation.
+    if [ "$padding_len" -lt 1 ]; then
+        padding_len=1
+        value=$(echo $value| fold -s -w "$((WIDTH - key_len - 3))")
+        printf "{C_KEY}%s:{RESET}%*s%s\\n" "$key" "$padding_len" "" " $value"
+    else
+        printf "{C_KEY}%s:{RESET}%*s%s\\n" "$key" "$padding_len" "" " $value"
+    fi
+}
+
+# --- Draw a rule across the screen ---
+# TODO: figure out why this method does not work in fzf
+draw_rule() {
+    local rule
+    # Generate the line of '─' characters, removing the trailing newline `tr` adds.
+    rule=$(printf '%*s' "$WIDTH" | tr ' ' '─' | tr -d '\n')
+    # Print the rule with colors and a single, clean newline.
+    printf "{C_RULE}%s{RESET}\\n" "$rule"
+}
+
+
+draw_rule(){
+    ll=2
+    while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
+        echo -n -e "{C_RULE}─{RESET}"
+        ((ll++))
+    done
+    echo
+}
+
 # Generate the same cache key that the Python worker uses
+# {PREFIX} is used only on episode previews to make sure they are unique
 title={}
 hash=$(generate_sha256 "{PREFIX}$title")
 
-# Display image if configured and the cached file exists
-if [ "{preview_mode}" = "full" ] || [ "{preview_mode}" = "image" ]; then
-    image_file="{image_cache_path}{path_sep}$hash.png"
+# 
+# --- Display image if configured and the cached file exists ---
+# 
+if [ "{PREVIEW_MODE}" = "full" ] || [ "{PREVIEW_MODE}" = "image" ]; then
+    image_file="{IMAGE_CACHE_PATH}{PATH_SEP}$hash.png"
     if [ -f "$image_file" ]; then
         fzf_preview "$image_file"
     else
@@ -89,8 +136,8 @@ if [ "{preview_mode}" = "full" ] || [ "{preview_mode}" = "image" ]; then
     echo # Add a newline for spacing
 fi
 # Display text info if configured and the cached file exists
-if [ "{preview_mode}" = "full" ] || [ "{preview_mode}" = "text" ]; then
-    info_file="{info_cache_path}{path_sep}$hash"
+if [ "{PREVIEW_MODE}" = "full" ] || [ "{PREVIEW_MODE}" = "text" ]; then
+    info_file="{INFO_CACHE_PATH}{PATH_SEP}$hash"
     if [ -f "$info_file" ]; then
         source "$info_file"
     else

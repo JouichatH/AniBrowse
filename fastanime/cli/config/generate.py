@@ -5,7 +5,9 @@ from ...core.config import AppConfig
 from ...core.constants import APP_ASCII_ART, DISCORD_INVITE, PROJECT_NAME, REPO_HOME
 
 # The header for the config file.
-config_asci = "\n".join([f"# {line}" for line in APP_ASCII_ART.split()])
+config_asci = "\n".join(
+    [f"# {line}" for line in APP_ASCII_ART.read_text(encoding="utf-8").split()]
+)
 CONFIG_HEADER = f"""
 # ==============================================================================
 # 

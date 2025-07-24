@@ -155,7 +155,7 @@ class AniListApi(BaseApiClient):
             "type": params.type.value if params.type else "ANIME",
         }
         response = execute_graphql(
-            ANILIST_ENDPOINT, self.http_client, gql.GET_USER_MEDIA_LIST, variables
+            ANILIST_ENDPOINT, self.http_client, gql.SEARCH_USER_MEDIA_LIST, variables
         )
         return mapper.to_generic_user_list_result(response.json()) if response else None
 

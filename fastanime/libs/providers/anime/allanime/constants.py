@@ -1,6 +1,6 @@
 import re
 
-from .....core.constants import APP_DIR
+from .....core.constants import GRAPHQL_DIR
 
 SERVERS_AVAILABLE = [
     "sharepoint",
@@ -28,7 +28,7 @@ MP4_SERVER_JUICY_STREAM_REGEX = re.compile(
 )
 
 # graphql files
-GQLS = APP_DIR / "libs" / "providers" / "anime" / "allanime" / "queries"
-SEARCH_GQL = GQLS / "search.gql"
-ANIME_GQL = GQLS / "anime.gql"
-EPISODE_GQL = GQLS / "episodes.gql"
+_GQL_QUERIES = GRAPHQL_DIR / "allanime" / "queries"
+SEARCH_GQL = _GQL_QUERIES / "search.gql"
+ANIME_GQL = _GQL_QUERIES / "anime.gql"
+EPISODE_GQL = _GQL_QUERIES / "episodes.gql"

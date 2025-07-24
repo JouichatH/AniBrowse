@@ -4,13 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, PrivateAttr, computed_field
 
-from ...core.constants import (
-    FZF_DEFAULT_OPTS,
-    ROFI_THEME_CONFIRM,
-    ROFI_THEME_INPUT,
-    ROFI_THEME_MAIN,
-    ROFI_THEME_PREVIEW,
-)
 from ...libs.api.types import MediaSort, UserMediaListSort
 from ...libs.providers.anime.types import ProviderName, ProviderServer
 from ..constants import APP_ASCII_ART
@@ -198,11 +191,15 @@ class SessionsConfig(OtherConfig):
 class FzfConfig(OtherConfig):
     """Configuration specific to the FZF selector."""
 
-    _opts: str = PrivateAttr(default=FZF_DEFAULT_OPTS.read_text(encoding="utf-8"))
+    _opts: str = PrivateAttr(
+        default_factory=lambda: defaults.FZF_OPTS.read_text(encoding="utf-8")
+    )
     header_color: str = Field(
         default=defaults.FZF_HEADER_COLOR, description=desc.FZF_HEADER_COLOR
     )
-    _header_ascii_art: str = PrivateAttr(default=APP_ASCII_ART)
+    _header_ascii_art: str = PrivateAttr(
+        default_factory=lambda: APP_ASCII_ART.read_text(encoding="utf-8")
+    )
     preview_header_color: str = Field(
         default=defaults.FZF_PREVIEW_HEADER_COLOR,
         description=desc.FZF_PREVIEW_HEADER_COLOR,
@@ -239,19 +236,19 @@ class RofiConfig(OtherConfig):
     """Configuration specific to the Rofi selector."""
 
     theme_main: Path = Field(
-        default=Path(str(ROFI_THEME_MAIN)),
+        default_factory=lambda: Path(str(defaults.ROFI_THEME_MAIN)),
         description=desc.ROFI_THEME_MAIN,
     )
     theme_preview: Path = Field(
-        default=Path(str(ROFI_THEME_PREVIEW)),
+        default_factory=lambda: Path(str(defaults.ROFI_THEME_PREVIEW)),
         description=desc.ROFI_THEME_PREVIEW,
     )
     theme_confirm: Path = Field(
-        default=Path(str(ROFI_THEME_CONFIRM)),
+        default_factory=lambda: Path(str(defaults.ROFI_THEME_CONFIRM)),
         description=desc.ROFI_THEME_CONFIRM,
     )
     theme_input: Path = Field(
-        default=Path(str(ROFI_THEME_INPUT)),
+        default_factory=lambda: Path(str(defaults.ROFI_THEME_INPUT)),
         description=desc.ROFI_THEME_INPUT,
     )
 
