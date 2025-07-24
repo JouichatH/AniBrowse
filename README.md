@@ -23,7 +23,17 @@
 </p>
 
 ![fastanime](https://github.com/user-attachments/assets/9ab09f26-e4a8-4b70-a315-7def998cec63)
+<details>
+  <summary>
+    <b>V3 teaser</b>
+  </summary>
+  **Anilist results menu:**
+  <img width="1346" height="710" alt="image" src="https://github.com/user-attachments/assets/c56da5d2-d55d-445c-9ad7-4e007e986d5b" />
+  **Episodes menu preview:**
+  <img width="1346" height="710" alt="image" src="https://github.com/user-attachments/assets/2294f621-8549-4b1c-9e28-d851b2585037" />
 
+<details>
+  
 <details>
   <summary>
     <b>Riced</b>
