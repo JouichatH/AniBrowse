@@ -58,7 +58,9 @@ class BaseApiClient(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_recommendation_for(self, params: MediaRecommendationParams) -> Optional[List[MediaItem]]:
+    def get_recommendation_for(
+        self, params: MediaRecommendationParams
+    ) -> Optional[List[MediaItem]]:
         pass
 
     @abc.abstractmethod
@@ -66,9 +68,13 @@ class BaseApiClient(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_related_anime_for(self, params: MediaRelationsParams) -> Optional[List[MediaItem]]:
+    def get_related_anime_for(
+        self, params: MediaRelationsParams
+    ) -> Optional[List[MediaItem]]:
         pass
 
     @abc.abstractmethod
-    def get_airing_schedule_for(self, params: MediaAiringScheduleParams) -> Optional[Dict]:
+    def get_airing_schedule_for(
+        self, params: MediaAiringScheduleParams
+    ) -> Optional[Dict]:
         pass

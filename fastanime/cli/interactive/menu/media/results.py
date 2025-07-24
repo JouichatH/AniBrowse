@@ -56,7 +56,12 @@ def results(ctx: Context, state: State) -> State | InternalDirective:
                 }
             )
     choices.update(
-        {"Back": lambda: InternalDirective.MAIN, "Exit": lambda: InternalDirective.EXIT}
+        {
+            "Back": lambda: InternalDirective.BACK
+            if page_info and page_info.current_page == 1
+            else InternalDirective.MAIN,
+            "Exit": lambda: InternalDirective.EXIT,
+        }
     )
 
     choice = ctx.selector.choose(

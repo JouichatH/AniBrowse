@@ -180,7 +180,7 @@ class Session:
 
         return decorator
 
-    def load_menus_from_folder(self, package:str):
+    def load_menus_from_folder(self, package: str):
         package_path = MENUS_DIR / package
         package_name = package_path.name
         logger.debug(f"Loading menus from '{package_path}'...")

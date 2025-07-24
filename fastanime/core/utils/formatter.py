@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import List, Optional,Dict,Union
+from typing import List, Optional, Dict, Union
 
 from ...libs.media_api.types import AiringSchedule
 
@@ -181,6 +181,7 @@ def shell_safe(text: Optional[str]) -> str:
     if not text:
         return ""
     return text.replace("`", "\\`").replace('"', '\\"').replace("$", "\\$")
+
 
 def extract_episode_number(title: str) -> Optional[float]:
     """

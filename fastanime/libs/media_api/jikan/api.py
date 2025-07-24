@@ -13,7 +13,6 @@ from ..types import MediaSearchResult, UserProfile
 from . import mapper
 
 if TYPE_CHECKING:
-
     pass
 
 logger = logging.getLogger(__name__)

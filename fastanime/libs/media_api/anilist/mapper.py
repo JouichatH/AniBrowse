@@ -321,15 +321,15 @@ def to_generic_recommendations(data: dict) -> Optional[List[MediaItem]]:
     """Maps the 'recommendations' part of an API response."""
     if not data or not data.get("data"):
         return None
-        
+
     page_data = data.get("data", {}).get("Page", {})
     if not page_data:
         return None
-        
+
     recommendations = page_data.get("recommendations", [])
     if not recommendations:
         return None
-        
+
     result = []
     for rec in recommendations:
         if rec and rec.get("media"):
@@ -339,5 +339,5 @@ def to_generic_recommendations(data: dict) -> Optional[List[MediaItem]]:
             except Exception as e:
                 logger.warning(f"Failed to map recommendation media item: {e}")
                 continue
-    
+
     return result if result else None

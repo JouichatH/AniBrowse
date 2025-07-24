@@ -208,11 +208,13 @@ class AniListApi(BaseApiClient):
             else False
         )
 
-    def get_recommendation_for(self, params: MediaRecommendationParams) -> Optional[List[MediaItem]]:
+    def get_recommendation_for(
+        self, params: MediaRecommendationParams
+    ) -> Optional[List[MediaItem]]:
         variables = {
-            "id": params.id, 
+            "id": params.id,
             "page": params.page,
-            "per_page": params.per_page or self.config.per_page
+            "per_page": params.per_page or self.config.per_page,
         }
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_RECOMMENDATIONS, variables
@@ -221,10 +223,11 @@ class AniListApi(BaseApiClient):
             try:
                 return mapper.to_generic_recommendations(response.json())
             except Exception as e:
-                logger.error(f"Error mapping recommendations for media {params.id}: {e}")
+                logger.error(
+                    f"Error mapping recommendations for media {params.id}: {e}"
+                )
                 return None
         return None
-         
 
     def get_characters_of(self, params: MediaCharactersParams) -> Optional[Dict]:
         variables = {"id": params.id, "type": "ANIME"}
@@ -233,7 +236,9 @@ class AniListApi(BaseApiClient):
         )
         return response.json() if response else None
 
-    def get_related_anime_for(self, params: MediaRelationsParams) -> Optional[List[MediaItem]]:
+    def get_related_anime_for(
+        self, params: MediaRelationsParams
+    ) -> Optional[List[MediaItem]]:
         variables = {"id": params.id}
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_RELATIONS, variables
@@ -246,7 +251,9 @@ class AniListApi(BaseApiClient):
                 return None
         return None
 
-    def get_airing_schedule_for(self, params: MediaAiringScheduleParams) -> Optional[Dict]:
+    def get_airing_schedule_for(
+        self, params: MediaAiringScheduleParams
+    ) -> Optional[Dict]:
         variables = {"id": params.id, "type": "ANIME"}
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_AIRING_SCHEDULE, variables
