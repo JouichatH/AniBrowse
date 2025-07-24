@@ -4,6 +4,7 @@ query ($id: Int, $page: Int, $per_page: Int) {
       media {
         id
         idMal
+        format
         mediaListEntry {
           status
           id
