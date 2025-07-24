@@ -2,14 +2,14 @@ import logging
 import random
 from typing import Callable, Dict
 
-from ....libs.media_api.params import MediaSearchParams, UserMediaListSearchParams
-from ....libs.media_api.types import (
+from .....libs.media_api.params import MediaSearchParams, UserMediaListSearchParams
+from .....libs.media_api.types import (
     MediaSort,
     MediaStatus,
     UserMediaListStatus,
 )
-from ..session import Context, session
-from ..state import InternalDirective, MediaApiState, MenuName, State
+from ...session import Context, session
+from ...state import InternalDirective, MediaApiState, MenuName, State
 
 logger = logging.getLogger(__name__)
 MenuAction = Callable[[], State | InternalDirective]

@@ -1,7 +1,7 @@
 from typing import Callable, Dict, Union
 
-from ..session import Context, session
-from ..state import InternalDirective, MenuName, State
+from ...session import Context, session
+from ...state import InternalDirective, MenuName, State
 
 MenuAction = Callable[[], Union[State, InternalDirective]]
 

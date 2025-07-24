@@ -1,10 +1,10 @@
 from typing import Dict, List
 
-from ....libs.players.params import PlayerParams
-from ....libs.providers.anime.params import EpisodeStreamsParams
-from ....libs.providers.anime.types import ProviderServer, Server
-from ..session import Context, session
-from ..state import InternalDirective, MenuName, State
+from .....libs.players.params import PlayerParams
+from .....libs.providers.anime.params import EpisodeStreamsParams
+from .....libs.providers.anime.types import ProviderServer, Server
+from ...session import Context, session
+from ...state import InternalDirective, MenuName, State
 
 
 @session.menu

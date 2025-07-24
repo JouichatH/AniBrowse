@@ -2,11 +2,11 @@ from typing import Callable, Dict
 
 from rich.console import Console
 
-from ....libs.media_api.params import UpdateUserMediaListEntryParams
-from ....libs.media_api.types import UserMediaListStatus
-from ....libs.players.params import PlayerParams
-from ..session import Context, session
-from ..state import InternalDirective, MenuName, State
+from .....libs.media_api.params import UpdateUserMediaListEntryParams
+from .....libs.media_api.types import UserMediaListStatus
+from .....libs.players.params import PlayerParams
+from ...session import Context, session
+from ...state import InternalDirective, MenuName, State
 
 MenuAction = Callable[[], State | InternalDirective]
 
@@ -155,7 +155,7 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
         from rich.panel import Panel
         from rich.text import Text
 
-        from ...utils import image
+        from ....utils import image
 
         # TODO: make this look nicer plus add other fields
         console = Console()

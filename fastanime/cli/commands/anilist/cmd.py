@@ -37,5 +37,5 @@ def anilist(ctx: click.Context, resume: bool):
     config = ctx.obj
 
     if ctx.invoked_subcommand is None:
-        session.load_menus_from_folder("")
+        session.load_menus_from_folder("media")
         session.run(config, resume=resume)

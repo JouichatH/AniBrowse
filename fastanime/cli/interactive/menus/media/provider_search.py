@@ -1,10 +1,10 @@
 from rich.progress import Progress
 from thefuzz import fuzz
 
-from ....libs.providers.anime.params import SearchParams
-from ....libs.providers.anime.types import SearchResult
-from ..session import Context, session
-from ..state import InternalDirective, MenuName, ProviderState, State
+from .....libs.providers.anime.params import SearchParams
+from .....libs.providers.anime.types import SearchResult
+from ...session import Context, session
+from ...state import InternalDirective, MenuName, ProviderState, State
 
 
 @session.menu
@@ -73,7 +73,7 @@ def provider_search(ctx: Context, state: State) -> State | InternalDirective:
             f"[cyan]Fetching full details for '{selected_provider_anime.title}'...",
             total=None,
         )
-        from ....libs.providers.anime.params import AnimeParams
+        from .....libs.providers.anime.params import AnimeParams
 
         full_provider_anime = provider.get(
             AnimeParams(id=selected_provider_anime.id, query=media_title.lower())

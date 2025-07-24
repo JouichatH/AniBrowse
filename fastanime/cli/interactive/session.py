@@ -180,7 +180,7 @@ class Session:
 
         return decorator
 
-    def load_menus_from_folder(self, package):
+    def load_menus_from_folder(self, package:str):
         package_path = MENUS_DIR / package
         package_name = package_path.name
         logger.debug(f"Loading menus from '{package_path}'...")
@@ -189,7 +189,7 @@ class Session:
             if filename.endswith(".py") and not filename.startswith("__"):
                 module_name = filename[:-3]
                 full_module_name = (
-                    f"fastanime.cli.interactive.{package_name}.{module_name}"
+                    f"fastanime.cli.interactive.menus.{package_name}.{module_name}"
                 )
                 file_path = package_path / filename
 

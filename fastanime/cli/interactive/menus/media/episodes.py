@@ -1,5 +1,5 @@
-from ..session import Context, session
-from ..state import InternalDirective, MenuName, State
+from ...session import Context, session
+from ...state import InternalDirective, MenuName, State
 
 
 @session.menu
@@ -39,7 +39,7 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
 
         preview_command = None
         if ctx.config.general.preview != "none":
-            from ...utils.previews import get_episode_preview
+            from ....utils.previews import get_episode_preview
 
             preview_command = get_episode_preview(
                 available_episodes, media_item, ctx.config
