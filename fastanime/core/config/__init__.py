@@ -1,10 +1,13 @@
 from .model import (
     AnilistConfig,
     AppConfig,
+    DownloadsConfig,
     FzfConfig,
     GeneralConfig,
+    MediaRegistryConfig,
     MpvConfig,
     RofiConfig,
+    ServiceConfig,
     StreamConfig,
     VlcConfig,
 )
@@ -18,4 +21,7 @@ __all__ = [
     "AnilistConfig",
     "StreamConfig",
     "GeneralConfig",
+    "DownloadsConfig",
+    "ServiceConfig",
+    "MediaRegistryConfig",
 ]
