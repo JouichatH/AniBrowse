@@ -124,7 +124,9 @@ class Session:
             else:
                 logger.warning("Failed to continue from history. No sessions found")
 
-        if not self._history:
+        if history:
+            self._history = history
+        else:
             self._history.append(State(menu_name=MenuName.MAIN))
 
         try:

@@ -1,27 +1,108 @@
+search = """
+\b
+\b\bExamples:
+  # Basic search by title
+  fastanime anilist search -t "Attack on Titan"
+\b
+  # Search with multiple filters
+  fastanime anilist search -g Action -T Isekai --score-greater 75 --status RELEASING
+\b
+  # Get anime with the tag of isekai
+  fastanime anilist search -T isekai
+\b
+  # Get anime of 2024 and sort by popularity, finished or releasing, not in your list
+  fastanime anilist search -y 2024 -s POPULARITY_DESC --status RELEASING --status FINISHED --not-on-list
+\b
+  # Get anime of 2024 season WINTER
+  fastanime anilist search -y 2024 --season WINTER
+\b
+  # Get anime genre action and tag isekai,magic
+  fastanime anilist search -g Action -T Isekai -T Magic
+\b
+  # Get anime of 2024 thats finished airing
+  fastanime anilist search -y 2024 -S FINISHED
+\b
+  # Get the most favourite anime movies
+  fastanime anilist search -f MOVIE -s FAVOURITES_DESC
+\b
+  # Search with score and popularity filters
+  fastanime anilist search --score-greater 80 --popularity-greater 50000
+\b
+  # Search excluding certain genres and tags
+  fastanime anilist search --genres-not Ecchi --tags-not "Hentai"
+\b
+  # Search with date ranges (YYYYMMDD format)
+  fastanime anilist search --start-date-greater 20200101 --start-date-lesser 20241231
+\b
+  # Get only TV series, exclude certain statuses
+  fastanime anilist search -f TV --status-not CANCELLED --status-not HIATUS
+\b
+  # Paginated search with custom page size
+  fastanime anilist search -g Action --page 2 --per-page 25
+\b
+  # Search for manga specifically
+  fastanime anilist search --media-type MANGA -g Fantasy
+\b
+  # Complex search with multiple criteria
+  fastanime anilist search -t "demon" -g Action -g Supernatural --score-greater 70 --year 2020 -s SCORE_DESC
+\b
+  # Dump search results as JSON instead of interactive mode
+  fastanime anilist search -g Action --dump-json
+"""
+
+
 main = """
 \b
 \b\bExamples:
   # ---- search ----  
 \b
-  # get anime with the tag of isekai
+  # Basic search by title
+  fastanime anilist search -t "Attack on Titan"
+\b
+  # Search with multiple filters
+  fastanime anilist search -g Action -T Isekai --score-greater 75 --status RELEASING
+\b
+  # Get anime with the tag of isekai
   fastanime anilist search -T isekai
 \b
-  # get anime of 2024 and sort by popularity
-  # that has already finished airing or is releasing
-  # and is not in your anime lists
+  # Get anime of 2024 and sort by popularity, finished or releasing, not in your list
   fastanime anilist search -y 2024 -s POPULARITY_DESC --status RELEASING --status FINISHED --not-on-list
 \b
-  # get anime of 2024 season WINTER
+  # Get anime of 2024 season WINTER
   fastanime anilist search -y 2024 --season WINTER
 \b
-  # get anime genre action and tag isekai,magic
+  # Get anime genre action and tag isekai,magic
   fastanime anilist search -g Action -T Isekai -T Magic
 \b
-  # get anime of 2024 thats finished airing
+  # Get anime of 2024 thats finished airing
   fastanime anilist search -y 2024 -S FINISHED
 \b
-  # get the most favourite anime movies
+  # Get the most favourite anime movies
   fastanime anilist search -f MOVIE -s FAVOURITES_DESC
+\b
+  # Search with score and popularity filters
+  fastanime anilist search --score-greater 80 --popularity-greater 50000
+\b
+  # Search excluding certain genres and tags
+  fastanime anilist search --genres-not Ecchi --tags-not "Hentai"
+\b
+  # Search with date ranges (YYYYMMDD format)
+  fastanime anilist search --start-date-greater 20200101 --start-date-lesser 20241231
+\b
+  # Get only TV series, exclude certain statuses
+  fastanime anilist search -f TV --status-not CANCELLED --status-not HIATUS
+\b
+  # Paginated search with custom page size
+  fastanime anilist search -g Action --page 2 --per-page 25
+\b
+  # Search for manga specifically
+  fastanime anilist search --media-type MANGA -g Fantasy
+\b
+  # Complex search with multiple criteria
+  fastanime anilist search -t "demon" -g Action -g Supernatural --score-greater 70 --year 2020 -s SCORE_DESC
+\b
+  # Dump search results as JSON instead of interactive mode
+  fastanime anilist search -g Action --dump-json
 \b
   # ---- login ----
 \b

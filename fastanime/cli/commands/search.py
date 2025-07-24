@@ -89,37 +89,24 @@ def search(config: AppConfig, **options: "Unpack[Options]"):
 
         if not anime:
             raise FastAnimeError(f"Failed to fetch anime {anime_result.title}")
-        episodes_range = []
-        episodes: list[str] = sorted(
+        
+        available_episodes: list[str] = sorted(
             getattr(anime.episodes, config.stream.translation_type), key=float
         )
+        
         if options["episode_range"]:
-            if ":" in options["episode_range"]:
-                ep_range_tuple = options["episode_range"].split(":")
-                if len(ep_range_tuple) == 3 and all(ep_range_tuple):
-                    episodes_start, episodes_end, step = ep_range_tuple
-                    episodes_range = episodes[
-                        int(episodes_start) : int(episodes_end) : int(step)
-                    ]
-
-                elif len(ep_range_tuple) == 2 and all(ep_range_tuple):
-                    episodes_start, episodes_end = ep_range_tuple
-                    episodes_range = episodes[int(episodes_start) : int(episodes_end)]
-                else:
-                    episodes_start, episodes_end = ep_range_tuple
-                    if episodes_start.strip():
-                        episodes_range = episodes[int(episodes_start) :]
-                    elif episodes_end.strip():
-                        episodes_range = episodes[: int(episodes_end)]
-                    else:
-                        episodes_range = episodes
-            else:
-                episodes_range = episodes[int(options["episode_range"]) :]
-
-            episodes_range = iter(episodes_range)
-
-            for episode in episodes_range:
-                stream_anime(config, provider, selector, anime, episode, anime_title)
+            from ..utils.parser import parse_episode_range
+            
+            try:
+                episodes_range = parse_episode_range(
+                    options["episode_range"], 
+                    available_episodes
+                )
+                
+                for episode in episodes_range:
+                    stream_anime(config, provider, selector, anime, episode, anime_title)
+            except (ValueError, IndexError) as e:
+                raise FastAnimeError(f"Invalid episode range: {e}") from e
         else:
             episode = selector.choose(
                 "Select Episode",
