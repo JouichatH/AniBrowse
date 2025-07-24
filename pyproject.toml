@@ -10,6 +10,7 @@ dependencies = [
   "click>=8.1.7",
   "httpx>=0.28.1",
   "inquirerpy>=0.3.4",
+  "libtorrent>=2.0.11",
   "lxml>=6.0.0",
   "pycryptodome>=3.21.0",
   "pydantic>=2.11.7",
