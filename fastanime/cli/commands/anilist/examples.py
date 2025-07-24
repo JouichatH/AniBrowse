@@ -7,35 +7,35 @@ download = """
   # Download specific episodes
   fastanime anilist download -t "One Piece" --episode-range "1-10"
 \b
-  # Download with auto-selection (no prompts)
-  fastanime anilist download -t "Naruto" --auto-select --silent
+  # Download single episode
+  fastanime anilist download -t "Death Note" --episode-range "1"
+\b
+  # Download multiple specific episodes
+  fastanime anilist download -t "Naruto" --episode-range "1,5,10"
 \b
   # Download with quality preference
-  fastanime anilist download -t "Death Note" --quality 1080p --episode-range "1-5"
+  fastanime anilist download -t "Death Note" --quality 1080 --episode-range "1-5"
 \b
   # Download with multiple filters
   fastanime anilist download -g Action -T Isekai --score-greater 80 --status RELEASING
 \b
-  # Download recent episodes only
-  fastanime anilist download -t "Demon Slayer" --episode-range "20:"
+  # Download with concurrent downloads
+  fastanime anilist download -t "Demon Slayer" --episode-range "1-5" --max-concurrent 3
 \b
-  # Download with subtitle merging
-  fastanime anilist download -t "Your Name" --merge --clean
-\b
-  # Download using FFmpeg with HLS options
-  fastanime anilist download -t "Spirited Away" --force-ffmpeg --hls-use-h264
+  # Force redownload existing episodes
+  fastanime anilist download -t "Your Name" --episode-range "1" --force-redownload
 \b
   # Download from a specific season and year
-  fastanime anilist download --season WINTER --year 2024 -s POPULARITY_DESC --auto-select
+  fastanime anilist download --season WINTER --year 2024 -s POPULARITY_DESC
+\b
+  # Download with genre filtering
+  fastanime anilist download -g Action -g Adventure --score-greater 75
 \b
   # Download only completed series
-  fastanime anilist download -g Fantasy --status FINISHED --score-greater 75 --auto-select
-\b
-  # Download with verbose output and no certificate checking
-  fastanime anilist download -t "Akira" --verbose --no-check-certificates
+  fastanime anilist download -g Fantasy --status FINISHED --score-greater 75
 \b
   # Download movies only
-  fastanime anilist download -f MOVIE -s SCORE_DESC --auto-select --quality best
+  fastanime anilist download -F MOVIE -s SCORE_DESC --quality best
 """
 
 

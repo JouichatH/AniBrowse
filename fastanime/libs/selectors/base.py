@@ -31,6 +31,50 @@ class BaseSelector(ABC):
         """
         pass
 
+    def choose_multiple(
+        self,
+        prompt: str,
+        choices: List[str],
+        *,
+        preview: Optional[str] = None,
+        header: Optional[str] = None,
+    ) -> List[str]:
+        """
+        Prompts the user to choose multiple items from a list.
+        Default implementation falls back to single selection.
+
+        Args:
+            prompt: The message to display to the user.
+            choices: A list of strings for the user to choose from.
+            preview: An optional command or string for a preview window.
+            header: An optional header to display above the choices.
+
+        Returns:
+            A list of the chosen items.
+        """
+        # Default implementation: single selection in a loop
+        selected = []
+        remaining_choices = choices.copy()
+        
+        while remaining_choices:
+            choice = self.choose(
+                f"{prompt} (Select multiple, empty to finish)",
+                remaining_choices + ["[DONE] Finish selection"],
+                preview=preview,
+                header=header,
+            )
+            
+            if not choice or choice == "[DONE] Finish selection":
+                break
+                
+            selected.append(choice)
+            remaining_choices.remove(choice)
+            
+            if not self.confirm(f"Selected: {', '.join(selected)}. Continue selecting?", default=True):
+                break
+        
+        return selected
+
     @abstractmethod
     def confirm(self, prompt: str, *, default: bool = False) -> bool:
         """

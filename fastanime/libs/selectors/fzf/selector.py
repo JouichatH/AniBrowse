@@ -53,6 +53,35 @@ class FzfSelector(BaseSelector):
             return None
         return result.stdout.strip()
 
+    def choose_multiple(self, prompt, choices, *, preview=None, header=None):
+        """Enhanced multi-selection using fzf's --multi flag."""
+        fzf_input = "\n".join(choices)
+
+        commands = [
+            self.executable,
+            "--multi",
+            "--prompt",
+            f"{prompt.title()}: ",
+            "--header",
+            f"{self.header}\nPress TAB to select multiple items, ENTER to confirm",
+            "--header-first",
+        ]
+        if preview:
+            commands.extend(["--preview", preview])
+
+        result = subprocess.run(
+            commands,
+            input=fzf_input,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        if result.returncode != 0:
+            return []
+        
+        # Split the output by newlines and filter out empty strings
+        selections = [line.strip() for line in result.stdout.strip().split('\n') if line.strip()]
+        return selections
+
     def confirm(self, prompt, *, default=False):
         choices = ["Yes", "No"]
         default_choice = "Yes" if default else "No"

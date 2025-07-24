@@ -33,6 +33,7 @@ class Services:
     watch_history: WatchHistoryService
     session: SessionsService
     auth: AuthService
+    download: "DownloadService"
 
 
 @dataclass(frozen=True)

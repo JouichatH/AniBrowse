@@ -274,3 +274,145 @@ class MediaRegistryService:
             self._save_index(index)
 
             logger.debug(f"Removed media record {media_id}")
+
+    def update_episode_download_status(
+        self,
+        media_id: int,
+        episode_number: str,
+        status: "DownloadStatus",
+        file_path: Optional[Path] = None,
+        file_size: Optional[int] = None,
+        quality: Optional[str] = None,
+        provider_name: Optional[str] = None,
+        server_name: Optional[str] = None,
+        subtitle_paths: Optional[list[Path]] = None,
+        error_message: Optional[str] = None,
+    ) -> bool:
+        """Update the download status and metadata for a specific episode."""
+        try:
+            from .models import DownloadStatus, MediaEpisode
+            
+            record = self.get_media_record(media_id)
+            if not record:
+                logger.error(f"No media record found for ID {media_id}")
+                return False
+            
+            # Find existing episode or create new one
+            episode_record = None
+            for episode in record.media_episodes:
+                if episode.episode_number == episode_number:
+                    episode_record = episode
+                    break
+            
+            if not episode_record:
+                if not file_path:
+                    logger.error(f"File path required for new episode {episode_number}")
+                    return False
+                episode_record = MediaEpisode(
+                    episode_number=episode_number,
+                    file_path=file_path,
+                    download_status=status,
+                )
+                record.media_episodes.append(episode_record)
+            
+            # Update episode metadata
+            episode_record.download_status = status
+            if file_path:
+                episode_record.file_path = file_path
+            if file_size is not None:
+                episode_record.file_size = file_size
+            if quality:
+                episode_record.quality = quality
+            if provider_name:
+                episode_record.provider_name = provider_name
+            if server_name:
+                episode_record.server_name = server_name
+            if subtitle_paths:
+                episode_record.subtitle_paths = subtitle_paths
+            if error_message:
+                episode_record.last_error = error_message
+            
+            # Increment download attempts if this is a failure
+            if status == DownloadStatus.FAILED:
+                episode_record.download_attempts += 1
+            
+            # Save the updated record
+            return self.save_media_record(record)
+            
+        except Exception as e:
+            logger.error(f"Failed to update episode download status: {e}")
+            return False
+
+    def get_episodes_by_download_status(
+        self, status: "DownloadStatus"
+    ) -> list[tuple[int, str]]:
+        """Get all episodes with a specific download status."""
+        try:
+            from .models import DownloadStatus
+            
+            episodes = []
+            for record in self.get_all_media_records():
+                for episode in record.media_episodes:
+                    if episode.download_status == status:
+                        episodes.append((record.media_item.id, episode.episode_number))
+            return episodes
+            
+        except Exception as e:
+            logger.error(f"Failed to get episodes by status: {e}")
+            return []
+
+    def get_download_statistics(self) -> dict:
+        """Get comprehensive download statistics."""
+        try:
+            from .models import DownloadStatus
+            
+            stats = {
+                "total_episodes": 0,
+                "downloaded": 0,
+                "failed": 0,
+                "queued": 0,
+                "downloading": 0,
+                "paused": 0,
+                "total_size_bytes": 0,
+                "by_quality": {},
+                "by_provider": {},
+            }
+            
+            for record in self.get_all_media_records():
+                for episode in record.media_episodes:
+                    stats["total_episodes"] += 1
+                    
+                    # Count by status
+                    status_key = episode.download_status.value.lower()
+                    if status_key == "completed":
+                        stats["downloaded"] += 1
+                    elif status_key == "failed":
+                        stats["failed"] += 1
+                    elif status_key == "queued":
+                        stats["queued"] += 1
+                    elif status_key == "downloading":
+                        stats["downloading"] += 1
+                    elif status_key == "paused":
+                        stats["paused"] += 1
+                    
+                    # Aggregate file sizes
+                    if episode.file_size:
+                        stats["total_size_bytes"] += episode.file_size
+                    
+                    # Count by quality
+                    if episode.quality:
+                        stats["by_quality"][episode.quality] = (
+                            stats["by_quality"].get(episode.quality, 0) + 1
+                        )
+                    
+                    # Count by provider
+                    if episode.provider_name:
+                        stats["by_provider"][episode.provider_name] = (
+                            stats["by_provider"].get(episode.provider_name, 0) + 1
+                        )
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Failed to get download statistics: {e}")
+            return {}
