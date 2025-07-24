@@ -7,7 +7,7 @@ from typing import Dict, Literal, Optional
 from pydantic import BaseModel, Field, computed_field
 
 from ....libs.media_api.types import MediaItem, UserMediaListStatus
-from ...utils import converters
+from ....core.utils import converters
 
 logger = logging.getLogger(__name__)
 
