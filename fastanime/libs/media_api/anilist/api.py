@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Optional
+from typing import Dict, List, Optional
 
 from httpx import Client
 
@@ -18,7 +18,7 @@ from ..params import (
     UpdateUserMediaListEntryParams,
     UserMediaListSearchParams,
 )
-from ..types import MediaSearchResult, UserMediaListStatus, UserProfile
+from ..types import MediaItem, MediaSearchResult, UserMediaListStatus, UserProfile
 from . import gql, mapper
 
 logger = logging.getLogger(__name__)
@@ -208,31 +208,37 @@ class AniListApi(BaseApiClient):
             else False
         )
 
-    def get_recommendation_for(self, params: MediaRecommendationParams):
-        variables = {"mediaRecommendationId": params.id, "page": params.page}
+    def get_recommendation_for(self, params: MediaRecommendationParams) -> Optional[List[MediaItem]]:
+        variables = {
+            "id": params.id, 
+            "page": params.page,
+            "per_page": params.per_page or self.config.per_page
+        }
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_RECOMMENDATIONS, variables
         )
-        return response
+        return mapper.to_generic_recommendations(response.json()) if response else None
 
-    def get_characters_of(self, params: MediaCharactersParams):
-        variables = {"id": params.id}
+    def get_characters_of(self, params: MediaCharactersParams) -> Optional[Dict]:
+        variables = {"id": params.id, "type": "ANIME"}
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_CHARACTERS, variables
         )
-        return response
+        return response.json() if response else None
 
-    def get_related_anime_for(self, params: MediaRelationsParams):
+    def get_related_anime_for(self, params: MediaRelationsParams) -> Optional[List[MediaItem]]:
         variables = {"id": params.id}
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_RELATIONS, variables
         )
+        return mapper.to_generic_relations(response.json()) if response else None
 
-    def get_airing_schedule_for(self, params: MediaAiringScheduleParams):
-        variables = {"id": params.id}
+    def get_airing_schedule_for(self, params: MediaAiringScheduleParams) -> Optional[Dict]:
+        variables = {"id": params.id, "type": "ANIME"}
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_AIRING_SCHEDULE, variables
         )
+        return response.json() if response else None
 
 
 if __name__ == "__main__":

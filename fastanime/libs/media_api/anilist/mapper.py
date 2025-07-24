@@ -347,14 +347,13 @@ def to_generic_relations(data: dict) -> Optional[List[MediaItem]]:
 
 def to_generic_recommendations(data: dict) -> Optional[List[MediaItem]]:
     """Maps the 'recommendations' part of an API response."""
-    recs = (
+    recommendations = (
         data.get("data", {})
-        .get("Media", {})
-        .get("recommendations", {})
-        .get("nodes", [])
+        .get("Page", {})
+        .get("recommendations", [])
     )
     return [
-        _to_generic_media_item(rec.get("mediaRecommendation"))
-        for rec in recs
-        if rec.get("mediaRecommendation")
+        _to_generic_media_item(rec.get("media"))
+        for rec in recommendations
+        if rec.get("media")
     ]
