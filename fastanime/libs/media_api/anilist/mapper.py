@@ -2,8 +2,7 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from ....core.utils.formatting import (
-    extract_episode_number,
+from ....core.utils.formatters import (
     renumber_titles,
     strip_original_episode_prefix,
 )
