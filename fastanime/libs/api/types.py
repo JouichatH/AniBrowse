@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -167,7 +167,7 @@ class MediaItem(BaseMediaApiModel):
     next_airing: Optional[AiringSchedule] = None
 
     # streaming episodes
-    streaming_episodes: List[StreamingEpisode] = Field(default_factory=list)
+    streaming_episodes: Dict[str, StreamingEpisode] = Field(default_factory=dict)
 
     # user related
     user_status: Optional[UserListItem] = None

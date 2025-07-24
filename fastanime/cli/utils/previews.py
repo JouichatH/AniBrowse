@@ -1,6 +1,7 @@
 import concurrent.futures
 import logging
 import os
+import re
 from hashlib import sha256
 from pathlib import Path
 from threading import Thread
@@ -32,6 +33,9 @@ TEMPLATE_INFO_SCRIPT = Path(str(FZF_SCRIPTS_DIR / "info.template.sh")).read_text
 TEMPLATE_EPISODE_INFO_SCRIPT = Path(
     str(FZF_SCRIPTS_DIR / "episode-info.template.sh")
 ).read_text(encoding="utf-8")
+
+
+EPISODE_PATTERN = re.compile(r"^Episode\s+(\d+)\s-\s.*")
 
 
 def get_anime_preview(
@@ -206,7 +210,7 @@ def _episode_cache_worker(
     episodes: List[str], media_item: MediaItem, config: AppConfig
 ):
     """Background task that fetches and saves episode preview data."""
-    streaming_episodes = {ep.title: ep for ep in media_item.streaming_episodes}
+    streaming_episodes = media_item.streaming_episodes
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         for episode_str in episodes:
@@ -217,13 +221,9 @@ def _episode_cache_worker(
             # Find matching streaming episode
             title = None
             thumbnail = None
-            for title, ep in streaming_episodes.items():
-                if f"Episode {episode_str} -" in title or title.endswith(
-                    f" {episode_str}"
-                ):
-                    title = title
-                    thumbnail = ep.thumbnail
-                    break
+            if ep := streaming_episodes.get(episode_str):
+                title = ep.title
+                thumbnail = ep.thumbnail
 
             # Fallback if no streaming episode found
             if not title:

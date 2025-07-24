@@ -1,8 +1,12 @@
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
-from ....core.utils.formatting import renumber_titles, strip_original_episode_prefix
+from ....core.utils.formatting import (
+    extract_episode_number,
+    renumber_titles,
+    strip_original_episode_prefix,
+)
 from ..types import (
     AiringSchedule,
     MediaFormat,
@@ -177,14 +181,14 @@ def _to_generic_tags(anilist_tags: list[AnilistMediaTag]) -> List[MediaTagItem]:
 
 def _to_generic_streaming_episodes(
     anilist_episodes: list[AnilistStreamingEpisode],
-) -> List[StreamingEpisode]:
+) -> Dict[str, StreamingEpisode]:
     """Maps a list of AniList streaming episodes to generic StreamingEpisode objects,
     renumbering them fresh if they contain episode numbers."""
 
     titles = [ep["title"] for ep in anilist_episodes if "title" in ep and ep["title"]]
     renumber_map = renumber_titles(titles)
 
-    result = []
+    result = {}
     for ep in anilist_episodes:
         title = ep.get("title")
         if not title:
@@ -197,11 +201,9 @@ def _to_generic_streaming_episodes(
             else title
         )
 
-        result.append(
-            StreamingEpisode(
-                title=display_title,
-                thumbnail=ep.get("thumbnail"),
-            )
+        result[str(renumbered_ep)] = StreamingEpisode(
+            title=display_title,
+            thumbnail=ep.get("thumbnail"),
         )
 
     return result

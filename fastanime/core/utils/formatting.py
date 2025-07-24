@@ -1,7 +1,25 @@
 import re
 from typing import Dict, List, Optional, Union
 
+# def _extract_episode_number(episode_string: str) -> int | None:
+#     """
+#     Extracts the episode number from a string formatted as 'Episode {number} - desc'.
 
+#     Args:
+#         episode_string: The input string, e.g., "Episode 123 - The Grand Finale".
+
+#     Returns:
+#         The extracted episode number as an integer, or None if the format
+#         does not match.
+#     """
+#     match = EPISODE_PATTERN.search(episode_string)
+
+
+#     if match:
+#         episode_number_str = match.group(1)
+#         return int(episode_number_str)
+#     else:
+#         return None
 def extract_episode_number(title: str) -> Optional[float]:
     """
     Extracts the episode number (supports floats) from a title like:
