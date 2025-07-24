@@ -92,7 +92,7 @@ With the following extras available:
 - api - which installs dependencies required to use `fastanime serve`
 - mpv - which installs python mpv
 - notifications - which installs plyer required for desktop notifications
-  
+
 #### Using uv
 
 Recommended method of installation is using [uv](https://docs.astral.sh/uv/).
@@ -813,11 +813,10 @@ player = mpv
 ```
 
 ### Other Terminal Browsers I Made
+
 [yt-x](https://github.com/Benexl/yt-x) - browse youtube and other yt-dlp sites from the terminal
 
 [lib-x](https://github.com/Benexl/lib-x) - browse your calibre library from the terminal
-
-
 
 ## Contributing
 

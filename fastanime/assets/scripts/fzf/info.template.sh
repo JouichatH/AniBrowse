@@ -4,7 +4,6 @@
 # This script formats and displays the textual information in the FZF preview pane.
 # Some values are injected by python those with '{name}' syntax using .replace()
 
-
 draw_rule
 
 print_kv "Title" "{TITLE}"
@@ -13,8 +12,8 @@ draw_rule
 
 # Emojis take up double the space
 score_multiplier=1
-if ! [ "{SCORE}" = "N/A" ];then
-    score_multiplier=2
+if ! [ "{SCORE}" = "N/A" ]; then
+	score_multiplier=2
 fi
 print_kv "Score" "{SCORE}" $score_multiplier
 

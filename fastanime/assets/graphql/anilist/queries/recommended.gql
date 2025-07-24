@@ -1,4 +1,4 @@
-query ($id: Int, $page: Int,$per_page:Int) {
+query ($id: Int, $page: Int, $per_page: Int) {
   Page(perPage: $per_page, page: $page) {
     recommendations(mediaRecommendationId: $id) {
       media {

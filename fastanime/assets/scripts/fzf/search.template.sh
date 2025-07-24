@@ -1,8 +1,8 @@
 fetch_anime_for_fzf() {
-  local search_term="$1"
-  if [ -z "$search_term" ]; then exit 0; fi
+	local search_term="$1"
+	if [ -z "$search_term" ]; then exit 0; fi
 
-  local query='
+	local query='
   query ($search: String) {
     Page(page: 1, perPage: 25) {
       media(search: $search, type: ANIME, sort: [SEARCH_MATCH]) {
@@ -16,25 +16,28 @@ fetch_anime_for_fzf() {
   }
   '
 
-  local json_payload
-  json_payload=$(jq -n --arg query "$query" --arg search "$search_term" \
-                    '{query: $query, variables: {search: $search}}')
+	local json_payload
+	json_payload=$(jq -n --arg query "$query" --arg search "$search_term" \
+		'{query: $query, variables: {search: $search}}')
 
-  curl --silent \
-       --header "Content-Type: application/json" \
-       --header "Accept: application/json" \
-       --request POST \
-       --data "$json_payload" \
-       https://graphql.anilist.co | \
-  jq -r '.data.Page.media[]? | select(.title.romaji) |
+	curl --silent \
+		--header "Content-Type: application/json" \
+		--header "Accept: application/json" \
+		--request POST \
+		--data "$json_payload" \
+		https://graphql.anilist.co |
+		jq -r '.data.Page.media[]? | select(.title.romaji) |
          "\(.title.english // .title.romaji) | Score: \(.meanScore // "N/A") | ID: \(.id)"'
 }
 fetch_anime_details() {
-  local anime_id
-  anime_id=$(echo "$1" | sed -n 's/.*ID: \([0-9]*\).*/\1/p')
-  if [ -z "$anime_id" ]; then echo "Select an item to see details..."; return; fi
+	local anime_id
+	anime_id=$(echo "$1" | sed -n 's/.*ID: \([0-9]*\).*/\1/p')
+	if [ -z "$anime_id" ]; then
+		echo "Select an item to see details..."
+		return
+	fi
 
-  local query='
+	local query='
   query ($id: Int) {
     Media(id: $id, type: ANIME) {
       title { romaji english }
@@ -50,18 +53,18 @@ fetch_anime_details() {
     }
   }
   '
-  local json_payload
-  json_payload=$(jq -n --arg query "$query" --argjson id "$anime_id" \
-                    '{query: $query, variables: {id: $id}}')
+	local json_payload
+	json_payload=$(jq -n --arg query "$query" --argjson id "$anime_id" \
+		'{query: $query, variables: {id: $id}}')
 
-  # Fetch and format details for the preview window
-  curl --silent \
-       --header "Content-Type: application/json" \
-       --header "Accept: application/json" \
-       --request POST \
-       --data "$json_payload" \
-       https://graphql.anilist.co | \
-  jq -r '
+	# Fetch and format details for the preview window
+	curl --silent \
+		--header "Content-Type: application/json" \
+		--header "Accept: application/json" \
+		--request POST \
+		--data "$json_payload" \
+		https://graphql.anilist.co |
+		jq -r '
     .data.Media |
     "Title: \(.title.english // .title.romaji)\n" +
     "Score: \(.meanScore // "N/A") | Episodes: \(.episodes // "N/A")\n" +

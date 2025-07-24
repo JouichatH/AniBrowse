@@ -11,7 +11,7 @@ query (
       currentPage
       total
     }
-    mediaList(userId: $userId, status: $status, type: $type,sort: $sort) {
+    mediaList(userId: $userId, status: $status, type: $type, sort: $sort) {
       mediaId
       media {
         id

@@ -4,10 +4,9 @@
 # This script formats and displays episode information in the FZF preview pane.
 # Some values are injected by python those with '{name}' syntax using .replace()
 
-
 draw_rule
 
-echo "{TITLE}"| fold -s -w "$WIDTH"
+echo "{TITLE}" | fold -s -w "$WIDTH"
 
 draw_rule
 
@@ -30,4 +29,3 @@ print_kv "Start Date" "{START_DATE}"
 print_kv "End Date" "{END_DATE}"
 
 draw_rule
-

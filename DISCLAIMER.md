@@ -6,7 +6,7 @@
 
 <br>
 
-The core aim of this project is to co-relate automation and efficiency to extract what is provided to a user on the internet. All content available through the project is hosted by external non-affiliated sources. 
+The core aim of this project is to co-relate automation and efficiency to extract what is provided to a user on the internet. All content available through the project is hosted by external non-affiliated sources.
 
 <br>
 
@@ -22,7 +22,6 @@ This project has no control on the content it is serving, using copyrighted cont
 
 </b>
 
-
 <br>
 
 <h2>DMCA and Copyright Infrigements</h3>
@@ -33,7 +32,6 @@ This project has no control on the content it is serving, using copyrighted cont
 
 A browser is a tool, and the maliciousness of the tool is directly based on the user.
 </b>
-
 
 This project uses client-side content access mechanisms. Hence, the copyright infrigements or DMCA in this project's regards are to be forwarded to the associated site by the associated notifier of any such claims. This is one of the main reasons the sites are listed in this project.
 
