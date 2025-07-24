@@ -27,7 +27,7 @@ MENUS_DIR = APP_DIR / "cli" / "interactive" / "menu"
 
 
 @dataclass(frozen=True)
-class Service:
+class Services:
     feedback: FeedbackService
     media_registry: MediaRegistryService
     watch_history: WatchHistoryService
@@ -42,7 +42,7 @@ class Context:
     selector: BaseSelector
     player: BasePlayer
     media_api: BaseApiClient
-    service: Service
+    service: Services
 
 
 MenuFunction = Callable[[Context, State], Union[State, InternalDirective]]
@@ -70,7 +70,7 @@ class Session:
             media_api=config.general.media_api, config=config.media_registry
         )
         auth = AuthService(config.general.media_api)
-        service = Service(
+        services = Services(
             feedback=FeedbackService(config.general.icons),
             media_registry=media_registry,
             watch_history=WatchHistoryService(config, media_registry),
@@ -95,7 +95,7 @@ class Session:
             selector=create_selector(config),
             player=create_player(config),
             media_api=media_api,
-            service=service,
+            service=services,
         )
         logger.info("Application context reloaded.")
 
