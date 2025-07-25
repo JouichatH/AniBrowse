@@ -53,6 +53,7 @@ user_list_status_map = {
     "COMPLETED": UserMediaListStatus.COMPLETED,
     "PAUSED": UserMediaListStatus.PAUSED,
     "REPEATING": UserMediaListStatus.REPEATING,
+    "DROPPED": UserMediaListStatus.DROPPED,
 }
 status_map = {
     "FINISHED": MediaStatus.FINISHED,
@@ -185,9 +186,10 @@ def _to_generic_user_status(
     anilist_list_entry: Optional[AnilistMediaList],
 ) -> Optional[UserListItem]:
     """Maps an AniList mediaListEntry to a generic UserListStatus."""
+    # FIX: investigate the inconsistency between mediaList entry status `and the main status
     if anilist_list_entry:
         return UserListItem(
-            status=user_list_status_map[anilist_list_entry["status"]],
+            status=user_list_status_map[anilist_media["mediaListEntry"]["status"]],  # type:ignore
             progress=anilist_list_entry["progress"],
             score=anilist_list_entry["score"],
             repeat=anilist_list_entry["repeat"],
