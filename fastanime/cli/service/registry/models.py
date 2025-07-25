@@ -6,8 +6,8 @@ from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field
 
-from ....libs.media_api.types import MediaItem, UserMediaListStatus
 from ....core.utils import converter
+from ....libs.media_api.types import MediaItem, UserMediaListStatus
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +30,15 @@ class MediaEpisode(BaseModel):
     download_status: DownloadStatus = DownloadStatus.NOT_DOWNLOADED
     file_path: Path
     download_date: datetime = Field(default_factory=datetime.now)
-    
+
     # Additional download metadata
     file_size: Optional[int] = None  # File size in bytes
-    quality: Optional[str] = None    # Download quality (e.g., "1080p", "720p")
+    quality: Optional[str] = None  # Download quality (e.g., "1080p", "720p")
     provider_name: Optional[str] = None  # Name of the provider used
-    server_name: Optional[str] = None    # Name of the server used
+    server_name: Optional[str] = None  # Name of the server used
     subtitle_paths: list[Path] = Field(default_factory=list)  # Paths to subtitle files
-    download_attempts: int = 0       # Number of download attempts
-    last_error: Optional[str] = None # Last error message if failed
+    download_attempts: int = 0  # Number of download attempts
+    last_error: Optional[str] = None  # Last error message if failed
 
 
 class MediaRecord(BaseModel):
@@ -91,7 +91,7 @@ class MediaRegistryIndex(BaseModel):
         """Get breakdown by user status."""
         breakdown = {}
         for entry in self.media_index.values():
-            breakdown[entry.status] = breakdown.get(entry.status, 0) + 1
+            breakdown[entry.status.value] = breakdown.get(entry.status.value, 0) + 1
         return breakdown
 
     @computed_field
