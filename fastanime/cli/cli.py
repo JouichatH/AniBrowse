@@ -32,7 +32,7 @@ commands = {
     "anilist": "anilist.anilist",
     "download": "download.download",
     "update": "update.update",
-    "registry": "registry.cmd.registry",
+    "registry": "registry.registry",
 }
 
 
