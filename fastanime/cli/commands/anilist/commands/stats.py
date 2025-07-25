@@ -16,22 +16,35 @@ def stats(config: "AppConfig"):
     from rich.markdown import Markdown
     from rich.panel import Panel
 
-    from fastanime.cli.utils.feedback import create_feedback_manager
-    from fastanime.core.exceptions import FastAnimeError
-    from fastanime.libs.media_api.api import create_api_client
+    from .....core.exceptions import FastAnimeError
+    from .....libs.media_api.api import create_api_client
+    from ....service.auth import AuthService
+    from ....service.feedback import FeedbackService
+    from ....service.registry import MediaRegistryService
 
-    feedback = create_feedback_manager(config.general.icons)
     console = Console()
 
-    try:
-        # Create API client and ensure authentication
-        api_client = create_api_client(config.general.media_api, config)
+    feedback = FeedbackService(config.general.icons)
+    auth = AuthService(config.general.media_api)
+    registry_service = MediaRegistryService(
+        config.general.media_api, config.media_registry
+    )
 
-        if not api_client.user_profile:
-            feedback.error("Not authenticated", "Please run: fastanime anilist login")
+    media_api_client = create_api_client(config.general.media_api, config)
+
+    # Check authentication
+
+    if profile := auth.get_auth():
+        if not media_api_client.authenticate(profile.token):
+            feedback.error(
+                "Authentication Required",
+                f"You must be logged in to {config.general.media_api} to sync your media list.",
+            )
+            feedback.info("Run this command to authenticate:", f"fastanime {config.general.media_api} auth")
             raise click.Abort()
 
-        user_profile = api_client.user_profile
+
+
 
         # Check if kitten is available for image display
         KITTEN_EXECUTABLE = shutil.which("kitten")
