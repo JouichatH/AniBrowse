@@ -165,7 +165,6 @@ class MediaRegistryService:
         notes: Optional[str] = None,
         last_notified_episode: Optional[str] = None,
     ):
-        """Update record from player feedback."""
         if media_item:
             self.get_or_create_record(media_item)
 
@@ -174,11 +173,11 @@ class MediaRegistryService:
 
         if progress:
             index_entry.progress = progress
-        if index_entry.status:
-            if status:
-                index_entry.status = status
+        if status:
+            index_entry.status = status
         else:
-            index_entry.status = UserMediaListStatus.WATCHING
+            if not index_entry.status:
+                index_entry.status = UserMediaListStatus.WATCHING
 
         if last_watch_position:
             index_entry.last_watch_position = last_watch_position
@@ -427,7 +426,9 @@ class MediaRegistryService:
 
         # Filter entries by status
         status_entries = [
-            entry for entry in index.media_index.values() if entry.status == status
+            entry
+            for entry in index.media_index.values()
+            if entry.status.value == status.value
         ]
 
         # Get media items for these entries
