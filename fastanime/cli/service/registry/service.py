@@ -174,6 +174,13 @@ class MediaRegistryService:
             index_entry.progress = progress
         if status:
             index_entry.status = status
+        if (
+            progress
+            and status == UserMediaListStatus.COMPLETED
+            and media_item
+            and media_item.episodes
+        ):
+            index_entry.progress = str(media_item.episodes)
         else:
             if not index_entry.status:
                 index_entry.status = UserMediaListStatus.WATCHING
