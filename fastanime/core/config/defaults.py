@@ -60,6 +60,7 @@ MPV_ARGS = ""
 MPV_PRE_ARGS = ""
 MPV_DISABLE_POPEN = True
 MPV_USE_PYTHON_MPV = False
+MPV_USE_IPC = False
 
 # VlcConfig
 VLC_ARGS = ""

@@ -73,6 +73,8 @@ class MpvPlayer(BasePlayer):
             return self._stream_on_desktop_with_webtorrent_cli(params)
         elif params.syncplay:
             return self._stream_on_desktop_with_syncplay(params)
+        elif self.config.use_ipc:
+            return self._stream_on_desktop_with_ipc(params)
         elif self.config.use_python_mpv:
             return self._stream_on_desktop_with_python_mpv(params)
         else:
@@ -106,6 +108,13 @@ class MpvPlayer(BasePlayer):
 
     def _stream_on_desktop_with_python_mpv(self, params: PlayerParams) -> PlayerResult:
         return PlayerResult()
+
+    def _stream_on_desktop_with_ipc(self, params: PlayerParams) -> PlayerResult:
+        """Stream using IPC player for enhanced features."""
+        from .ipc import MpvIPCPlayer
+        
+        ipc_player = MpvIPCPlayer(self.config)
+        return ipc_player.play(params)
 
     def _stream_on_desktop_with_webtorrent_cli(
         self, params: PlayerParams

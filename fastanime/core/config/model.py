@@ -273,6 +273,10 @@ class MpvConfig(OtherConfig):
         default=defaults.MPV_USE_PYTHON_MPV,
         description=desc.MPV_USE_PYTHON_MPV,
     )
+    use_ipc: bool = Field(
+        default=defaults.MPV_USE_IPC,
+        description=desc.MPV_USE_IPC,
+    )
 
 
 class VlcConfig(OtherConfig):
