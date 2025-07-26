@@ -61,7 +61,7 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
             f"{'🔂 ' if icons else ''}Replay": _replay(ctx, state),
             f"{'💽 ' if icons else ''}Change Server": _change_server(ctx, state),
             f"{'📀 ' if icons else ''}Change Quality": _change_quality(ctx, state),
-            f"{'🎞️ ' if icons else ''}Episode List": lambda: _episodes_list(ctx, state),
+            f"{'🎞️ ' if icons else ''}Episode List": _episodes_list(ctx, state),
             f"{'🔘 ' if icons else ''}Toggle Auto Next Episode (Current: {ctx.config.stream.auto_next})": _toggle_config_state(
                 ctx, state, "AUTO_EPISODE"
             ),
