@@ -9,9 +9,9 @@ import logging
 from typing import List, Optional
 
 import httpx
-from ...core.constants import SCRIPTS_DIR
 
 from ...core.config import AppConfig
+from ...core.constants import SCRIPTS_DIR
 from ...core.utils import formatter
 from ...core.utils.concurrency import (
     ManagedBackgroundWorker,
@@ -102,9 +102,8 @@ class PreviewCacheWorker(ManagedBackgroundWorker):
             # Submit info generation task if needed
             if config.general.preview in ("full", "text"):
                 info_path = self.info_cache_dir / hash_id
-                if not info_path.exists():
-                    info_text = self._generate_info_text(media_item, config)
-                    self.submit_function(self._save_info_text, info_text, hash_id)
+                info_text = self._generate_info_text(media_item, config)
+                self.submit_function(self._save_info_text, info_text, hash_id)
 
     def _download_and_save_image(self, url: str, hash_id: str) -> None:
         """Download an image and save it to cache."""
