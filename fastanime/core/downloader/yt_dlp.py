@@ -28,7 +28,7 @@ class YtDLPDownloader(BaseDownloader):
             video_path = None
             sub_paths = []
             merged_path = None
-            
+
             if TORRENT_REGEX.match(params.url):
                 from .torrents import download_torrent_with_webtorrent_cli
 
@@ -38,24 +38,26 @@ class YtDLPDownloader(BaseDownloader):
                 dest_dir.mkdir(parents=True, exist_ok=True)
 
                 video_path = dest_dir / episode_title
-                video_path = download_torrent_with_webtorrent_cli(video_path, params.url)
+                video_path = download_torrent_with_webtorrent_cli(
+                    video_path, params.url
+                )
             else:
                 video_path = self._download_video(params)
-                
+
             if params.subtitles:
                 sub_paths = self._download_subs(params)
                 if params.merge:
                     merged_path = self._merge_subtitles(params, video_path, sub_paths)
-                    
+
             return DownloadResult(
                 success=True,
                 video_path=video_path,
                 subtitle_paths=sub_paths,
                 merged_path=merged_path,
                 anime_title=params.anime_title,
-                episode_title=params.episode_title
+                episode_title=params.episode_title,
             )
-            
+
         except KeyboardInterrupt:
             print()
             print("Aborted!")
@@ -63,7 +65,7 @@ class YtDLPDownloader(BaseDownloader):
                 success=False,
                 error_message="Download aborted by user",
                 anime_title=params.anime_title,
-                episode_title=params.episode_title
+                episode_title=params.episode_title,
             )
         except Exception as e:
             logger.error(f"Download failed: {e}")
@@ -71,7 +73,7 @@ class YtDLPDownloader(BaseDownloader):
                 success=False,
                 error_message=str(e),
                 anime_title=params.anime_title,
-                episode_title=params.episode_title
+                episode_title=params.episode_title,
             )
 
     def _download_video(self, params: DownloadParams) -> Path:
@@ -167,7 +169,9 @@ class YtDLPDownloader(BaseDownloader):
             downloaded_subs.append(sub_path)
         return downloaded_subs
 
-    def _merge_subtitles(self, params, video_path: Path, sub_paths: list[Path]) -> Path | None:
+    def _merge_subtitles(
+        self, params, video_path: Path, sub_paths: list[Path]
+    ) -> Path | None:
         """Merge subtitles with video and return the path to the merged file."""
         self.FFMPEG_EXECUTABLE = shutil.which("ffmpeg")
         if not self.FFMPEG_EXECUTABLE:
@@ -243,7 +247,7 @@ class YtDLPDownloader(BaseDownloader):
                     f"[green bold]Subtitles merged successfully.[/] Output file: {final_output_path}"
                 )
                 return final_output_path
-                
+
             except Exception as e:
                 print(f"[red bold]An unexpected error[/] occurred: {e}")
                 return None

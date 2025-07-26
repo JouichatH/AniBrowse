@@ -177,7 +177,9 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
             image.render_image(cover_image.large)
 
         # Create main title
-        main_title = media_item.title.english or media_item.title.romaji or "Unknown Title"
+        main_title = (
+            media_item.title.english or media_item.title.romaji or "Unknown Title"
+        )
         title_text = Text(main_title, style="bold cyan")
 
         # Create info table
@@ -189,7 +191,7 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
         info_table.add_row("English Title", media_item.title.english or "N/A")
         info_table.add_row("Romaji Title", media_item.title.romaji or "N/A")
         info_table.add_row("Native Title", media_item.title.native or "N/A")
-        
+
         if media_item.synonymns:
             synonyms = ", ".join(media_item.synonymns[:3])  # Show first 3 synonyms
             if len(media_item.synonymns) > 3:
@@ -197,10 +199,19 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
             info_table.add_row("Synonyms", synonyms)
 
         info_table.add_row("Type", media_item.type.value if media_item.type else "N/A")
-        info_table.add_row("Format", media_item.format.value if media_item.format else "N/A")
-        info_table.add_row("Status", media_item.status.value if media_item.status else "N/A")
-        info_table.add_row("Episodes", str(media_item.episodes) if media_item.episodes else "Unknown")
-        info_table.add_row("Duration", f"{media_item.duration} min" if media_item.duration else "Unknown")
+        info_table.add_row(
+            "Format", media_item.format.value if media_item.format else "N/A"
+        )
+        info_table.add_row(
+            "Status", media_item.status.value if media_item.status else "N/A"
+        )
+        info_table.add_row(
+            "Episodes", str(media_item.episodes) if media_item.episodes else "Unknown"
+        )
+        info_table.add_row(
+            "Duration",
+            f"{media_item.duration} min" if media_item.duration else "Unknown",
+        )
 
         # Add dates
         if media_item.start_date:
@@ -229,63 +240,72 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
                 Text(genres_text, style="green"),
                 title="[bold]Genres[/bold]",
                 border_style="green",
-                box=box.ROUNDED
+                box=box.ROUNDED,
             )
         else:
             genres_panel = Panel(
                 Text("No genres available", style="dim"),
                 title="[bold]Genres[/bold]",
                 border_style="green",
-                box=box.ROUNDED
+                box=box.ROUNDED,
             )
 
         # Create tags panel (show top tags)
         if media_item.tags:
-            top_tags = sorted(media_item.tags, key=lambda x: x.rank or 0, reverse=True)[:10]
+            top_tags = sorted(media_item.tags, key=lambda x: x.rank or 0, reverse=True)[
+                :10
+            ]
             tags_text = ", ".join([tag.name.value for tag in top_tags])
             tags_panel = Panel(
                 Text(tags_text, style="yellow"),
                 title="[bold]Tags[/bold]",
                 border_style="yellow",
-                box=box.ROUNDED
+                box=box.ROUNDED,
             )
         else:
             tags_panel = Panel(
                 Text("No tags available", style="dim"),
                 title="[bold]Tags[/bold]",
                 border_style="yellow",
-                box=box.ROUNDED
+                box=box.ROUNDED,
             )
 
         # Create studios panel
         if media_item.studios:
-            studios_text = ", ".join([studio.name for studio in media_item.studios if studio.name])
+            studios_text = ", ".join(
+                [studio.name for studio in media_item.studios if studio.name]
+            )
             studios_panel = Panel(
                 Text(studios_text, style="blue"),
                 title="[bold]Studios[/bold]",
                 border_style="blue",
-                box=box.ROUNDED
+                box=box.ROUNDED,
             )
         else:
             studios_panel = Panel(
                 Text("No studio information", style="dim"),
                 title="[bold]Studios[/bold]",
                 border_style="blue",
-                box=box.ROUNDED
+                box=box.ROUNDED,
             )
 
         # Create description panel
         description = media_item.description or "No description available"
         # Clean HTML tags from description
-        clean_description = re.sub(r'<[^>]+>', '', description)
+        clean_description = re.sub(r"<[^>]+>", "", description)
         # Replace common HTML entities
-        clean_description = clean_description.replace('&quot;', '"').replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
-        
+        clean_description = (
+            clean_description.replace("&quot;", '"')
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+        )
+
         description_panel = Panel(
             Text(clean_description, style="white"),
             title="[bold]Description[/bold]",
             border_style="cyan",
-            box=box.ROUNDED
+            box=box.ROUNDED,
         )
 
         # Create user status panel if available
@@ -293,35 +313,44 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
             user_info_table = Table(show_header=False, box=box.SIMPLE)
             user_info_table.add_column("Field", style="bold magenta")
             user_info_table.add_column("Value", style="white")
-            
+
             if media_item.user_status.status:
-                user_info_table.add_row("Status", media_item.user_status.status.value.title())
+                user_info_table.add_row(
+                    "Status", media_item.user_status.status.value.title()
+                )
             if media_item.user_status.progress is not None:
-                progress = f"{media_item.user_status.progress}/{media_item.episodes or '?'}"
+                progress = (
+                    f"{media_item.user_status.progress}/{media_item.episodes or '?'}"
+                )
                 user_info_table.add_row("Progress", progress)
             if media_item.user_status.score:
-                user_info_table.add_row("Your Score", f"{media_item.user_status.score}/10")
+                user_info_table.add_row(
+                    "Your Score", f"{media_item.user_status.score}/10"
+                )
             if media_item.user_status.repeat:
-                user_info_table.add_row("Rewatched", f"{media_item.user_status.repeat} times")
+                user_info_table.add_row(
+                    "Rewatched", f"{media_item.user_status.repeat} times"
+                )
 
             user_panel = Panel(
                 user_info_table,
                 title="[bold]Your List Status[/bold]",
                 border_style="magenta",
-                box=box.ROUNDED
+                box=box.ROUNDED,
             )
         else:
             user_panel = None
 
         # Create next airing panel if available
         if media_item.next_airing:
-            from datetime import datetime
             airing_info_table = Table(show_header=False, box=box.SIMPLE)
             airing_info_table.add_column("Field", style="bold red")
             airing_info_table.add_column("Value", style="white")
-            
-            airing_info_table.add_row("Next Episode", str(media_item.next_airing.episode))
-            
+
+            airing_info_table.add_row(
+                "Next Episode", str(media_item.next_airing.episode)
+            )
+
             if media_item.next_airing.airing_at:
                 air_date = media_item.next_airing.airing_at.strftime("%Y-%m-%d %H:%M")
                 airing_info_table.add_row("Air Date", air_date)
@@ -330,7 +359,7 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
                 airing_info_table,
                 title="[bold]Next Airing[/bold]",
                 border_style="red",
-                box=box.ROUNDED
+                box=box.ROUNDED,
             )
         else:
             airing_panel = None
@@ -340,30 +369,30 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
             info_table,
             title="[bold]Basic Information[/bold]",
             border_style="cyan",
-            box=box.ROUNDED
+            box=box.ROUNDED,
         )
 
         # Display everything
         console.print(Panel(title_text, box=box.DOUBLE, border_style="bright_cyan"))
         console.print()
-        
+
         # Create columns for better layout
         panels_row1 = [info_panel, genres_panel]
         if user_panel:
             panels_row1.append(user_panel)
-        
+
         console.print(Columns(panels_row1, equal=True, expand=True))
         console.print()
-        
+
         panels_row2 = [tags_panel, studios_panel]
         if airing_panel:
             panels_row2.append(airing_panel)
-            
+
         console.print(Columns(panels_row2, equal=True, expand=True))
         console.print()
-        
+
         console.print(description_panel)
-        
+
         ctx.selector.ask("Press Enter to continue...")
         return InternalDirective.RELOAD
 
@@ -479,7 +508,7 @@ def _view_characters(ctx: Context, state: State) -> MenuAction:
 
         loading_message = "Fetching characters..."
         characters_data = None
-        
+
         with feedback.progress(loading_message):
             characters_data = ctx.media_api.get_characters_of(
                 MediaCharactersParams(id=media_item.id)
@@ -487,8 +516,8 @@ def _view_characters(ctx: Context, state: State) -> MenuAction:
 
         if not characters_data or not characters_data.get("data"):
             feedback.warning(
-                "No character information found", 
-                "This anime doesn't have character data available"
+                "No character information found",
+                "This anime doesn't have character data available",
             )
             return InternalDirective.RELOAD
 
@@ -496,7 +525,7 @@ def _view_characters(ctx: Context, state: State) -> MenuAction:
             # Extract characters from the nested response structure
             page_data = characters_data["data"]["Page"]["media"][0]
             characters = page_data["characters"]["nodes"]
-            
+
             if not characters:
                 feedback.warning("No characters found for this anime")
                 return InternalDirective.RELOAD
@@ -506,7 +535,6 @@ def _view_characters(ctx: Context, state: State) -> MenuAction:
             from rich.table import Table
             from rich.panel import Panel
             from rich.text import Text
-            from datetime import datetime
 
             console = Console()
             console.clear()
@@ -528,12 +556,15 @@ def _view_characters(ctx: Context, state: State) -> MenuAction:
                 gender = char.get("gender") or "Unknown"
                 age = str(char.get("age") or "Unknown")
                 favorites = str(char.get("favourites") or "0")
-                
+
                 # Clean up description (remove HTML tags and truncate)
                 description = char.get("description") or "No description"
                 if description:
                     import re
-                    description = re.sub(r'<[^>]+>', '', description)  # Remove HTML tags
+
+                    description = re.sub(
+                        r"<[^>]+>", "", description
+                    )  # Remove HTML tags
                     if len(description) > 100:
                         description = description[:97] + "..."
 
@@ -542,12 +573,12 @@ def _view_characters(ctx: Context, state: State) -> MenuAction:
             # Display in a panel
             panel = Panel(table, title=title, border_style="blue")
             console.print(panel)
-            
+
             ctx.selector.ask("Press Enter to continue...")
-            
+
         except (KeyError, IndexError, TypeError) as e:
             feedback.error(f"Error displaying characters: {e}")
-            
+
         return InternalDirective.RELOAD
 
     return action
@@ -564,7 +595,7 @@ def _view_airing_schedule(ctx: Context, state: State) -> MenuAction:
 
         loading_message = "Fetching airing schedule..."
         schedule_data = None
-        
+
         with feedback.progress(loading_message):
             schedule_data = ctx.media_api.get_airing_schedule_for(
                 MediaAiringScheduleParams(id=media_item.id)
@@ -572,8 +603,8 @@ def _view_airing_schedule(ctx: Context, state: State) -> MenuAction:
 
         if not schedule_data or not schedule_data.get("data"):
             feedback.warning(
-                "No airing schedule found", 
-                "This anime doesn't have upcoming episodes or airing data"
+                "No airing schedule found",
+                "This anime doesn't have upcoming episodes or airing data",
             )
             return InternalDirective.RELOAD
 
@@ -581,11 +612,11 @@ def _view_airing_schedule(ctx: Context, state: State) -> MenuAction:
             # Extract schedule from the nested response structure
             page_data = schedule_data["data"]["Page"]["media"][0]
             schedule_nodes = page_data["airingSchedule"]["nodes"]
-            
+
             if not schedule_nodes:
                 feedback.info(
                     "No upcoming episodes",
-                    "This anime has no scheduled upcoming episodes"
+                    "This anime has no scheduled upcoming episodes",
                 )
                 return InternalDirective.RELOAD
 
@@ -611,7 +642,7 @@ def _view_airing_schedule(ctx: Context, state: State) -> MenuAction:
 
             for episode in schedule_nodes[:10]:  # Show next 10 episodes
                 ep_num = str(episode.get("episode", "?"))
-                
+
                 # Format air date
                 airing_at = episode.get("airingAt")
                 if airing_at:
@@ -619,14 +650,14 @@ def _view_airing_schedule(ctx: Context, state: State) -> MenuAction:
                     formatted_date = air_date.strftime("%Y-%m-%d %H:%M")
                 else:
                     formatted_date = "Unknown"
-                
+
                 # Format time until airing
                 time_until = episode.get("timeUntilAiring")
                 if time_until:
                     days = time_until // 86400
                     hours = (time_until % 86400) // 3600
                     minutes = (time_until % 3600) // 60
-                    
+
                     if days > 0:
                         time_str = f"{days}d {hours}h {minutes}m"
                     elif hours > 0:
@@ -641,12 +672,12 @@ def _view_airing_schedule(ctx: Context, state: State) -> MenuAction:
             # Display in a panel
             panel = Panel(table, title=title, border_style="blue")
             console.print(panel)
-            
+
             ctx.selector.ask("Press Enter to continue...")
-            
+
         except (KeyError, IndexError, TypeError) as e:
             feedback.error(f"Error displaying airing schedule: {e}")
-            
+
         return InternalDirective.RELOAD
 
     return action

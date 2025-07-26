@@ -134,7 +134,20 @@ class Session:
         except Exception:
             self._context.service.session.create_crash_backup(self._history)
             raise
+        finally:
+            # Clean up preview workers when session ends
+            self._cleanup_preview_workers()
         self._context.service.session.save_session(self._history)
+
+    def _cleanup_preview_workers(self):
+        """Clean up preview workers when session ends."""
+        try:
+            from ..utils.preview import shutdown_preview_workers
+
+            shutdown_preview_workers(wait=False, timeout=5.0)
+            logger.debug("Preview workers cleaned up successfully")
+        except Exception as e:
+            logger.warning(f"Failed to cleanup preview workers: {e}")
 
     def _run_main_loop(self):
         """Run the main session loop."""

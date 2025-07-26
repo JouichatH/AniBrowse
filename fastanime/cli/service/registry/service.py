@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Generator, List, Optional, TypedDict
+from typing import Dict, Generator, List, Optional, TypedDict
 
 from ....core.config.model import MediaRegistryConfig
 from ....core.exceptions import FastAnimeError
@@ -12,7 +12,6 @@ from ....libs.media_api.types import (
     MediaItem,
     MediaSearchResult,
     PageInfo,
-    UserListItem,
     UserMediaListStatus,
 )
 from .models import (
@@ -586,8 +585,6 @@ class MediaRegistryService:
     ) -> list[tuple[int, str]]:
         """Get all episodes with a specific download status."""
         try:
-            from .models import DownloadStatus
-
             episodes = []
             for record in self.get_all_media_records():
                 for episode in record.media_episodes:
@@ -602,8 +599,6 @@ class MediaRegistryService:
     def get_download_statistics(self) -> dict:
         """Get comprehensive download statistics."""
         try:
-            from .models import DownloadStatus
-
             stats = {
                 "total_episodes": 0,
                 "downloaded": 0,

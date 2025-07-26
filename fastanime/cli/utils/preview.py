@@ -1,21 +1,13 @@
-import concurrent.futures
 import logging
 import os
 import re
-from hashlib import sha256
-from pathlib import Path
-from threading import Thread
-from typing import List
-
-import httpx
-
-from ...core.utils import formatter
+from typing import List, Optional
 
 from ...core.config import AppConfig
 from ...core.constants import APP_CACHE_DIR, PLATFORM, SCRIPTS_DIR
-from ...core.utils.file import AtomicWriter
 from ...libs.media_api.types import MediaItem
 from . import ansi
+from .preview_workers import PreviewWorkerManager
 
 logger = logging.getLogger(__name__)
 
@@ -26,23 +18,109 @@ IMAGES_CACHE_DIR = PREVIEWS_CACHE_DIR / "images"
 INFO_CACHE_DIR = PREVIEWS_CACHE_DIR / "info"
 
 FZF_SCRIPTS_DIR = SCRIPTS_DIR / "fzf"
-TEMPLATE_PREVIEW_SCRIPT = Path(str(FZF_SCRIPTS_DIR / "preview.template.sh")).read_text(
+TEMPLATE_PREVIEW_SCRIPT = (FZF_SCRIPTS_DIR / "preview.template.sh").read_text(
     encoding="utf-8"
 )
-TEMPLATE_INFO_SCRIPT = Path(str(FZF_SCRIPTS_DIR / "info.template.sh")).read_text(
+DYNAMIC_PREVIEW_SCRIPT = (FZF_SCRIPTS_DIR / "dynamic_preview.template.sh").read_text(
     encoding="utf-8"
 )
-TEMPLATE_EPISODE_INFO_SCRIPT = Path(
-    str(FZF_SCRIPTS_DIR / "episode-info.template.sh")
-).read_text(encoding="utf-8")
-
 
 EPISODE_PATTERN = re.compile(r"^Episode\s+(\d+)\s-\s.*")
+
+# Global preview worker manager instance
+_preview_manager: Optional[PreviewWorkerManager] = None
+
+
+def create_preview_context():
+    """
+    Create a context manager for preview operations.
+
+    This can be used in menu functions to ensure proper cleanup:
+
+    ```python
+    with create_preview_context() as preview_ctx:
+        preview_script = preview_ctx.get_anime_preview(items, titles, config)
+        # ... use preview_script
+    # Workers are automatically cleaned up here
+    ```
+
+    Returns:
+        PreviewContext: A context manager for preview operations
+    """
+    return PreviewContext()
+
+
+class PreviewContext:
+    """Context manager for preview operations with automatic cleanup."""
+
+    def __init__(self):
+        self._manager = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._manager:
+            try:
+                self._manager.shutdown_all(wait=False, timeout=3.0)
+            except Exception as e:
+                logger.warning(f"Failed to cleanup preview context: {e}")
+
+    def get_anime_preview(
+        self, items: List[MediaItem], titles: List[str], config: AppConfig
+    ) -> str:
+        """Get anime preview script with managed workers."""
+        if not self._manager:
+            self._manager = _get_preview_manager()
+        return get_anime_preview(items, titles, config)
+
+    def get_episode_preview(
+        self, episodes: List[str], media_item: MediaItem, config: AppConfig
+    ) -> str:
+        """Get episode preview script with managed workers."""
+        if not self._manager:
+            self._manager = _get_preview_manager()
+        return get_episode_preview(episodes, media_item, config)
+
+    def get_dynamic_anime_preview(self, config: AppConfig) -> str:
+        """Get dynamic anime preview script for search functionality."""
+        if not self._manager:
+            self._manager = _get_preview_manager()
+        return get_dynamic_anime_preview(config)
+
+    def cancel_all_tasks(self) -> int:
+        """Cancel all running preview tasks."""
+        if not self._manager:
+            return 0
+
+        cancelled = 0
+        if self._manager._preview_worker:
+            cancelled += self._manager._preview_worker.cancel_all_tasks()
+        if self._manager._episode_worker:
+            cancelled += self._manager._episode_worker.cancel_all_tasks()
+        return cancelled
+
+    def get_status(self) -> dict:
+        """Get status of workers in this context."""
+        if self._manager:
+            return self._manager.get_status()
+        return {"preview_worker": None, "episode_worker": None}
 
 
 def get_anime_preview(
     items: List[MediaItem], titles: List[str], config: AppConfig
 ) -> str:
+    """
+    Generate anime preview script and start background caching.
+
+    Args:
+        items: List of media items to preview
+        titles: Corresponding titles for each media item
+        config: Application configuration
+
+    Returns:
+        Preview script content for fzf
+    """
     # Ensure cache directories exist on startup
     IMAGES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     INFO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -52,8 +130,15 @@ def get_anime_preview(
 
     preview_script = TEMPLATE_PREVIEW_SCRIPT
 
-    # Start the non-blocking background Caching
-    Thread(target=_cache_worker, args=(items, titles, config), daemon=True).start()
+    # Start the managed background caching
+    try:
+        preview_manager = _get_preview_manager()
+        worker = preview_manager.get_preview_worker()
+        worker.cache_anime_previews(items, titles, config)
+        logger.debug("Started background caching for anime previews")
+    except Exception as e:
+        logger.error(f"Failed to start background caching: {e}")
+        # Continue with script generation even if caching fails
 
     # Prepare values to inject into the template
     path_sep = "\\" if PLATFORM == "win32" else "/"
@@ -80,97 +165,20 @@ def get_anime_preview(
     return preview_script
 
 
-def _cache_worker(media_items: List[MediaItem], titles: List[str], config: AppConfig):
-    """The background task that fetches and saves all necessary preview data."""
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        for media_item, title_str in zip(media_items, titles):
-            hash_id = _get_cache_hash(title_str)
-            if config.general.preview in ("full", "image") and media_item.cover_image:
-                if not (IMAGES_CACHE_DIR / f"{hash_id}.png").exists():
-                    executor.submit(
-                        _save_image_from_url, media_item.cover_image.large, hash_id
-                    )
-            if config.general.preview in ("full", "text"):
-                # TODO: Come up with a better caching pattern for now just let it be remade
-                if not (INFO_CACHE_DIR / hash_id).exists() or True:
-                    info_text = _populate_info_template(media_item, config)
-                    executor.submit(_save_info_text, info_text, hash_id)
-
-
-def _populate_info_template(media_item: MediaItem, config: AppConfig) -> str:
-    """
-    Takes the info.sh template and injects formatted, shell-safe data.
-    """
-    info_script = TEMPLATE_INFO_SCRIPT
-    description = formatter.clean_html(
-        media_item.description or "No description available."
-    )
-
-    # Escape all variables before injecting them into the script
-    replacements = {
-        "TITLE": formatter.shell_safe(
-            media_item.title.english or media_item.title.romaji
-        ),
-        "STATUS": formatter.shell_safe(media_item.status.value),
-        "FORMAT": formatter.shell_safe(media_item.format.value),
-        "NEXT_EPISODE": formatter.shell_safe(
-            f"Episode {media_item.next_airing.episode} on {formatter.format_date(media_item.next_airing.airing_at, '%A, %d %B %Y at %X)')}"
-            if media_item.next_airing
-            else "N/A"
-        ),
-        "EPISODES": formatter.shell_safe(str(media_item.episodes)),
-        "DURATION": formatter.shell_safe(
-            formatter.format_media_duration(media_item.duration)
-        ),
-        "SCORE": formatter.shell_safe(
-            formatter.format_score_stars_full(media_item.average_score)
-        ),
-        "FAVOURITES": formatter.shell_safe(
-            formatter.format_number_with_commas(media_item.favourites)
-        ),
-        "POPULARITY": formatter.shell_safe(
-            formatter.format_number_with_commas(media_item.popularity)
-        ),
-        "GENRES": formatter.shell_safe(
-            formatter.format_list_with_commas([v.value for v in media_item.genres])
-        ),
-        "TAGS": formatter.shell_safe(
-            formatter.format_list_with_commas([t.name.value for t in media_item.tags])
-        ),
-        "STUDIOS": formatter.shell_safe(
-            formatter.format_list_with_commas(
-                [t.name for t in media_item.studios if t.name]
-            )
-        ),
-        "SYNONYMNS": formatter.shell_safe(
-            formatter.format_list_with_commas(media_item.synonymns)
-        ),
-        "USER_STATUS": formatter.shell_safe(
-            media_item.user_status.status.value
-            if media_item.user_status and media_item.user_status.status
-            else "NOT_ON_LIST"
-        ),
-        "USER_PROGRESS": formatter.shell_safe(
-            f"Episode {media_item.user_status.progress}"
-            if media_item.user_status
-            else "0"
-        ),
-        "START_DATE": formatter.shell_safe(
-            formatter.format_date(media_item.start_date)
-        ),
-        "END_DATE": formatter.shell_safe(formatter.format_date(media_item.end_date)),
-        "SYNOPSIS": formatter.shell_safe(description),
-    }
-
-    for key, value in replacements.items():
-        info_script = info_script.replace(f"{{{key}}}", value)
-
-    return info_script
-
-
 def get_episode_preview(
     episodes: List[str], media_item: MediaItem, config: AppConfig
 ) -> str:
+    """
+    Generate episode preview script and start background caching.
+
+    Args:
+        episodes: List of episode identifiers
+        media_item: Media item containing episode data
+        config: Application configuration
+
+    Returns:
+        Preview script content for fzf
+    """
     IMAGES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     INFO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -178,10 +186,16 @@ def get_episode_preview(
     SEPARATOR_COLOR = config.fzf.preview_separator_color.split(",")
 
     preview_script = TEMPLATE_PREVIEW_SCRIPT
-    # Start background caching for episodes
-    Thread(
-        target=_episode_cache_worker, args=(episodes, media_item, config), daemon=True
-    ).start()
+
+    # Start managed background caching for episodes
+    try:
+        preview_manager = _get_preview_manager()
+        worker = preview_manager.get_episode_worker()
+        worker.cache_episode_previews(episodes, media_item, config)
+        logger.debug("Started background caching for episode previews")
+    except Exception as e:
+        logger.error(f"Failed to start episode background caching: {e}")
+        # Continue with script generation even if caching fails
 
     # Prepare values to inject into the template
     path_sep = "\\" if PLATFORM == "win32" else "/"
@@ -208,107 +222,86 @@ def get_episode_preview(
     return preview_script
 
 
-def _episode_cache_worker(
-    episodes: List[str], media_item: MediaItem, config: AppConfig
-):
-    """Background task that fetches and saves episode preview data."""
-    streaming_episodes = media_item.streaming_episodes
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        for episode_str in episodes:
-            hash_id = _get_cache_hash(
-                f"{media_item.title.english}_Episode_{episode_str}"
-            )
-
-            # Find matching streaming episode
-            title = None
-            thumbnail = None
-            if ep := streaming_episodes.get(episode_str):
-                title = ep.title
-                thumbnail = ep.thumbnail
-
-            # Fallback if no streaming episode found
-            if not title:
-                title = f"Episode {episode_str}"
-
-            # fallback
-            if not thumbnail and media_item.cover_image:
-                thumbnail = media_item.cover_image.large
-
-            # Download thumbnail if available
-            if thumbnail:
-                executor.submit(_save_image_from_url, thumbnail, hash_id)
-
-            # Generate and save episode info
-            episode_info = _populate_episode_info_template(config, title, media_item)
-            executor.submit(_save_info_text, episode_info, hash_id)
-
-
-def _populate_episode_info_template(
-    config: AppConfig, title: str, media_item: MediaItem
-) -> str:
+def get_dynamic_anime_preview(config: AppConfig) -> str:
     """
-    Takes the episode_info.sh template and injects episode-specific formatted data.
+    Generate dynamic anime preview script for search functionality.
+    
+    This is different from regular anime preview because:
+    1. We don't have media items upfront
+    2. The preview needs to work with search results as they come in
+    3. Preview is handled entirely in shell by parsing JSON results
+    
+    Args:
+        config: Application configuration
+        
+    Returns:
+        Preview script content for fzf dynamic search
     """
-    episode_info_script = TEMPLATE_EPISODE_INFO_SCRIPT
+    # Ensure cache directories exist
+    IMAGES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    INFO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+    HEADER_COLOR = config.fzf.preview_header_color.split(",")
+    SEPARATOR_COLOR = config.fzf.preview_separator_color.split(",")
+
+    # Use the dynamic preview script template
+    preview_script = DYNAMIC_PREVIEW_SCRIPT
+
+    # We need to return the path to the search results file
+    from ...core.constants import APP_CACHE_DIR
+    search_cache_dir = APP_CACHE_DIR / "search"
+    search_results_file = search_cache_dir / "current_search_results.json"
+
+    # Prepare values to inject into the template
+    path_sep = "\\" if PLATFORM == "win32" else "/"
+
+    # Format the template with the dynamic values
     replacements = {
-        "TITLE": formatter.shell_safe(title),
-        "NEXT_EPISODE": formatter.shell_safe(
-            f"Episode {media_item.next_airing.episode} on {formatter.format_date(media_item.next_airing.airing_at, '%A, %d %B %Y at %X)')}"
-            if media_item.next_airing
-            else "N/A"
-        ),
-        "DURATION": formatter.format_media_duration(media_item.duration),
-        "STATUS": formatter.shell_safe(media_item.status.value),
-        "EPISODES": formatter.shell_safe(str(media_item.episodes)),
-        "USER_STATUS": formatter.shell_safe(
-            media_item.user_status.status.value
-            if media_item.user_status and media_item.user_status.status
-            else "NOT_ON_LIST"
-        ),
-        "USER_PROGRESS": formatter.shell_safe(
-            f"Episode {media_item.user_status.progress}"
-            if media_item.user_status
-            else "0"
-        ),
-        "START_DATE": formatter.shell_safe(
-            formatter.format_date(media_item.start_date)
-        ),
-        "END_DATE": formatter.shell_safe(formatter.format_date(media_item.end_date)),
+        "PREVIEW_MODE": config.general.preview,
+        "IMAGE_CACHE_PATH": str(IMAGES_CACHE_DIR),
+        "INFO_CACHE_PATH": str(INFO_CACHE_DIR),
+        "PATH_SEP": path_sep,
+        "IMAGE_RENDERER": config.general.image_renderer,
+        "SEARCH_RESULTS_FILE": str(search_results_file),
+        # Color codes
+        "C_TITLE": ansi.get_true_fg(HEADER_COLOR, bold=True),
+        "C_KEY": ansi.get_true_fg(HEADER_COLOR, bold=True),
+        "C_VALUE": ansi.get_true_fg(HEADER_COLOR, bold=True),
+        "C_RULE": ansi.get_true_fg(SEPARATOR_COLOR, bold=True),
+        "RESET": ansi.RESET,
     }
 
     for key, value in replacements.items():
-        episode_info_script = episode_info_script.replace(f"{{{key}}}", value)
+        preview_script = preview_script.replace(f"{{{key}}}", value)
 
-    return episode_info_script
-
-
-def _get_cache_hash(text: str) -> str:
-    """Generates a consistent SHA256 hash for a given string to use as a filename."""
-    return sha256(text.encode("utf-8")).hexdigest()
+    return preview_script
 
 
-def _save_image_from_url(url: str, hash_id: str):
-    """Downloads an image using httpx and saves it to the cache."""
-    image_path = IMAGES_CACHE_DIR / f"{hash_id}.png"
-    try:
-        with httpx.stream("GET", url, follow_redirects=True, timeout=20) as response:
-            response.raise_for_status()
-            with AtomicWriter(image_path, "wb", encoding=None) as f:
-                chunks = b""
-                for chunk in response.iter_bytes():
-                    chunks += chunk
-                f.write(chunks)
-    except Exception as e:
-        logger.error(f"Failed to download image {url}: {e}")
+def _get_preview_manager() -> PreviewWorkerManager:
+    """Get or create the global preview worker manager."""
+    global _preview_manager
+    if _preview_manager is None:
+        _preview_manager = PreviewWorkerManager(IMAGES_CACHE_DIR, INFO_CACHE_DIR)
+    return _preview_manager
 
 
-def _save_info_text(info_text: str, hash_id: str):
-    """Saves pre-formatted text to the info cache."""
-    try:
-        info_path = INFO_CACHE_DIR / hash_id
-        with AtomicWriter(info_path) as f:
-            f.write(info_text)
-    except IOError as e:
-        logger.error(f"Failed to write info cache for {hash_id}: {e}")
+def shutdown_preview_workers(wait: bool = True, timeout: Optional[float] = 5.0) -> None:
+    """
+    Shutdown all preview workers.
+
+    Args:
+        wait: Whether to wait for tasks to complete
+        timeout: Maximum time to wait for shutdown
+    """
+    global _preview_manager
+    if _preview_manager:
+        _preview_manager.shutdown_all(wait=wait, timeout=timeout)
+        _preview_manager = None
+
+
+def get_preview_worker_status() -> dict:
+    """Get status of all preview workers."""
+    global _preview_manager
+    if _preview_manager:
+        return _preview_manager.get_status()
+    return {"preview_worker": None, "episode_worker": None}

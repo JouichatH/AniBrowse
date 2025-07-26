@@ -116,7 +116,7 @@ class JikanApi(BaseApiClient):
             raw_data = self._execute_request(endpoint)
             if not raw_data or "data" not in raw_data:
                 return None
-            
+
             recommendations = []
             for item in raw_data["data"]:
                 # Jikan recommendation structure has an 'entry' field with anime data
@@ -124,7 +124,7 @@ class JikanApi(BaseApiClient):
                 if entry:
                     media_item = mapper._to_generic_media_item(entry)
                     recommendations.append(media_item)
-            
+
             return recommendations
         except Exception as e:
             logger.error(f"Failed to fetch recommendations for media {params.id}: {e}")
@@ -137,7 +137,7 @@ class JikanApi(BaseApiClient):
             raw_data = self._execute_request(endpoint)
             if not raw_data:
                 return None
-            
+
             # Return the raw character data as Jikan provides it
             return raw_data
         except Exception as e:
@@ -153,7 +153,7 @@ class JikanApi(BaseApiClient):
             raw_data = self._execute_request(endpoint)
             if not raw_data or "data" not in raw_data:
                 return None
-            
+
             related_anime = []
             for relation in raw_data["data"]:
                 entries = relation.get("entry", [])
@@ -164,9 +164,7 @@ class JikanApi(BaseApiClient):
                             id=entry["mal_id"],
                             id_mal=entry["mal_id"],
                             title=MediaTitle(
-                                english=entry["name"],
-                                romaji=entry["name"],
-                                native=None
+                                english=entry["name"], romaji=entry["name"], native=None
                             ),
                             cover_image=MediaImage(large=""),
                             description=None,
@@ -176,7 +174,7 @@ class JikanApi(BaseApiClient):
                             user_status=None,
                         )
                         related_anime.append(media_item)
-            
+
             return related_anime
         except Exception as e:
             logger.error(f"Failed to fetch related anime for media {params.id}: {e}")
@@ -186,5 +184,7 @@ class JikanApi(BaseApiClient):
         self, params: MediaAiringScheduleParams
     ) -> Optional[Dict]:
         """Jikan doesn't provide a direct airing schedule endpoint per anime."""
-        logger.warning("Jikan API does not support fetching airing schedules for individual anime.")
+        logger.warning(
+            "Jikan API does not support fetching airing schedules for individual anime."
+        )
         return None

@@ -16,7 +16,6 @@ def stats(config: "AppConfig"):
     from rich.markdown import Markdown
     from rich.panel import Panel
 
-    from .....core.exceptions import FastAnimeError
     from .....libs.media_api.api import create_api_client
     from ....service.auth import AuthService
     from ....service.feedback import FeedbackService

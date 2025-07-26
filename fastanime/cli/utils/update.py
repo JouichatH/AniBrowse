@@ -9,7 +9,7 @@ import sys
 from httpx import get
 from rich import print
 
-from ...core.constants import  AUTHOR, GIT_REPO, PROJECT_NAME_LOWER, __version__
+from ...core.constants import AUTHOR, GIT_REPO, PROJECT_NAME_LOWER, __version__
 
 API_URL = f"https://api.{GIT_REPO}/repos/{AUTHOR}/{PROJECT_NAME_LOWER}/releases/latest"
 
@@ -98,7 +98,7 @@ def update_app(force=False):
         process = subprocess.run(
             [NIX, "profile", "upgrade", PROJECT_NAME_LOWER], check=False
         )
-    elif is_git_repo(AUTHOR, PROJECT_NAME_LOWER)  :
+    elif is_git_repo(AUTHOR, PROJECT_NAME_LOWER):
         GIT_EXECUTABLE = shutil.which("git")
         args = [
             GIT_EXECUTABLE,
@@ -117,7 +117,9 @@ def update_app(force=False):
         )
 
     elif UV := shutil.which("uv"):
-        process = subprocess.run([UV, "tool", "upgrade", PROJECT_NAME_LOWER], check=False)
+        process = subprocess.run(
+            [UV, "tool", "upgrade", PROJECT_NAME_LOWER], check=False
+        )
     elif PIPX := shutil.which("pipx"):
         process = subprocess.run([PIPX, "upgrade", PROJECT_NAME_LOWER], check=False)
     else:

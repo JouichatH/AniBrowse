@@ -3,6 +3,7 @@ import importlib
 import click
 
 
+# TODO: since command structure is pretty obvious default to only requiring  mapping of command names to their function name(cause some have special names like import)
 class LazyGroup(click.Group):
     def __init__(self, root: str, *args, lazy_subcommands=None, **kwargs):
         super().__init__(*args, **kwargs)

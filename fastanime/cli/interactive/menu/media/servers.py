@@ -73,7 +73,11 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
         )
         return InternalDirective.RELOAD
 
-    final_title = f"{provider_anime.title} - Ep {episode_number}"
+    final_title = (
+        media_item.streaming_episodes[episode_number].title
+        if media_item.streaming_episodes.get(episode_number)
+        else f"{media_item.title.english} - Ep {episode_number}"
+    )
     feedback.info(f"[bold green]Launching player for:[/] {final_title}")
 
     player_result = ctx.player.play(
