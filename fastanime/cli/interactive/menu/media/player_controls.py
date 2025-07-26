@@ -232,7 +232,7 @@ def _change_server(ctx: Context, state: State) -> MenuAction:
 def _episodes_list(ctx: Context, state: State) -> MenuAction:
     def action():
         ctx.switch.force_episodes_menu()
-        return InternalDirective.BACK
+        return InternalDirective.BACKX2
 
     return action
 
