@@ -12,19 +12,19 @@ from ...libs.provider.anime.types import Anime, SearchResults, Server
 class InternalDirective(Enum):
     MAIN = "MAIN"
 
-    BACK = auto()
+    BACK = "BACK"
 
-    BACK_FORCE = auto()
+    BACK_FORCE = "BACK_FORCE"
 
-    BACKX2 = auto()
+    BACKX2 = "BACKX2"
 
-    BACKX3 = auto()
+    BACKX3 = "BACKX3"
 
-    EXIT = auto()
+    EXIT = "EXIT"
 
-    CONFIG_EDIT = auto()
+    CONFIG_EDIT = "CONFIG_EDIT"
 
-    RELOAD = auto()
+    RELOAD = "RELOAD"
 
 
 class MenuName(Enum):
