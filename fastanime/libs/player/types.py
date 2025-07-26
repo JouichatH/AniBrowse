@@ -11,5 +11,6 @@ class PlayerResult:
         total_time: The total duration of the media (e.g., "00:23:45").
     """
 
+    episode: str | None = None
     stop_time: str | None = None
     total_time: str | None = None

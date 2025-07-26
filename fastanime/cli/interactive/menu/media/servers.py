@@ -86,6 +86,7 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
             title=final_title,
             subtitles=[sub.url for sub in selected_server.subtitles],
             headers=selected_server.headers,
+            start_time=state.provider.start_time,
         )
     )
     if media_item and episode_number:

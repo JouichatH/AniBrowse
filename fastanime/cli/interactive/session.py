@@ -1,7 +1,7 @@
 import importlib.util
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import click
@@ -28,8 +28,48 @@ MENUS_DIR = APP_DIR / "cli" / "interactive" / "menu"
 
 
 @dataclass
+class Switch:
+    "Forces menus to show selector and not just pass through,once viewed it auto sets back to false"
+
+    _provider_results: bool = False
+    _episodes: bool = False
+    _servers: bool = False
+
+    @property
+    def show_provider_results_menu(self):
+        if self._provider_results:
+            self._provider_results = False
+            return True
+        return False
+
+    def force_provider_results_menu(self):
+        self._provider_results = True
+
+    @property
+    def show_episodes_menu(self):
+        if self._episodes:
+            self._episodes = False
+            return True
+        return False
+
+    def force_episodes_menu(self):
+        self._episodes = True
+
+    @property
+    def servers(self):
+        if self._servers:
+            self._servers = False
+            return True
+        return False
+
+    def force_servers_menu(self):
+        self._servers = True
+
+
+@dataclass
 class Context:
     config: "AppConfig"
+    switch: Switch = field(default_factory=Switch)
     _provider: Optional["BaseAnimeProvider"] = None
     _selector: Optional["BaseSelector"] = None
     _player: Optional["BasePlayer"] = None

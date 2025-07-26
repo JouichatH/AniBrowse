@@ -44,6 +44,50 @@ class WatchHistoryService:
                 )
             )
 
+    def get_episode(self, media_item: MediaItem):
+        index_entry = self.media_registry.get_media_index_entry(media_item.id)
+        current_remote_episode = None
+        current_local_episode = None
+        start_time = None
+        episode = None
+
+        if media_item.user_status:
+            # TODO: change mediaa item progress to a string
+            current_remote_episode = str(media_item.user_status.progress)
+        if index_entry:
+            current_local_episode = index_entry.progress
+            start_time = index_entry.last_watch_position
+            total_duration = index_entry.total_duration
+            if start_time and total_duration and current_local_episode:
+                from ....core.utils.converter import calculate_completion_percentage
+
+                if (
+                    calculate_completion_percentage(start_time, total_duration)
+                    >= self.config.stream.episode_complete_at
+                ):
+                    start_time = None
+                    try:
+                        current_local_episode = str(int(current_local_episode) + 1)
+                    except:
+                        # incase its a float
+                        pass
+        else:
+            current_local_episode = current_remote_episode
+        if not media_item.user_status:
+            current_remote_episode = current_local_episode
+        if current_local_episode != current_remote_episode:
+            if self.config.general.preferred_tracker == "local":
+                episode = current_local_episode
+            else:
+                episode = current_remote_episode
+        else:
+            episode = current_local_episode
+
+        # TODO: check if start time is mostly complete and increment the episode
+        if episode == "0":
+            episode = "1"
+        return episode, start_time
+
     def update(
         self,
         media_item: MediaItem,

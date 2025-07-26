@@ -31,7 +31,7 @@ def results(ctx: Context, state: State) -> State | InternalDirective:
         if page_info.has_next_page:
             choices.update(
                 {
-                    f"{'➡️ ' if ctx.config.general.icons else ''}Next Page (Page {page_info.current_page + 1})": lambda: _handle_pagination(
+                    "Next Page (Page {page_info.current_page + 1})": lambda: _handle_pagination(
                         ctx, state, 1
                     )
                 }
@@ -39,7 +39,7 @@ def results(ctx: Context, state: State) -> State | InternalDirective:
         if page_info.current_page > 1:
             choices.update(
                 {
-                    f"{'⬅️ ' if ctx.config.general.icons else ''}Previous Page (Page {page_info.current_page - 1})": lambda: _handle_pagination(
+                    "Previous Page (Page {page_info.current_page - 1})": lambda: _handle_pagination(
                         ctx, state, -1
                     )
                 }

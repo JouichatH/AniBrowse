@@ -29,12 +29,12 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
         return InternalDirective.BACKX2
 
     chosen_episode: str | None = None
+    start_time: str | None = None
 
     if config.stream.continue_from_watch_history:
-        # TODO: implement watch history logic
-        pass
+        chosen_episode, start_time = ctx.watch_history.get_episode(media_item)
 
-    if not chosen_episode:
+    if not chosen_episode or ctx.switch.show_episodes_menu:
         choices = [*sorted(available_episodes, key=float), "Back"]
 
         preview_command = None
@@ -68,16 +68,10 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
 
             chosen_episode = chosen_episode_str
 
-    # Track episode selection in watch history (if enabled in config)
-    if (
-        config.stream.continue_from_watch_history
-        and config.stream.preferred_watch_history == "local"
-    ):
-        # TODO: implement watch history logic
-        pass
-
     return State(
         menu_name=MenuName.SERVERS,
         media_api=state.media_api,
-        provider=state.provider.model_copy(update={"episode": chosen_episode}),
+        provider=state.provider.model_copy(
+            update={"episode": chosen_episode, "start_time": start_time}
+        ),
     )

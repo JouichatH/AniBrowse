@@ -1,4 +1,4 @@
-from typing import Callable, Dict
+from typing import Callable, Dict, Literal, Optional
 
 from rich.console import Console
 
@@ -9,7 +9,7 @@ from .....libs.media_api.params import (
     MediaRelationsParams,
     UpdateUserMediaListEntryParams,
 )
-from .....libs.media_api.types import UserMediaListStatus
+from .....libs.media_api.types import MediaItem, MediaStatus, UserMediaListStatus
 from .....libs.player.params import PlayerParams
 from ...session import Context, session
 from ...state import InternalDirective, MediaApiState, MenuName, State
@@ -28,11 +28,15 @@ def media_actions(ctx: Context, state: State) -> State | InternalDirective:
     if not media_item:
         feedback.error("Media item is not in state")
         return InternalDirective.BACK
+    progress = _get_progress_string(ctx, state.media_api.media_item)
 
     # TODO: Add media list management
     # TODO: cross reference for none implemented features
     options: Dict[str, MenuAction] = {
-        f"{'▶️ ' if icons else ''}Stream": _stream(ctx, state),
+        f"{'▶️ ' if icons else ''}Stream {progress}": _stream(ctx, state),
+        f"{'📽️ ' if icons else ''}Episodes": _stream(
+            ctx, state, force_episodes_menu=True
+        ),
         f"{'📼 ' if icons else ''}Watch Trailer": _watch_trailer(ctx, state),
         f"{'🔗 ' if icons else ''}Recommendations": _view_recommendations(ctx, state),
         f"{'🔄 ' if icons else ''}Related Anime": _view_relations(ctx, state),
@@ -41,6 +45,19 @@ def media_actions(ctx: Context, state: State) -> State | InternalDirective:
         f"{'➕ ' if icons else ''}Add/Update List": _manage_user_media_list(ctx, state),
         f"{'⭐ ' if icons else ''}Score Anime": _score_anime(ctx, state),
         f"{'ℹ️ ' if icons else ''}View Info": _view_info(ctx, state),
+        f"{'📀 ' if icons else ''}Change Provider": _change_provider(ctx, state),
+        f"{'🔘 ' if icons else ''}Toggle Auto Select Anime (Current: {ctx.config.general.auto_select_anime_result})": _toggle_config_state(
+            ctx, state, "AUTO_ANIME"
+        ),
+        f"{'🔘 ' if icons else ''}Toggle Auto Next Episode (Current: {ctx.config.stream.auto_next})": _toggle_config_state(
+            ctx, state, "AUTO_EPISODE"
+        ),
+        f"{'🔘 ' if icons else ''}Toggle Continue From History (Current: {ctx.config.stream.continue_from_watch_history})": _toggle_config_state(
+            ctx, state, "CONTINUE_FROM_HISTORY"
+        ),
+        f"{'🔘 ' if icons else ''}Toggle Translation Type  (Current: {ctx.config.stream.translation_type.upper()})": _toggle_config_state(
+            ctx, state, "TRANSLATION_TYPE"
+        ),
         f"{'🔙 ' if icons else ''}Back to Results": lambda: InternalDirective.BACK,
     }
 
@@ -55,8 +72,39 @@ def media_actions(ctx: Context, state: State) -> State | InternalDirective:
     return InternalDirective.BACK
 
 
-def _stream(ctx: Context, state: State) -> MenuAction:
+def _get_progress_string(ctx: Context, media_item: Optional[MediaItem]) -> str:
+    if not media_item:
+        return ""
+    config = ctx.config
+
+    progress = "0"
+
+    if media_item.user_status:
+        progress = str(media_item.user_status.progress or 0)
+
+    episodes_total = str(media_item.episodes or "??")
+    display_title = f"({progress} of {episodes_total})"
+
+    # Add a visual indicator for new episodes if applicable
+    if (
+        media_item.status == MediaStatus.RELEASING
+        and media_item.next_airing
+        and media_item.user_status
+        and media_item.user_status.status == UserMediaListStatus.WATCHING
+    ):
+        last_aired = media_item.next_airing.episode - 1
+        unwatched = last_aired - (media_item.user_status.progress or 0)
+        if unwatched > 0:
+            icon = "🔹" if config.general.icons else "!"
+            display_title += f" {icon}{unwatched} new{icon}"
+
+    return display_title
+
+
+def _stream(ctx: Context, state: State, force_episodes_menu=False) -> MenuAction:
     def action():
+        if force_episodes_menu:
+            ctx.switch.force_episodes_menu()
         return State(menu_name=MenuName.PROVIDER_SEARCH, media_api=state.media_api)
 
     return action
@@ -120,6 +168,47 @@ def _manage_user_media_list(ctx: Context, state: State) -> MenuAction:
     return action
 
 
+def _change_provider(ctx: Context, state: State) -> MenuAction:
+    def action():
+        from .....libs.provider.anime.types import ProviderName
+
+        new_provider = ctx.selector.choose(
+            "Select Provider", [provider.value for provider in ProviderName]
+        )
+        ctx.config.general.provider = ProviderName(new_provider)
+        return InternalDirective.RELOAD
+
+    return action
+
+
+def _toggle_config_state(
+    ctx: Context,
+    state: State,
+    config_state: Literal[
+        "AUTO_ANIME", "AUTO_EPISODE", "CONTINUE_FROM_HISTORY", "TRANSLATION_TYPE"
+    ],
+) -> MenuAction:
+    def action():
+        match config_state:
+            case "AUTO_ANIME":
+                ctx.config.general.auto_select_anime_result = (
+                    not ctx.config.general.auto_select_anime_result
+                )
+            case "AUTO_EPISODE":
+                ctx.config.stream.auto_next = not ctx.config.stream.auto_next
+            case "CONTINUE_FROM_HISTORY":
+                ctx.config.stream.continue_from_watch_history = (
+                    not ctx.config.stream.continue_from_watch_history
+                )
+            case "TRANSLATION_TYPE":
+                ctx.config.stream.translation_type = (
+                    "sub" if ctx.config.stream.translation_type == "dub" else "dub"
+                )
+        return InternalDirective.RELOAD
+
+    return action
+
+
 def _score_anime(ctx: Context, state: State) -> MenuAction:
     def action():
         feedback = ctx.feedback
@@ -160,12 +249,13 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
         if not media_item:
             return InternalDirective.RELOAD
 
+        import re
+
         from rich import box
         from rich.columns import Columns
         from rich.panel import Panel
         from rich.table import Table
         from rich.text import Text
-        import re
 
         from ....utils import image
 
@@ -532,8 +622,8 @@ def _view_characters(ctx: Context, state: State) -> MenuAction:
 
             # Display characters using rich
             from rich.console import Console
-            from rich.table import Table
             from rich.panel import Panel
+            from rich.table import Table
             from rich.text import Text
 
             console = Console()
@@ -621,11 +711,12 @@ def _view_airing_schedule(ctx: Context, state: State) -> MenuAction:
                 return InternalDirective.RELOAD
 
             # Display schedule using rich
-            from rich.console import Console
-            from rich.table import Table
-            from rich.panel import Panel
-            from rich.text import Text
             from datetime import datetime
+
+            from rich.console import Console
+            from rich.panel import Panel
+            from rich.table import Table
+            from rich.text import Text
 
             console = Console()
             console.clear()

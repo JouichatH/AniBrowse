@@ -65,6 +65,7 @@ class ProviderState(StateModel):
     episode: Optional[str] = None
     servers: Optional[Dict[str, Server]] = None
     server_name: Optional[str] = None
+    start_time: Optional[str] = None
 
     @property
     def server(self) -> Optional[Server]:
