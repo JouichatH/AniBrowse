@@ -3,8 +3,6 @@ import os
 import re
 from typing import List, Optional
 
-
-
 from ...core.config import AppConfig
 from ...core.constants import APP_CACHE_DIR, PLATFORM, SCRIPTS_DIR
 from ...libs.media_api.types import MediaItem
