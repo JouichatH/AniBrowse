@@ -21,7 +21,7 @@ query ($id: Int, $page: Int, $per_page: Int) {
         }
         description
         episodes
-        duration # Added duration here
+        duration
         trailer {
           site
           id

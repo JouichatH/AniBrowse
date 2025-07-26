@@ -23,6 +23,7 @@
 </p>
 
 ![fastanime](https://github.com/user-attachments/assets/9ab09f26-e4a8-4b70-a315-7def998cec63)
+
 <details>
   <summary>
     <b>V3 teaser</b>

@@ -222,7 +222,7 @@ def _to_generic_media_item(
         type=data.get("type", "ANIME"),
         title=_to_generic_media_title(data["title"]),
         status=status_map[data["status"]],
-        format=MediaFormat(data["format"]),
+        format=MediaFormat(data["format"]) if data["format"] else None,
         cover_image=_to_generic_media_image(data["coverImage"]),
         banner_image=data.get("bannerImage"),
         trailer=_to_generic_media_trailer(data["trailer"]),

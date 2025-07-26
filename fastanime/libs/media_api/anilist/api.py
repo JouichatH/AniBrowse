@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from httpx import Client
 
@@ -214,42 +214,29 @@ class AniListApi(BaseApiClient):
         variables = {
             "id": params.id,
             "page": params.page,
-            "per_page": params.per_page or self.config.per_page,
+            "per_page": params.per_page or 50,
         }
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_RECOMMENDATIONS, variables
         )
-        if response and response.json():
-            try:
-                return mapper.to_generic_recommendations(response.json())
-            except Exception as e:
-                logger.error(
-                    f"Error mapping recommendations for media {params.id}: {e}"
-                )
-                return None
-        return None
+        return mapper.to_generic_recommendations(response.json())
 
     def get_characters_of(self, params: MediaCharactersParams) -> Optional[Dict]:
         variables = {"id": params.id, "type": "ANIME"}
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_CHARACTERS, variables
         )
-        return response.json() if response else None
+        # TODO: standardize character type
+        return response.json()
 
     def get_related_anime_for(
         self, params: MediaRelationsParams
     ) -> Optional[List[MediaItem]]:
-        variables = {"id": params.id}
+        variables = {"id": params.id, "format_in": None}
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_RELATIONS, variables
         )
-        if response and response.json():
-            try:
-                return mapper.to_generic_relations(response.json())
-            except Exception as e:
-                logger.error(f"Error mapping relations: {e}")
-                return None
-        return None
+        return mapper.to_generic_relations(response.json())
 
     def get_airing_schedule_for(
         self, params: MediaAiringScheduleParams
@@ -258,15 +245,16 @@ class AniListApi(BaseApiClient):
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_AIRING_SCHEDULE, variables
         )
-        return response.json() if response else None
+        # TODO: standardize airing schedule type
+        return response.json()
 
-    def transform_raw_search_data(self, raw_data: Dict) -> Optional[MediaSearchResult]:
+    def transform_raw_search_data(self, raw_data: Any) -> Optional[MediaSearchResult]:
         """
         Transform raw AniList API response data into a MediaSearchResult.
-        
+
         Args:
             raw_data: Raw response data from the AniList GraphQL API
-            
+
         Returns:
             MediaSearchResult object or None if transformation fails
         """

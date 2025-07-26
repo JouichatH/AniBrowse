@@ -56,6 +56,7 @@ class MediaFormat(Enum):
     TV = "TV"
     TV_SHORT = "TV_SHORT"
     MOVIE = "MOVIE"
+    MANGA = "MANGA"
     SPECIAL = "SPECIAL"
     OVA = "OVA"
     ONA = "ONA"
@@ -143,7 +144,7 @@ class MediaItem(BaseMediaApiModel):
     id_mal: Optional[int] = None
     type: MediaType = MediaType.ANIME
     status: MediaStatus = MediaStatus.FINISHED
-    format: MediaFormat = MediaFormat.TV
+    format: Optional[MediaFormat] = MediaFormat.TV
 
     cover_image: Optional[MediaImage] = None
     banner_image: Optional[str] = None
