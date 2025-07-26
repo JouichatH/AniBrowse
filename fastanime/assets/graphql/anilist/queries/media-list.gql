@@ -8,8 +8,9 @@ query (
 ) {
   Page(perPage: $perPage, page: $page) {
     pageInfo {
-      currentPage
       total
+      currentPage
+      hasNextPage
     }
     mediaList(userId: $userId, status: $status, type: $type, sort: $sort) {
       mediaId

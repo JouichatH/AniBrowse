@@ -271,8 +271,7 @@ def to_generic_search_result(
             _to_generic_media_item(item, user_media_list_item)
             for item, user_media_list_item in zip(raw_media_list, user_media_list)
         ]
-        # TODO: further probe this type
-        page_info = _to_generic_page_info(page_data)  # type: ignore
+        page_info = _to_generic_page_info(page_data["pageInfo"])
     else:
         media_items: List[MediaItem] = [
             _to_generic_media_item(item) for item in raw_media_list
@@ -294,7 +293,14 @@ def to_generic_user_list_result(data: AnilistMediaLists) -> Optional[MediaSearch
 
     # Now that we have a standard list of media, we can reuse the main search result mapper
     return to_generic_search_result(
-        {"data": {"Page": {"media": raw_media_list}}},  # pyright:ignore
+        {
+            "data": {
+                "Page": {
+                    "media": raw_media_list,
+                    "pageInfo": page_data["pageInfo"],
+                },
+            }
+        },
         media_list_items,
     )
 
