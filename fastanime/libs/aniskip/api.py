@@ -1,4 +1,4 @@
-import requests
+from httpx import get
 
 ANISKIP_ENDPOINT = "https://api.aniskip.com/v1/skip-times"
 
@@ -10,7 +10,7 @@ class AniSkip:
         cls, mal_id: int, episode_number: float | int, types=["op", "ed"]
     ):
         url = f"{ANISKIP_ENDPOINT}/{mal_id}/{episode_number}?types=op&types=ed"
-        response = requests.get(url)
+        response = get(url)
         print(response.text)
         return response.json()
 

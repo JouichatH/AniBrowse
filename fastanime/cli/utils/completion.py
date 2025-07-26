@@ -34,7 +34,7 @@ def get_anime_titles(query: str, variables: dict = {}):
     Returns:
         a boolean indicating success and none or an anilist object depending on success
     """
-    from requests import post
+    from httpx import post
 
     try:
         response = post(

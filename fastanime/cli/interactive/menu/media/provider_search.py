@@ -1,5 +1,5 @@
 from rich.progress import Progress
-from thefuzz import fuzz
+from .....core.utils.fuzzy import fuzz
 
 from .....libs.provider.anime.params import SearchParams
 from .....libs.provider.anime.types import SearchResult

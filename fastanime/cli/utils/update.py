@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 
-import requests
+from httpx import get
 from rich import print
 
 from ...core.constants import  AUTHOR, GIT_REPO, PROJECT_NAME_LOWER, __version__
@@ -17,7 +17,7 @@ API_URL = f"https://api.{GIT_REPO}/repos/{AUTHOR}/{PROJECT_NAME_LOWER}/releases/
 def check_for_updates():
     USER_AGENT = f"{PROJECT_NAME_LOWER} user"
     try:
-        request = requests.get(
+        response = get(
             API_URL,
             headers={
                 "User-Agent": USER_AGENT,
@@ -29,8 +29,8 @@ def check_for_updates():
         print("You are not connected to the internet")
         return True, {}
 
-    if request.status_code == 200:
-        release_json = request.json()
+    if response.status_code == 200:
+        release_json = response.json()
         remote_tag = list(
             map(int, release_json["tag_name"].replace("v", "").split("."))
         )
@@ -51,7 +51,7 @@ def check_for_updates():
         return (is_latest, release_json)
     else:
         print("Failed to check for updates")
-        print(request.text)
+        print(response.text)
         return (True, {})
 
 

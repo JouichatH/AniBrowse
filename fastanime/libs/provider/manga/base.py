@@ -1,13 +1,18 @@
-import requests
-from yt_dlp.utils.networking import random_user_agent
+from httpx import Client
+from ....core.utils.networking import random_user_agent
 
 
 class MangaProvider:
-    session: requests.Session
+    session: Client
 
     USER_AGENT = random_user_agent()
     HEADERS = {}
 
     def __init__(self) -> None:
-        self.session = requests.session()
-        self.session.headers.update({"User-Agent": self.USER_AGENT, **self.HEADERS})
+        self.session = Client(
+            headers={
+                "User-Agent": self.USER_AGENT,
+                **self.HEADERS,
+            },
+            timeout=10,
+        )

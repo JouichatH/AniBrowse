@@ -1,6 +1,6 @@
 import logging
 
-from requests import get
+from httpx import get
 
 logger = logging.getLogger(__name__)
 

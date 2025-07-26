@@ -6,29 +6,30 @@ license = "UNLICENSE"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-  "beautifulsoup4>=4.13.4",
   "click>=8.1.7",
   "httpx>=0.28.1",
   "inquirerpy>=0.3.4",
-  "libtorrent>=2.0.11",
-  "lxml>=6.0.0",
-  "pycryptodome>=3.21.0",
   "pydantic>=2.11.7",
-  "pypresence>=4.3.0",
-  "requests>=2.32.3",
   "rich>=13.9.2",
-  "thefuzz>=0.22.1",
-  "yt-dlp[default]>=2024.10.7",
 ]
 
 [project.scripts]
 fastanime = 'fastanime:Cli'
 
 [project.optional-dependencies]
-standard = ["fastapi[standard]>=0.115.0", "mpv>=1.0.7", "plyer>=2.1.0"]
-api = ["fastapi[standard]>=0.115.0"]
+standard = [
+ "mpv>=1.0.7",
+ "plyer>=2.1.0",
+ "libtorrent>=2.0.11",
+ "lxml>=6.0.0",
+ "pypresence>=4.3.0",
+ "thefuzz>=0.22.1",
+]
 notifications = ["plyer>=2.1.0"]
 mpv = ["mpv>=1.0.7"]
+torrent = ["libtorrent>=2.0.11"]
+lxml = ["lxml>=6.0.0"]
+discord = ["pypresence>=4.3.0"]
 
 [build-system]
 requires = ["hatchling"]

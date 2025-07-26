@@ -9,7 +9,10 @@ Python's built-in html.parser or lxml for better performance when available.
 import logging
 import re
 from html.parser import HTMLParser as BaseHTMLParser
-from typing import Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+
+if TYPE_CHECKING:
+    from lxml import etree
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +57,7 @@ class HTMLParser:
         """Initialize the HTML parser with configuration."""
         self.config = config or HTMLParserConfig()
         
-    def parse(self, html_content: str) -> Union[etree._Element, 'ParsedHTML']:
+    def parse(self, html_content: str) -> Union[Any, 'ParsedHTML']:
         """
         Parse HTML content and return a parsed tree.
         
@@ -69,7 +72,7 @@ class HTMLParser:
         else:
             return self._parse_with_builtin(html_content)
     
-    def _parse_with_lxml(self, html_content: str) -> etree._Element:
+    def _parse_with_lxml(self, html_content: str) -> Any:
         """Parse HTML using lxml."""
         try:
             # Use lxml's HTML parser which is more lenient
@@ -230,7 +233,7 @@ def get_element_by_id(element_id: str, html_content: str) -> Optional[str]:
     """
     parsed = _default_parser.parse(html_content)
     
-    if _default_parser.config.use_lxml:
+    if _default_parser.config.use_lxml and HAS_LXML:
         try:
             element = parsed.xpath(f'//*[@id="{element_id}"]')
             if element:
@@ -259,7 +262,7 @@ def get_element_by_tag(tag_name: str, html_content: str) -> Optional[str]:
     """
     parsed = _default_parser.parse(html_content)
     
-    if _default_parser.config.use_lxml:
+    if _default_parser.config.use_lxml and HAS_LXML:
         try:
             elements = parsed.xpath(f'//{tag_name}')
             if elements:
@@ -288,7 +291,7 @@ def get_element_by_class(class_name: str, html_content: str) -> Optional[str]:
     """
     parsed = _default_parser.parse(html_content)
     
-    if _default_parser.config.use_lxml:
+    if _default_parser.config.use_lxml and HAS_LXML:
         try:
             elements = parsed.xpath(f'//*[contains(@class, "{class_name}")]')
             if elements:
@@ -318,7 +321,7 @@ def get_elements_by_tag(tag_name: str, html_content: str) -> List[str]:
     parsed = _default_parser.parse(html_content)
     results = []
     
-    if _default_parser.config.use_lxml:
+    if _default_parser.config.use_lxml and HAS_LXML:
         try:
             elements = parsed.xpath(f'//{tag_name}')
             for element in elements:
@@ -347,7 +350,7 @@ def get_elements_by_class(class_name: str, html_content: str) -> List[str]:
     parsed = _default_parser.parse(html_content)
     results = []
     
-    if _default_parser.config.use_lxml:
+    if _default_parser.config.use_lxml and HAS_LXML:
         try:
             elements = parsed.xpath(f'//*[contains(@class, "{class_name}")]')
             for element in elements:
@@ -396,7 +399,7 @@ def get_element_text_and_html_by_tag(tag_name: str, html_content: str) -> Tuple[
     """
     parsed = _default_parser.parse(html_content)
     
-    if _default_parser.config.use_lxml:
+    if _default_parser.config.use_lxml and HAS_LXML:
         try:
             elements = parsed.xpath(f'//{tag_name}')
             if elements:
