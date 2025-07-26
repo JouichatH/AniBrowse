@@ -260,6 +260,22 @@ class AniListApi(BaseApiClient):
         )
         return response.json() if response else None
 
+    def transform_raw_search_data(self, raw_data: Dict) -> Optional[MediaSearchResult]:
+        """
+        Transform raw AniList API response data into a MediaSearchResult.
+        
+        Args:
+            raw_data: Raw response data from the AniList GraphQL API
+            
+        Returns:
+            MediaSearchResult object or None if transformation fails
+        """
+        try:
+            return mapper.to_generic_search_result(raw_data)
+        except Exception as e:
+            logger.error(f"Failed to transform raw search data: {e}")
+            return None
+
 
 if __name__ == "__main__":
     from httpx import Client

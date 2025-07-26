@@ -21,6 +21,9 @@ FZF_SCRIPTS_DIR = SCRIPTS_DIR / "fzf"
 TEMPLATE_PREVIEW_SCRIPT = (FZF_SCRIPTS_DIR / "preview.template.sh").read_text(
     encoding="utf-8"
 )
+DYNAMIC_PREVIEW_SCRIPT = (FZF_SCRIPTS_DIR / "dynamic_preview.template.sh").read_text(
+    encoding="utf-8"
+)
 
 EPISODE_PATTERN = re.compile(r"^Episode\s+(\d+)\s-\s.*")
 
@@ -78,6 +81,12 @@ class PreviewContext:
         if not self._manager:
             self._manager = _get_preview_manager()
         return get_episode_preview(episodes, media_item, config)
+
+    def get_dynamic_anime_preview(self, config: AppConfig) -> str:
+        """Get dynamic anime preview script for search functionality."""
+        if not self._manager:
+            self._manager = _get_preview_manager()
+        return get_dynamic_anime_preview(config)
 
     def cancel_all_tasks(self) -> int:
         """Cancel all running preview tasks."""
@@ -205,6 +214,61 @@ def get_episode_preview(
         "C_RULE": ansi.get_true_fg(SEPARATOR_COLOR, bold=True),
         "RESET": ansi.RESET,
         "PREFIX": f"{media_item.title.english}_Episode_",
+    }
+
+    for key, value in replacements.items():
+        preview_script = preview_script.replace(f"{{{key}}}", value)
+
+    return preview_script
+
+
+def get_dynamic_anime_preview(config: AppConfig) -> str:
+    """
+    Generate dynamic anime preview script for search functionality.
+    
+    This is different from regular anime preview because:
+    1. We don't have media items upfront
+    2. The preview needs to work with search results as they come in
+    3. Preview is handled entirely in shell by parsing JSON results
+    
+    Args:
+        config: Application configuration
+        
+    Returns:
+        Preview script content for fzf dynamic search
+    """
+    # Ensure cache directories exist
+    IMAGES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    INFO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    HEADER_COLOR = config.fzf.preview_header_color.split(",")
+    SEPARATOR_COLOR = config.fzf.preview_separator_color.split(",")
+
+    # Use the dynamic preview script template
+    preview_script = DYNAMIC_PREVIEW_SCRIPT
+
+    # We need to return the path to the search results file
+    from ...core.constants import APP_CACHE_DIR
+    search_cache_dir = APP_CACHE_DIR / "search"
+    search_results_file = search_cache_dir / "current_search_results.json"
+
+    # Prepare values to inject into the template
+    path_sep = "\\" if PLATFORM == "win32" else "/"
+
+    # Format the template with the dynamic values
+    replacements = {
+        "PREVIEW_MODE": config.general.preview,
+        "IMAGE_CACHE_PATH": str(IMAGES_CACHE_DIR),
+        "INFO_CACHE_PATH": str(INFO_CACHE_DIR),
+        "PATH_SEP": path_sep,
+        "IMAGE_RENDERER": config.general.image_renderer,
+        "SEARCH_RESULTS_FILE": str(search_results_file),
+        # Color codes
+        "C_TITLE": ansi.get_true_fg(HEADER_COLOR, bold=True),
+        "C_KEY": ansi.get_true_fg(HEADER_COLOR, bold=True),
+        "C_VALUE": ansi.get_true_fg(HEADER_COLOR, bold=True),
+        "C_RULE": ansi.get_true_fg(SEPARATOR_COLOR, bold=True),
+        "RESET": ansi.RESET,
     }
 
     for key, value in replacements.items():

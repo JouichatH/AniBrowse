@@ -114,3 +114,30 @@ class FzfSelector(BaseSelector):
         # The output contains the selection (if any) and the query on the last line
         lines = result.stdout.strip().splitlines()
         return lines[-1] if lines else (default or "")
+
+    def search(self, prompt, search_command, *, preview=None, header=None):
+        """Enhanced search using fzf's --reload flag for dynamic search."""
+        commands = [
+            self.executable,
+            "--prompt",
+            f"{prompt.title()}: ",
+            "--header",
+            header or self.header,
+            "--header-first",
+            "--bind",
+            f"change:reload({search_command})",
+            "--ansi",
+        ]
+        
+        if preview:
+            commands.extend(["--preview", preview])
+
+        result = subprocess.run(
+            commands,
+            input="",
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        if result.returncode != 0:
+            return None
+        return result.stdout.strip()

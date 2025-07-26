@@ -39,6 +39,7 @@ def main(ctx: Context, state: State) -> State | InternalDirective:
             ctx, state, UserMediaListStatus.PLANNING
         ),
         f"{'🔎 ' if icons else ''}Search": _create_search_media_list(ctx, state),
+        f"{'🔍 ' if icons else ''}Dynamic Search": _create_dynamic_search_action(ctx, state),
         f"{'🏠 ' if icons else ''}Downloads": _create_downloads_action(ctx, state),
         f"{'🔔 ' if icons else ''}Recently Updated": _create_media_list_action(
             ctx, state, MediaSort.UPDATED_AT_DESC
@@ -226,5 +227,14 @@ def _create_downloads_action(ctx: Context, state: State) -> MenuAction:
 
     def action():
         return State(menu_name=MenuName.DOWNLOADS)
+
+    return action
+
+
+def _create_dynamic_search_action(ctx: Context, state: State) -> MenuAction:
+    """Create action to navigate to the dynamic search menu."""
+
+    def action():
+        return State(menu_name=MenuName.DYNAMIC_SEARCH)
 
     return action

@@ -104,3 +104,28 @@ class BaseSelector(ABC):
             The string entered by the user.
         """
         pass
+
+    def search(
+        self,
+        prompt: str,
+        search_command: str,
+        *,
+        preview: Optional[str] = None,
+        header: Optional[str] = None,
+    ) -> str | None:
+        """
+        Provides dynamic search functionality that reloads results based on user input.
+        
+        Args:
+            prompt: The message to display to the user.
+            search_command: The command to execute for searching/reloading results.
+            preview: An optional command or string for a preview window.
+            header: An optional header to display above the choices.
+            
+        Returns:
+            The string of the chosen item.
+            
+        Raises:
+            NotImplementedError: If the selector doesn't support dynamic search.
+        """
+        raise NotImplementedError("Dynamic search is not supported by this selector")
