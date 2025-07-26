@@ -14,11 +14,11 @@ class InternalDirective(Enum):
 
     BACK = "BACK"
 
-    BACK_FORCE = "BACK_FORCE"
-
     BACKX2 = "BACKX2"
 
     BACKX3 = "BACKX3"
+
+    BACKX4 = "BACKX4"
 
     EXIT = "EXIT"
 

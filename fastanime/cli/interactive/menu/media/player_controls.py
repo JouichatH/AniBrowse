@@ -68,9 +68,8 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
             f"{'🔘 ' if icons else ''}Toggle Translation Type  (Current: {ctx.config.stream.translation_type.upper()})": _toggle_config_state(
                 ctx, state, "TRANSLATION_TYPE"
             ),
-            f"{'🏠 ' if icons else ''}Main Menu": lambda: State(
-                menu_name=MenuName.MAIN
-            ),
+            f"{'🎥 ' if icons else ''}Media Actions Menu": lambda: InternalDirective.BACKX4,
+            f"{'🏠 ' if icons else ''}Main Menu": lambda: InternalDirective.MAIN,
             f"{'❌ ' if icons else ''}Exit": lambda: InternalDirective.EXIT,
         }
     )

@@ -247,7 +247,7 @@ class Session:
             if isinstance(next_step, InternalDirective):
                 if next_step == InternalDirective.MAIN:
                     self._history = [self._history[0]]
-                if next_step == InternalDirective.RELOAD:
+                elif next_step == InternalDirective.RELOAD:
                     continue
                 elif next_step == InternalDirective.CONFIG_EDIT:
                     self._edit_config()
@@ -260,6 +260,12 @@ class Session:
                         self._history.pop()
                 elif next_step == InternalDirective.BACKX3:
                     if len(self._history) > 3:
+                        self._history.pop()
+                        self._history.pop()
+                        self._history.pop()
+                elif next_step == InternalDirective.BACKX4:
+                    if len(self._history) > 4:
+                        self._history.pop()
                         self._history.pop()
                         self._history.pop()
                         self._history.pop()
