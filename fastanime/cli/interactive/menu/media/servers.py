@@ -46,8 +46,8 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
             all_servers: List[Server] = list(server_iterator) if server_iterator else []
 
     if not all_servers:
-        feedback.error("o streaming servers found for this episode")
-        return InternalDirective.BACK
+        feedback.error(f"o streaming servers found for episode {episode_number}")
+        return InternalDirective.BACKX3
 
     server_map: Dict[str, Server] = {s.name: s for s in all_servers}
     selected_server: Server | None = None
