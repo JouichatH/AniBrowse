@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from ....core.config.model import AppConfig, DownloadsConfig
+from ....core.config.model import AppConfig
 from ....core.downloader.base import BaseDownloader
 from ....core.downloader.downloader import create_downloader
 from ....core.downloader.params import DownloadParams

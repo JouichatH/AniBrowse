@@ -343,7 +343,6 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
 
         # Create next airing panel if available
         if media_item.next_airing:
-            from datetime import datetime
 
             airing_info_table = Table(show_header=False, box=box.SIMPLE)
             airing_info_table.add_column("Field", style="bold red")
@@ -537,7 +536,6 @@ def _view_characters(ctx: Context, state: State) -> MenuAction:
             from rich.table import Table
             from rich.panel import Panel
             from rich.text import Text
-            from datetime import datetime
 
             console = Console()
             console.clear()

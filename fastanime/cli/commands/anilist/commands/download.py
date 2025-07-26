@@ -575,7 +575,7 @@ def _get_available_episodes(provider, anime, config, feedback):
         )
 
         if not provider_anime_data:
-            feedback.warning(f"Failed to get anime details from provider")
+            feedback.warning("Failed to get anime details from provider")
             return []
 
         # Check all available translation types
@@ -967,7 +967,7 @@ def _show_final_statistics(download_service, feedback):
     stats = download_service.get_download_statistics()
 
     if stats:
-        console.print(f"\n[bold blue]Overall Download Statistics:[/bold blue]")
+        console.print("\n[bold blue]Overall Download Statistics:[/bold blue]")
         console.print(f"Total episodes tracked: {stats.get('total_episodes', 0)}")
         console.print(f"Successfully downloaded: {stats.get('downloaded', 0)}")
         console.print(f"Failed downloads: {stats.get('failed', 0)}")

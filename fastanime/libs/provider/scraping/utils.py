@@ -6,7 +6,7 @@ that was previously sourced from yt-dlp.
 """
 
 import string
-from typing import Union, Optional
+from typing import Optional
 
 
 def encode_base_n(num: int, n: int, table: Optional[str] = None) -> str:

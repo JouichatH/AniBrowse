@@ -2,7 +2,6 @@
 Registry backup command - create full backups of the registry
 """
 
-import shutil
 import tarfile
 from pathlib import Path
 from datetime import datetime

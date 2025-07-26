@@ -346,8 +346,6 @@ def _import_data(registry_service, data: dict, merge: bool, dry_run: bool, feedb
     """Import data into the registry."""
     from .....libs.media_api.types import (
         MediaFormat,
-        MediaGenre,
-        MediaStatus,
         MediaType,
     )
 

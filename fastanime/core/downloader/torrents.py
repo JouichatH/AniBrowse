@@ -4,8 +4,7 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
-from typing import Optional, Dict, Any, Callable, Union
-from urllib.parse import urlparse
+from typing import Optional, Dict, Any, Callable
 
 from ..exceptions import FastAnimeError, DependencyNotFoundError
 

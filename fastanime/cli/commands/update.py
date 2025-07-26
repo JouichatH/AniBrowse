@@ -124,7 +124,7 @@ def update(
             else:
                 latest_version = release_json.get("tag_name", "unknown")
                 print(f"[yellow]Update available: {latest_version}[/]")
-                print(f"[dim]Run 'fastanime update' to update[/]")
+                print("[dim]Run 'fastanime update' to update[/]")
                 sys.exit(1)
         else:
             print("[cyan]Checking for updates and updating if necessary...[/]")
