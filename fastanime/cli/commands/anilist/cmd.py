@@ -10,6 +10,7 @@ commands = {
     "download": "download.download",
     # "downloads": "downloads.downloads",
     "auth": "auth.auth",
+    "stats": "stats.stats",
 }
 
 

@@ -150,20 +150,19 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
 
         if not anime:
             raise FastAnimeError(f"Failed to fetch anime {anime_result.title}")
-        
+
         available_episodes: list[str] = sorted(
             getattr(anime.episodes, config.stream.translation_type), key=float
         )
-        
+
         if options["episode_range"]:
             from ..utils.parser import parse_episode_range
-            
+
             try:
                 episodes_range = parse_episode_range(
-                    options["episode_range"], 
-                    available_episodes
+                    options["episode_range"], available_episodes
                 )
-                
+
                 for episode in episodes_range:
                     download_anime(
                         config, options, provider, selector, anime, anime_title, episode

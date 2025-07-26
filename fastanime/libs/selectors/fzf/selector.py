@@ -77,9 +77,11 @@ class FzfSelector(BaseSelector):
         )
         if result.returncode != 0:
             return []
-        
+
         # Split the output by newlines and filter out empty strings
-        selections = [line.strip() for line in result.stdout.strip().split('\n') if line.strip()]
+        selections = [
+            line.strip() for line in result.stdout.strip().split("\n") if line.strip()
+        ]
         return selections
 
     def confirm(self, prompt, *, default=False):

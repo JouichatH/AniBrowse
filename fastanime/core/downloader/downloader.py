@@ -30,9 +30,11 @@ class DownloadFactory:
             try:
                 import yt_dlp
                 from .yt_dlp import YtDLPDownloader
+
                 return YtDLPDownloader(config)
             except ImportError:
                 from .default import DefaultDownloader
+
                 return DefaultDownloader(config)
         else:
             raise FastAnimeError("Downloader not implemented")

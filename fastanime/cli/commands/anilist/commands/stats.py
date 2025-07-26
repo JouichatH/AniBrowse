@@ -40,11 +40,11 @@ def stats(config: "AppConfig"):
                 "Authentication Required",
                 f"You must be logged in to {config.general.media_api} to sync your media list.",
             )
-            feedback.info("Run this command to authenticate:", f"fastanime {config.general.media_api} auth")
+            feedback.info(
+                "Run this command to authenticate:",
+                f"fastanime {config.general.media_api} auth",
+            )
             raise click.Abort()
-
-
-
 
         # Check if kitten is available for image display
         KITTEN_EXECUTABLE = shutil.which("kitten")
@@ -52,7 +52,7 @@ def stats(config: "AppConfig"):
             feedback.warning("Kitten not found - profile image will not be displayed")
         else:
             # Display profile image using kitten icat
-            if user_profile.avatar_url:
+            if profile.user_profile.avatar_url:
                 console.clear()
                 image_x = int(console.size.width * 0.1)
                 image_y = int(console.size.height * 0.1)
@@ -66,7 +66,7 @@ def stats(config: "AppConfig"):
                         "--clear",
                         "--place",
                         f"{img_w}x{img_h}@{image_x}x{image_y}",
-                        user_profile.avatar_url,
+                        profile.user_profile.avatar_url,
                     ],
                     check=False,
                 )
@@ -75,21 +75,16 @@ def stats(config: "AppConfig"):
                     feedback.warning("Failed to display profile image")
 
         # Display user information
-        about_text = getattr(user_profile, "about", "") or "No description available"
+        about_text = (
+            getattr(profile.user_profile, "about", "") or "No description available"
+        )
 
         console.print(
             Panel(
                 Markdown(about_text),
-                title=f"📊 {user_profile.name}'s Profile",
+                title=f"📊 {profile.user_profile.name}'s Profile",
             )
         )
 
         # You can add more stats here if the API provides them
         feedback.success("User profile displayed successfully")
-
-    except FastAnimeError as e:
-        feedback.error("Failed to fetch user stats", str(e))
-        raise click.Abort()
-    except Exception as e:
-        feedback.error("Unexpected error occurred", str(e))
-        raise click.Abort()

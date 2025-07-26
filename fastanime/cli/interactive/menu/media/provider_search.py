@@ -30,9 +30,12 @@ def provider_search(ctx: Context, state: State) -> State | InternalDirective:
         return InternalDirective.BACK
 
     provider_search_results = provider.search(
-        SearchParams(query=normalize_title(media_title, config.general.provider.value,True), translation_type=config.stream.translation_type)
+        SearchParams(
+            query=normalize_title(media_title, config.general.provider.value, True),
+            translation_type=config.stream.translation_type,
+        )
     )
-    
+
     if not provider_search_results or not provider_search_results.results:
         feedback.warning(
             f"Could not find '{media_title}' on {provider.__class__.__name__}",
@@ -51,7 +54,10 @@ def provider_search(ctx: Context, state: State) -> State | InternalDirective:
         # Use fuzzy matching to find the best title
         best_match_title = max(
             provider_results_map.keys(),
-            key=lambda p_title: fuzz.ratio(normalize_title(p_title,config.general.provider.value).lower(), media_title.lower()),
+            key=lambda p_title: fuzz.ratio(
+                normalize_title(p_title, config.general.provider.value).lower(),
+                media_title.lower(),
+            ),
         )
         feedback.info("Auto-selecting best match: {best_match_title}")
         selected_provider_anime = provider_results_map[best_match_title]

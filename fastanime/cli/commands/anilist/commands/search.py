@@ -229,17 +229,39 @@ def search(config: AppConfig, **options: "Unpack[SearchOptions]"):
         on_list = options.get("on_list")
 
         # Validate logical relationships
-        if score_greater is not None and score_lesser is not None and score_greater > score_lesser:
+        if (
+            score_greater is not None
+            and score_lesser is not None
+            and score_greater > score_lesser
+        ):
             raise FastAnimeError("Minimum score cannot be higher than maximum score")
-        
-        if popularity_greater is not None and popularity_lesser is not None and popularity_greater > popularity_lesser:
-            raise FastAnimeError("Minimum popularity cannot be higher than maximum popularity")
-        
-        if start_date_greater is not None and start_date_lesser is not None and start_date_greater > start_date_lesser:
-            raise FastAnimeError("Start date greater cannot be later than start date lesser")
-        
-        if end_date_greater is not None and end_date_lesser is not None and end_date_greater > end_date_lesser:
-            raise FastAnimeError("End date greater cannot be later than end date lesser")
+
+        if (
+            popularity_greater is not None
+            and popularity_lesser is not None
+            and popularity_greater > popularity_lesser
+        ):
+            raise FastAnimeError(
+                "Minimum popularity cannot be higher than maximum popularity"
+            )
+
+        if (
+            start_date_greater is not None
+            and start_date_lesser is not None
+            and start_date_greater > start_date_lesser
+        ):
+            raise FastAnimeError(
+                "Start date greater cannot be later than start date lesser"
+            )
+
+        if (
+            end_date_greater is not None
+            and end_date_lesser is not None
+            and end_date_greater > end_date_lesser
+        ):
+            raise FastAnimeError(
+                "End date greater cannot be later than end date lesser"
+            )
 
         # Build search parameters
         search_params = MediaSearchParams(
@@ -287,7 +309,7 @@ def search(config: AppConfig, **options: "Unpack[SearchOptions]"):
             feedback.info(
                 f"Found {len(search_result.media)} anime matching your search. Launching interactive mode..."
             )
-            
+
             # Create initial state with search results
             initial_state = State(
                 menu_name=MenuName.RESULTS,
@@ -299,7 +321,7 @@ def search(config: AppConfig, **options: "Unpack[SearchOptions]"):
                     page_info=search_result.page_info,
                 ),
             )
-            
+
             session.load_menus_from_folder("media")
             session.run(config, history=[initial_state])
 
