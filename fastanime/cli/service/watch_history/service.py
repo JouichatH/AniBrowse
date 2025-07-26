@@ -11,7 +11,6 @@ from ..registry import MediaRegistryService
 logger = logging.getLogger(__name__)
 
 
-# TODO: Implement stuff like syncing btw local and remote
 class WatchHistoryService:
     def __init__(
         self,

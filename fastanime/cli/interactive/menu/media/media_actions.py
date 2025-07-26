@@ -45,7 +45,9 @@ def media_actions(ctx: Context, state: State) -> State | InternalDirective:
         f"{'➕ ' if icons else ''}Add/Update List": _manage_user_media_list(ctx, state),
         f"{'⭐ ' if icons else ''}Score Anime": _score_anime(ctx, state),
         f"{'ℹ️ ' if icons else ''}View Info": _view_info(ctx, state),
-        f"{'📀 ' if icons else ''}Change Provider": _change_provider(ctx, state),
+        f"{'📀 ' if icons else ''}Change Provider (Current: {ctx.config.general.provider.value.upper()})": _change_provider(
+            ctx, state
+        ),
         f"{'🔘 ' if icons else ''}Toggle Auto Select Anime (Current: {ctx.config.general.auto_select_anime_result})": _toggle_config_state(
             ctx, state, "AUTO_ANIME"
         ),
@@ -59,6 +61,7 @@ def media_actions(ctx: Context, state: State) -> State | InternalDirective:
             ctx, state, "TRANSLATION_TYPE"
         ),
         f"{'🔙 ' if icons else ''}Back to Results": lambda: InternalDirective.BACK,
+        f"{'❌ ' if icons else ''}Exit": lambda: InternalDirective.EXIT,
     }
 
     choice = ctx.selector.choose(
