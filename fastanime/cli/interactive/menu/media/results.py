@@ -9,7 +9,7 @@ from ...state import InternalDirective, MediaApiState, MenuName, State
 
 @session.menu
 def results(ctx: Context, state: State) -> State | InternalDirective:
-    feedback = ctx.service.feedback
+    feedback = ctx.feedback
     feedback.clear_console()
 
     search_result = state.media_api.search_result
@@ -127,7 +127,7 @@ def _format_title(ctx: Context, media_item: MediaItem) -> str:
 def _handle_pagination(
     ctx: Context, state: State, page_delta: int
 ) -> State | InternalDirective:
-    feedback = ctx.service.feedback
+    feedback = ctx.feedback
 
     search_params = state.media_api.search_params
 

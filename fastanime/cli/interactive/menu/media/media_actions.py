@@ -19,7 +19,7 @@ MenuAction = Callable[[], State | InternalDirective]
 
 @session.menu
 def media_actions(ctx: Context, state: State) -> State | InternalDirective:
-    feedback = ctx.service.feedback
+    feedback = ctx.feedback
 
     icons = ctx.config.general.icons
 
@@ -64,7 +64,7 @@ def _stream(ctx: Context, state: State) -> MenuAction:
 
 def _watch_trailer(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.service.feedback
+        feedback = ctx.feedback
         media_item = state.media_api.media_item
 
         if not media_item:
@@ -87,7 +87,7 @@ def _watch_trailer(ctx: Context, state: State) -> MenuAction:
 
 def _manage_user_media_list(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.service.feedback
+        feedback = ctx.feedback
         media_item = state.media_api.media_item
 
         if not media_item:
@@ -104,7 +104,7 @@ def _manage_user_media_list(ctx: Context, state: State) -> MenuAction:
         )
         if status:
             # local
-            ctx.service.media_registry.update_media_index_entry(
+            ctx.media_registry.update_media_index_entry(
                 media_id=media_item.id,
                 media_item=media_item,
                 status=UserMediaListStatus(status),
@@ -122,7 +122,7 @@ def _manage_user_media_list(ctx: Context, state: State) -> MenuAction:
 
 def _score_anime(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.service.feedback
+        feedback = ctx.feedback
         media_item = state.media_api.media_item
 
         if not media_item:
@@ -137,7 +137,7 @@ def _score_anime(ctx: Context, state: State) -> MenuAction:
             if not 0.0 <= score <= 10.0:
                 raise ValueError("Score out of range.")
             # local
-            ctx.service.media_registry.update_media_index_entry(
+            ctx.media_registry.update_media_index_entry(
                 media_id=media_item.id, media_item=media_item, score=score
             )
             # remote
@@ -401,7 +401,7 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
 
 def _view_recommendations(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.service.feedback
+        feedback = ctx.feedback
         media_item = state.media_api.media_item
 
         if not media_item:
@@ -450,7 +450,7 @@ def _view_recommendations(ctx: Context, state: State) -> MenuAction:
 
 def _view_relations(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.service.feedback
+        feedback = ctx.feedback
         media_item = state.media_api.media_item
 
         if not media_item:
@@ -499,7 +499,7 @@ def _view_relations(ctx: Context, state: State) -> MenuAction:
 
 def _view_characters(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.service.feedback
+        feedback = ctx.feedback
         media_item = state.media_api.media_item
 
         if not media_item:
@@ -586,7 +586,7 @@ def _view_characters(ctx: Context, state: State) -> MenuAction:
 
 def _view_airing_schedule(ctx: Context, state: State) -> MenuAction:
     def action():
-        feedback = ctx.service.feedback
+        feedback = ctx.feedback
         media_item = state.media_api.media_item
 
         if not media_item:

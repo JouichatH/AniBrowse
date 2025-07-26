@@ -16,16 +16,31 @@ class SessionsService:
         self.dir = config.dir
         self._ensure_sessions_directory()
 
-    def save_session(self, history: List[State], name: Optional[str] = None):
-        session = Session(history=history)
+    def save_session(
+        self, history: List[State], name: Optional[str] = None, default=True
+    ):
+        if default:
+            name = "default"
+            session = Session(history=history, name=name)
+        else:
+            session = Session(history=history)
         self._save_session(session)
 
-    def create_crash_backup(self, history: List[State]):
-        self._save_session(Session(history=history, is_from_crash=True))
+    def create_crash_backup(self, history: List[State], default=True):
+        if default:
+            self._save_session(
+                Session(history=history, name="crash", is_from_crash=True)
+            )
+        else:
+            self._save_session(Session(history=history, is_from_crash=True))
 
     def get_session_history(self, session_name: str) -> Optional[List[State]]:
         if session := self._load_session(session_name):
             return session.history
+
+    def get_default_session_history(self) -> Optional[List[State]]:
+        if history := self.get_session_history("default"):
+            return history
 
     def get_most_recent_session_history(self) -> Optional[List[State]]:
         session_name: Optional[str] = None

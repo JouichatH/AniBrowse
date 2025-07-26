@@ -22,7 +22,7 @@ SEARCH_TEMPLATE_SCRIPT = (FZF_SCRIPTS_DIR / "search.template.sh").read_text(
 @session.menu
 def dynamic_search(ctx: Context, state: State) -> State | InternalDirective:
     """Dynamic search menu that provides real-time search results."""
-    feedback = ctx.service.feedback
+    feedback = ctx.feedback
     feedback.clear_console()
 
     # Ensure cache directory exists

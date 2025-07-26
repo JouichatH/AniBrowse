@@ -19,7 +19,7 @@ MenuAction = Callable[[], State | InternalDirective]
 def downloads(ctx: Context, state: State) -> State | InternalDirective:
     """Downloads menu showing locally stored media from registry."""
     icons = ctx.config.general.icons
-    feedback = ctx.service.feedback
+    feedback = ctx.feedback
     feedback.clear_console()
 
     options: Dict[str, MenuAction] = {
@@ -90,13 +90,13 @@ def _create_local_media_list_action(
     """Create action for searching local media with sorting and optional status filter."""
 
     def action():
-        feedback = ctx.service.feedback
+        feedback = ctx.feedback
         search_params = MediaSearchParams(sort=sort, status=status)
 
         loading_message = "Searching local media registry"
         result = None
         with feedback.progress(loading_message):
-            result = ctx.service.media_registry.search_for_media(search_params)
+            result = ctx.media_registry.search_for_media(search_params)
 
         if result and result.media:
             return State(
@@ -120,12 +120,12 @@ def _create_local_random_media_list(ctx: Context, state: State) -> MenuAction:
     """Create action for getting random local media."""
 
     def action():
-        feedback = ctx.service.feedback
+        feedback = ctx.feedback
 
         loading_message = "Getting random local media"
         with feedback.progress(loading_message):
             # Get all records and pick random ones
-            all_records = list(ctx.service.media_registry.get_all_media_records())
+            all_records = list(ctx.media_registry.get_all_media_records())
 
         if not all_records:
             feedback.info("No media found in local registry")
@@ -136,7 +136,7 @@ def _create_local_random_media_list(ctx: Context, state: State) -> MenuAction:
         random_ids = [record.media_item.id for record in random_records]
 
         search_params = MediaSearchParams(id_in=random_ids)
-        result = ctx.service.media_registry.search_for_media(search_params)
+        result = ctx.media_registry.search_for_media(search_params)
 
         if result and result.media:
             return State(
@@ -160,7 +160,7 @@ def _create_local_search_media_list(ctx: Context, state: State) -> MenuAction:
     """Create action for searching local media by query."""
 
     def action():
-        feedback = ctx.service.feedback
+        feedback = ctx.feedback
 
         query = ctx.selector.ask("Search Local Anime")
         if not query:
@@ -171,7 +171,7 @@ def _create_local_search_media_list(ctx: Context, state: State) -> MenuAction:
         loading_message = "Searching local media registry"
         result = None
         with feedback.progress(loading_message):
-            result = ctx.service.media_registry.search_for_media(search_params)
+            result = ctx.media_registry.search_for_media(search_params)
 
         if result and result.media:
             return State(
@@ -197,12 +197,12 @@ def _create_local_status_action(
     """Create action for getting local media by user status."""
 
     def action():
-        feedback = ctx.service.feedback
+        feedback = ctx.feedback
 
         loading_message = f"Getting {status.value} media from local registry"
         result = None
         with feedback.progress(loading_message):
-            result = ctx.service.media_registry.get_media_by_status(status)
+            result = ctx.media_registry.get_media_by_status(status)
 
         if result and result.media:
             return State(
@@ -225,7 +225,7 @@ def _create_local_recent_media_action(ctx: Context, state: State) -> MenuAction:
     """Create action for getting recently watched local media."""
 
     def action():
-        result = ctx.service.media_registry.get_recently_watched()
+        result = ctx.media_registry.get_recently_watched()
         if result and result.media:
             return State(
                 menu_name=MenuName.RESULTS,
@@ -237,7 +237,7 @@ def _create_local_recent_media_action(ctx: Context, state: State) -> MenuAction:
                 ),
             )
         else:
-            ctx.service.feedback.info(
+            ctx.feedback.info(
                 "No recently watched media found in local registry"
             )
             return InternalDirective.RELOAD

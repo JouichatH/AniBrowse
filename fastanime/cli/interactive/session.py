@@ -2,47 +2,132 @@ import importlib.util
 import logging
 import os
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import click
 
 from ...core.config import AppConfig
 from ...core.constants import APP_DIR, USER_CONFIG_PATH
-from ...libs.media_api.base import BaseApiClient
-from ...libs.player.base import BasePlayer
-from ...libs.provider.anime.base import BaseAnimeProvider
-from ...libs.selectors.base import BaseSelector
-from ..service.auth import AuthService
-from ..service.feedback import FeedbackService
-from ..service.registry import MediaRegistryService
-from ..service.session import SessionsService
-from ..service.watch_history import WatchHistoryService
 from .state import InternalDirective, MenuName, State
+
+if TYPE_CHECKING:
+    from ...libs.media_api.base import BaseApiClient
+    from ...libs.player.base import BasePlayer
+    from ...libs.provider.anime.base import BaseAnimeProvider
+    from ...libs.selectors.base import BaseSelector
+    from ..service.auth import AuthService
+    from ..service.feedback import FeedbackService
+    from ..service.registry import MediaRegistryService
+    from ..service.session import SessionsService
+    from ..service.watch_history import WatchHistoryService
 
 logger = logging.getLogger(__name__)
 
-# A type alias for the signature all menu functions must follow.
 
 MENUS_DIR = APP_DIR / "cli" / "interactive" / "menu"
 
 
-@dataclass(frozen=True)
-class Services:
-    feedback: FeedbackService
-    media_registry: MediaRegistryService
-    watch_history: WatchHistoryService
-    session: SessionsService
-    auth: AuthService
-
-
-@dataclass(frozen=True)
+@dataclass
 class Context:
-    config: AppConfig
-    provider: BaseAnimeProvider
-    selector: BaseSelector
-    player: BasePlayer
-    media_api: BaseApiClient
-    service: Services
+    config: "AppConfig"
+    _provider: Optional["BaseAnimeProvider"] = None
+    _selector: Optional["BaseSelector"] = None
+    _player: Optional["BasePlayer"] = None
+    _media_api: Optional["BaseApiClient"] = None
+
+    _feedback: Optional["FeedbackService"] = None
+    _media_registry: Optional["MediaRegistryService"] = None
+    _watch_history: Optional["WatchHistoryService"] = None
+    _session: Optional["SessionsService"] = None
+    _auth: Optional["AuthService"] = None
+
+    @property
+    def provider(self) -> "BaseAnimeProvider":
+        if not self._provider:
+            from ...libs.provider.anime.provider import create_provider
+
+            self._provider = create_provider(self.config.general.provider)
+        return self._provider
+
+    @property
+    def selector(self) -> "BaseSelector":
+        if not self._selector:
+            from ...libs.selectors.selector import create_selector
+
+            self._selector = create_selector(self.config)
+        return self._selector
+
+    @property
+    def media_api(self) -> "BaseApiClient":
+        if not self._media_api:
+            from ...libs.media_api.api import create_api_client
+
+            self._media_api = create_api_client(
+                self.config.general.media_api, self.config
+            )
+
+            if auth_profile := self.auth.get_auth():
+                p = self._media_api.authenticate(auth_profile.token)
+                if p:
+                    logger.debug(f"Authenticated as {p.name}")
+                else:
+                    logger.warning(f"Failed to authenticate with {auth_profile.token}")
+            else:
+                logger.debug("Not authenticated")
+
+        return self._media_api
+
+    @property
+    def player(self) -> "BasePlayer":
+        if not self._player:
+            from ...libs.player.player import create_player
+
+            self._player = create_player(self.config)
+        return self._player
+
+    @property
+    def feedback(self) -> "FeedbackService":
+        if not self._feedback:
+            from ..service.feedback.service import FeedbackService
+
+            self._feedback = FeedbackService()
+        return self._feedback
+
+    @property
+    def media_registry(self) -> "MediaRegistryService":
+        if not self._media_registry:
+            from ..service.registry.service import MediaRegistryService
+
+            self._media_registry = MediaRegistryService(
+                self.config.general.media_api, self.config.media_registry
+            )
+        return self._media_registry
+
+    @property
+    def watch_history(self) -> "WatchHistoryService":
+        if not self._watch_history:
+            from ..service.watch_history.service import WatchHistoryService
+
+            self._watch_history = WatchHistoryService(
+                self.config, self.media_registry, self._media_api
+            )
+        return self._watch_history
+
+    @property
+    def session(self) -> "SessionsService":
+        if not self._session:
+            from ..service.session.service import SessionsService
+
+            self._session = SessionsService(self.config.sessions)
+        return self._session
+
+    @property
+    def auth(self) -> "AuthService":
+        if not self._auth:
+            from ..service.auth.service import AuthService
+
+            self._auth = AuthService(self.config.general.media_api)
+        return self._auth
 
 
 MenuFunction = Callable[[Context, State], Union[State, InternalDirective]]
@@ -60,43 +145,7 @@ class Session:
     _menus: dict[MenuName, Menu] = {}
 
     def _load_context(self, config: AppConfig):
-        """Initializes all shared service based on the provided configuration."""
-        from ...libs.media_api.api import create_api_client
-        from ...libs.player import create_player
-        from ...libs.provider.anime.provider import create_provider
-        from ...libs.selectors import create_selector
-
-        media_registry = MediaRegistryService(
-            media_api=config.general.media_api, config=config.media_registry
-        )
-        auth = AuthService(config.general.media_api)
-        services = Services(
-            feedback=FeedbackService(config.general.icons),
-            media_registry=media_registry,
-            watch_history=WatchHistoryService(config, media_registry),
-            session=SessionsService(config.sessions),
-            auth=auth,
-        )
-
-        media_api = create_api_client(config.general.media_api, config)
-
-        if auth_profile := auth.get_auth():
-            p = media_api.authenticate(auth_profile.token)
-            if p:
-                logger.debug(f"Authenticated as {p.name}")
-            else:
-                logger.warning(f"Failed to authenticate with {auth_profile.token}")
-        else:
-            logger.debug("Not authenticated")
-
-        self._context = Context(
-            config=config,
-            provider=create_provider(config.general.provider),
-            selector=create_selector(config),
-            player=create_player(config),
-            media_api=media_api,
-            service=services,
-        )
+        self._context = Context(config)
         logger.info("Application context reloaded.")
 
     def _edit_config(self):
@@ -116,10 +165,7 @@ class Session:
     ):
         self._load_context(config)
         if resume:
-            if (
-                history
-                := self._context.service.session.get_most_recent_session_history()
-            ):
+            if history := self._context.session.get_default_session_history():
                 self._history = history
             else:
                 logger.warning("Failed to continue from history. No sessions found")
@@ -132,12 +178,12 @@ class Session:
         try:
             self._run_main_loop()
         except Exception:
-            self._context.service.session.create_crash_backup(self._history)
+            self._context.session.create_crash_backup(self._history)
             raise
         finally:
             # Clean up preview workers when session ends
             self._cleanup_preview_workers()
-        self._context.service.session.save_session(self._history)
+        self._context.session.save_session(self._history)
 
     def _cleanup_preview_workers(self):
         """Clean up preview workers when session ends."""
