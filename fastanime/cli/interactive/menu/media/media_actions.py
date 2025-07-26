@@ -343,7 +343,6 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
 
         # Create next airing panel if available
         if media_item.next_airing:
-
             airing_info_table = Table(show_header=False, box=box.SIMPLE)
             airing_info_table.add_column("Field", style="bold red")
             airing_info_table.add_column("Value", style="white")

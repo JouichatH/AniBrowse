@@ -585,7 +585,6 @@ class MediaRegistryService:
     ) -> list[tuple[int, str]]:
         """Get all episodes with a specific download status."""
         try:
-
             episodes = []
             for record in self.get_all_media_records():
                 for episode in record.media_episodes:
@@ -600,7 +599,6 @@ class MediaRegistryService:
     def get_download_statistics(self) -> dict:
         """Get comprehensive download statistics."""
         try:
-
             stats = {
                 "total_episodes": 0,
                 "downloaded": 0,

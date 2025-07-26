@@ -23,17 +23,6 @@ def results(ctx: Context, state: State) -> State | InternalDirective:
         _format_title(ctx, media_item): media_item
         for media_item in search_result.values()
     }
-
-    preview_command = None
-    if ctx.config.general.preview != "none":
-        from ....utils.preview import get_anime_preview
-
-        preview_command = get_anime_preview(
-            list(search_result_dict.values()),
-            list(search_result_dict.keys()),
-            ctx.config,
-        )
-
     choices: Dict[str, Callable[[], Union[int, State, InternalDirective]]] = {
         title: lambda media_id=item.id: media_id
         for title, item in search_result_dict.items()
@@ -64,11 +53,31 @@ def results(ctx: Context, state: State) -> State | InternalDirective:
         }
     )
 
-    choice = ctx.selector.choose(
-        prompt="Select Anime",
-        choices=list(choices),
-        preview=preview_command,
-    )
+    preview_command = None
+    if ctx.config.general.preview != "none":
+        from ....utils.preview import create_preview_context
+
+        with create_preview_context() as preview_ctx:
+            preview_command = preview_ctx.get_anime_preview(
+                list(search_result_dict.values()),
+                list(search_result_dict.keys()),
+                ctx.config,
+            )
+
+            choice = ctx.selector.choose(
+                prompt="Select Anime",
+                choices=list(choices),
+                preview=preview_command,
+            )
+
+    else:
+        # No preview mode
+
+        choice = ctx.selector.choose(
+            prompt="Select Anime",
+            choices=list(choices),
+            preview=None,
+        )
 
     if not choice:
         return InternalDirective.RELOAD

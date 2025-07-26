@@ -39,21 +39,34 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
 
         preview_command = None
         if ctx.config.general.preview != "none":
-            from ....utils.preview import get_episode_preview
+            from ....utils.preview import create_preview_context
 
-            preview_command = get_episode_preview(
-                available_episodes, media_item, ctx.config
+            with create_preview_context() as preview_ctx:
+                preview_command = preview_ctx.get_episode_preview(
+                    available_episodes, media_item, ctx.config
+                )
+
+                chosen_episode_str = ctx.selector.choose(
+                    prompt="Select Episode", choices=choices, preview=preview_command
+                )
+
+                if not chosen_episode_str or chosen_episode_str == "Back":
+                    # TODO: should improve the back logic for menus that can be pass through
+                    return InternalDirective.BACKX2
+
+                chosen_episode = chosen_episode_str
+                # Workers are automatically cleaned up when exiting the context
+        else:
+            # No preview mode
+            chosen_episode_str = ctx.selector.choose(
+                prompt="Select Episode", choices=choices, preview=None
             )
 
-        chosen_episode_str = ctx.selector.choose(
-            prompt="Select Episode", choices=choices, preview=preview_command
-        )
+            if not chosen_episode_str or chosen_episode_str == "Back":
+                # TODO: should improve the back logic for menus that can be pass through
+                return InternalDirective.BACKX2
 
-        if not chosen_episode_str or chosen_episode_str == "Back":
-            # TODO: should improve the back logic for menus that can be pass through
-            return InternalDirective.BACKX2
-
-        chosen_episode = chosen_episode_str
+            chosen_episode = chosen_episode_str
 
     # Track episode selection in watch history (if enabled in config)
     if (
