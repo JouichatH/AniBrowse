@@ -176,16 +176,12 @@ def stream_anime(
             f"Failed to get stream link for anime: {anime.title}, episode: {episode}"
         )
     print(f"[green bold]Now Streaming:[/] {anime.title} Episode: {episode}")
-    
+
     # Check if IPC player should be used
     if config.mpv.use_ipc:
         # Get available episodes for current translation type
-        available_episodes = getattr(
-            anime.episodes, 
-            config.stream.translation_type, 
-            []
-        )
-        
+        available_episodes = getattr(anime.episodes, config.stream.translation_type, [])
+
         # Use IPC player with episode navigation capabilities
         player.play(
             PlayerParams(
@@ -200,7 +196,7 @@ def stream_anime(
                 current_episode=episode,
                 current_anime_id=anime.id,
                 current_anime_title=anime.title,
-                current_translation_type=config.stream.translation_type
+                current_translation_type=config.stream.translation_type,
             )
         )
     else:

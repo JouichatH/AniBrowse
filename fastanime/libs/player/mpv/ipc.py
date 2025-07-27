@@ -25,7 +25,6 @@ Requirements:
 import json
 import logging
 import random
-import re
 import socket
 import subprocess
 import tempfile

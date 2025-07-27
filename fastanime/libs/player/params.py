@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, List, Literal, Optional
+from typing import TYPE_CHECKING, List, Literal, Optional
 
 if TYPE_CHECKING:
     from ..provider.anime.base import BaseAnimeProvider
@@ -14,7 +14,7 @@ class PlayerParams:
     subtitles: list[str] | None = None
     headers: dict[str, str] | None = None
     start_time: str | None = None
-    
+
     # IPC player specific parameters for episode navigation
     anime_provider: Optional["BaseAnimeProvider"] = None
     current_anime: Optional["Anime"] = None

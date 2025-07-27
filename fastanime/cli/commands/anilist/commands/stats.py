@@ -40,16 +40,18 @@ def stats(config: "AppConfig"):
                     "Authentication Required",
                     f"You must be logged in to {config.general.media_api} to sync your media list.",
                 )
-                feedback.info("Run this command to authenticate:", f"fastanime {config.general.media_api} auth")
+                feedback.info(
+                    "Run this command to authenticate:",
+                    f"fastanime {config.general.media_api} auth",
+                )
                 raise click.Abort()
-
-
-
 
             # Check if kitten is available for image display
             KITTEN_EXECUTABLE = shutil.which("kitten")
             if not KITTEN_EXECUTABLE:
-                feedback.warning("Kitten not found - profile image will not be displayed")
+                feedback.warning(
+                    "Kitten not found - profile image will not be displayed"
+                )
             else:
                 # Display profile image using kitten icat
                 if profile.avatar_url:

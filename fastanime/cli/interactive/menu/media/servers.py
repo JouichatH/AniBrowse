@@ -82,18 +82,17 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
 
     # TODO: Refine implementation mpv ipc player
     # Check if IPC player should be used and if we have the required data
-    if (config.mpv.use_ipc and 
-        state.provider.anime and 
-        provider_anime and 
-        episode_number):
-        
+    if (
+        config.mpv.use_ipc
+        and state.provider.anime
+        and provider_anime
+        and episode_number
+    ):
         # Get available episodes for current translation type
         available_episodes = getattr(
-            provider_anime.episodes, 
-            config.stream.translation_type, 
-            []
+            provider_anime.episodes, config.stream.translation_type, []
         )
-        
+
         # Create player params with IPC dependencies for episode navigation
         player_result = ctx.player.play(
             PlayerParams(
@@ -109,7 +108,7 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
                 current_episode=episode_number,
                 current_anime_id=provider_anime.id,
                 current_anime_title=provider_anime.title,
-                current_translation_type=config.stream.translation_type
+                current_translation_type=config.stream.translation_type,
             )
         )
     else:

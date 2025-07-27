@@ -83,10 +83,10 @@ class BaseApiClient(abc.ABC):
     def transform_raw_search_data(self, raw_data: Dict) -> Optional[MediaSearchResult]:
         """
         Transform raw API response data into a MediaSearchResult.
-        
+
         Args:
             raw_data: Raw response data from the API
-            
+
         Returns:
             MediaSearchResult object or None if transformation fails
         """

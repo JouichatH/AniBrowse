@@ -22,11 +22,11 @@ def create_ipc_player_params(
     translation_type: Literal["sub", "dub"] = "sub",
     subtitles: Optional[List[str]] = None,
     headers: Optional[dict] = None,
-    start_time: Optional[str] = None
+    start_time: Optional[str] = None,
 ) -> PlayerParams:
     """
     Create PlayerParams with IPC player dependencies for episode navigation.
-    
+
     Args:
         url: Stream URL
         title: Episode title
@@ -37,13 +37,13 @@ def create_ipc_player_params(
         subtitles: List of subtitle URLs
         headers: HTTP headers for streaming
         start_time: Start time for playback
-    
+
     Returns:
         PlayerParams configured for IPC player
     """
     # Get available episodes for the translation type
     available_episodes: List[str] = getattr(anime.episodes, translation_type, [])
-    
+
     return PlayerParams(
         url=url,
         title=title,
@@ -57,7 +57,7 @@ def create_ipc_player_params(
         current_episode=current_episode,
         current_anime_id=anime.id,
         current_anime_title=anime.title,
-        current_translation_type=translation_type
+        current_translation_type=translation_type,
     )
 
 
@@ -65,7 +65,7 @@ def example_usage():
     """Example of how to use the IPC player in an interactive session."""
     # This would typically be called from within the servers.py menu
     # when the IPC player is enabled
-    
+
     # Updated integration example:
     """
     # In servers.py, around line 82:
@@ -112,28 +112,28 @@ def example_usage():
 
 
 # Key features enabled by IPC player:
-# 
+#
 # 1. Episode Navigation:
 #    - Shift+N: Next episode
 #    - Shift+P: Previous episode
 #    - Shift+R: Reload current episode
-# 
+#
 # 2. Quality/Server switching:
 #    - Script message: select-quality 720
 #    - Script message: select-server gogoanime
-# 
+#
 # 3. Episode jumping:
 #    - Script message: select-episode 5
-# 
+#
 # 4. Translation type switching:
 #    - Shift+T: Toggle between sub/dub
-# 
+#
 # 5. Auto-next episode (when implemented):
 #    - Automatically plays next episode when current one ends
 #
 # To send script messages from MPV console (` key):
 # script-message select-episode 5
-# script-message select-quality 1080  
+# script-message select-quality 1080
 # script-message select-server top
 #
 # Configuration:

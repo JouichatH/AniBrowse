@@ -237,9 +237,7 @@ def _create_local_recent_media_action(ctx: Context, state: State) -> MenuAction:
                 ),
             )
         else:
-            ctx.feedback.info(
-                "No recently watched media found in local registry"
-            )
+            ctx.feedback.info("No recently watched media found in local registry")
             return InternalDirective.RELOAD
 
     return action

@@ -112,7 +112,7 @@ class MpvPlayer(BasePlayer):
     def _stream_on_desktop_with_ipc(self, params: PlayerParams) -> PlayerResult:
         """Stream using IPC player for enhanced features."""
         from .ipc import MpvIPCPlayer
-        
+
         ipc_player = MpvIPCPlayer(self.config)
         return ipc_player.play(params)
 

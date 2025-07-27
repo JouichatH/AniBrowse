@@ -225,15 +225,15 @@ def get_episode_preview(
 def get_dynamic_anime_preview(config: AppConfig) -> str:
     """
     Generate dynamic anime preview script for search functionality.
-    
+
     This is different from regular anime preview because:
     1. We don't have media items upfront
     2. The preview needs to work with search results as they come in
     3. Preview is handled entirely in shell by parsing JSON results
-    
+
     Args:
         config: Application configuration
-        
+
     Returns:
         Preview script content for fzf dynamic search
     """
@@ -249,6 +249,7 @@ def get_dynamic_anime_preview(config: AppConfig) -> str:
 
     # We need to return the path to the search results file
     from ...core.constants import APP_CACHE_DIR
+
     search_cache_dir = APP_CACHE_DIR / "search"
     search_results_file = search_cache_dir / "current_search_results.json"
 

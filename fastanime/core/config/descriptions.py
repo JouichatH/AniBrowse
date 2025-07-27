@@ -91,7 +91,9 @@ MPV_DISABLE_POPEN = (
     "Disable using subprocess.Popen for MPV, which can be unstable on some systems."
 )
 MPV_USE_PYTHON_MPV = "Use the python-mpv library for enhanced player control."
-MPV_USE_IPC = "Use IPC communication with MPV for advanced features like episode navigation."
+MPV_USE_IPC = (
+    "Use IPC communication with MPV for advanced features like episode navigation."
+)
 
 # VlcConfig
 VLC_ARGS = "Comma-separated arguments to pass to the Vlc player."

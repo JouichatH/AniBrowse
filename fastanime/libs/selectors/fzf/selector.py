@@ -128,7 +128,7 @@ class FzfSelector(BaseSelector):
             f"change:reload({search_command})",
             "--ansi",
         ]
-        
+
         if preview:
             commands.extend(["--preview", preview])
 
