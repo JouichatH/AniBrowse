@@ -1,8 +1,4 @@
-from rich.progress import Progress
-from .....core.utils.fuzzy import fuzz
-from .....core.utils.normalizer import normalize_title
-
-from .....libs.provider.anime.params import SearchParams
+from .....libs.provider.anime.params import AnimeParams, SearchParams
 from .....libs.provider.anime.types import SearchResult
 from ...session import Context, session
 from ...state import InternalDirective, MenuName, ProviderState, State
@@ -10,6 +6,9 @@ from ...state import InternalDirective, MenuName, ProviderState, State
 
 @session.menu
 def provider_search(ctx: Context, state: State) -> State | InternalDirective:
+    from .....core.utils.fuzzy import fuzz
+    from .....core.utils.normalizer import normalize_title
+
     feedback = ctx.feedback
     media_item = state.media_api.media_item
     if not media_item:
@@ -74,14 +73,9 @@ def provider_search(ctx: Context, state: State) -> State | InternalDirective:
 
         selected_provider_anime = provider_results_map[chosen_title]
 
-    # --- Fetch Full Anime Details from Provider ---
-    with Progress(transient=True) as progress:
-        progress.add_task(
-            f"[cyan]Fetching full details for '{selected_provider_anime.title}'...",
-            total=None,
-        )
-        from .....libs.provider.anime.params import AnimeParams
-
+    with feedback.progress(
+        f"[cyan]Fetching full details for '{selected_provider_anime.title}'"
+    ):
         full_provider_anime = provider.get(
             AnimeParams(id=selected_provider_anime.id, query=media_title.lower())
         )
