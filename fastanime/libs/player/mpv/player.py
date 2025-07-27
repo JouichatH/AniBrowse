@@ -63,7 +63,7 @@ class MpvPlayer(BasePlayer):
 
         subprocess.run(args)
 
-        return PlayerResult()
+        return PlayerResult(params.episode)
 
     def _play_on_desktop(self, params) -> PlayerResult:
         if not self.executable:
@@ -100,7 +100,9 @@ class MpvPlayer(BasePlayer):
                     stop_time = match.group(1)
                     total_time = match.group(2)
                     break
-        return PlayerResult(total_time=total_time, stop_time=stop_time)
+        return PlayerResult(
+            episode=params.episode, total_time=total_time, stop_time=stop_time
+        )
 
     def play_with_ipc(self, params: PlayerParams, socket_path: str) -> subprocess.Popen:
         """Stream using IPC player for enhanced features."""
@@ -120,9 +122,7 @@ class MpvPlayer(BasePlayer):
 
         logger.info(f"Starting MPV with IPC socket: {socket_path}")
 
-        process = subprocess.Popen(
-            pre_args + mpv_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
+        process = subprocess.Popen(pre_args + mpv_args)
 
         return process
 
@@ -141,7 +141,7 @@ class MpvPlayer(BasePlayer):
             args.extend(mpv_args)
 
         subprocess.run(args)
-        return PlayerResult()
+        return PlayerResult(params.episode)
 
     # TODO: Get people with real friends to do this lol
     def _stream_on_desktop_with_syncplay(self, params: PlayerParams) -> PlayerResult:
@@ -156,7 +156,7 @@ class MpvPlayer(BasePlayer):
             args.extend(mpv_args)
         subprocess.run(args)
 
-        return PlayerResult()
+        return PlayerResult(params.episode)
 
     def _create_mpv_cli_options(self, params: PlayerParams) -> list[str]:
         mpv_args = []
@@ -185,5 +185,5 @@ if __name__ == "__main__":
     print(APP_ASCII_ART)
     url = input("Enter the url you would like to stream: ")
     mpv = MpvPlayer(MpvConfig())
-    player_result = mpv.play(PlayerParams(url=url, title=""))
+    player_result = mpv.play(PlayerParams(episode="", query="", url=url, title=""))
     print(player_result)
