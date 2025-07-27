@@ -24,7 +24,6 @@ class FeedbackService:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
             console.print(main_msg)
-        # time.sleep(5)
 
     def error(self, message: str, details: Optional[str] = None) -> None:
         """Show an error message with optional details."""
@@ -35,7 +34,7 @@ class FeedbackService:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
             console.print(main_msg)
-        time.sleep(5)
+        click.pause("Enter to continue...")
 
     def warning(self, message: str, details: Optional[str] = None) -> None:
         """Show a warning message with optional details."""
@@ -46,7 +45,6 @@ class FeedbackService:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
             console.print(main_msg)
-        time.sleep(5)
 
     def info(self, message: str, details: Optional[str] = None) -> None:
         """Show an informational message with optional details."""

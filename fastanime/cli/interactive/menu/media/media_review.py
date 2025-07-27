@@ -38,8 +38,7 @@ def media_review(ctx: Context, state: State) -> Union[State, InternalDirective]:
         )
 
     if not reviews:
-        feedback.warning("No reviews found for this anime.")
-        selector.ask("Press Enter to return...")
+        feedback.error("No reviews found for this anime.")
         return InternalDirective.BACK
 
     choice_map: Dict[str, MediaReview] = {
