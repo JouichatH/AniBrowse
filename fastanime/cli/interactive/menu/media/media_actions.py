@@ -1,7 +1,5 @@
 from typing import Callable, Dict, Literal, Optional
 
-from rich.console import Console
-
 from .....libs.media_api.params import (
     MediaAiringScheduleParams,
     MediaCharactersParams,
@@ -256,6 +254,7 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
 
         from rich import box
         from rich.columns import Columns
+        from rich.console import Console
         from rich.panel import Panel
         from rich.table import Table
         from rich.text import Text
@@ -267,7 +266,7 @@ def _view_info(ctx: Context, state: State) -> MenuAction:
 
         # Display cover image if available
         if cover_image := media_item.cover_image:
-            image.render_image(cover_image.large)
+            image.render(cover_image.large)
 
         # Create main title
         main_title = (

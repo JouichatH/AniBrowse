@@ -13,7 +13,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
-def render_image(url: str, capture: bool = False, size: str = "30x30") -> Optional[str]:
+def render(url: str, capture: bool = False, size: str = "30x30") -> Optional[str]:
     """
     Renders an image from a URL in the terminal using icat or chafa.
 
