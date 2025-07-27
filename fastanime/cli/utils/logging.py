@@ -4,6 +4,7 @@ from pathlib import Path
 
 from ...core.constants import LOG_FILE
 
+root_logger = logging.getLogger()
 logger = logging.getLogger(__name__)
 
 
@@ -14,15 +15,8 @@ def setup_logging(log: bool | None) -> None:
     if log:
         from rich.logging import RichHandler
 
-        logging.basicConfig(
-            level="DEBUG",
-            format="%(message)s",
-            datefmt="[%X]",
-            handlers=[RichHandler()],
-        )
-        logging.getLogger(__name__).info("Rich logging initialized.")
-    else:
-        logging.basicConfig(level="CRITICAL")
+        root_logger.addHandler(RichHandler())
+        logger.info("Rich logging initialized.")
 
 
 def _setup_default_logger(
@@ -31,9 +25,10 @@ def _setup_default_logger(
     backup_count=5,
     level=logging.DEBUG,
 ):
-    logger.setLevel(level)
+    root_logger.setLevel(level)
+
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(process)d - %(thread)d - %(filename)s:%(lineno)d - %(message)s"
+        "%(asctime)s - [%(process)d:%(thread)d] - %(levelname)-8s  - %(name)s - %(filename)s:%(lineno)d - %(message)s"
     )
 
     file_handler = RotatingFileHandler(
@@ -44,4 +39,4 @@ def _setup_default_logger(
     )
     file_handler.setLevel(level)
     file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+    root_logger.addHandler(file_handler)
