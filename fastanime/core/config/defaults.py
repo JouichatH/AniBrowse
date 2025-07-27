@@ -1,15 +1,18 @@
-from ..constants import APP_DATA_DIR, DEFAULTS_DIR, USER_VIDEOS_DIR
+from ..constants import APP_DATA_DIR, DEFAULTS_DIR, PLATFORM, USER_VIDEOS_DIR
+from ..utils import detect
 
 # GeneralConfig
 GENERAL_PYGMENT_STYLE = "github-dark"
 GENERAL_API_CLIENT = "anilist"
 GENERAL_PREFERRED_TRACKER = "local"
 GENERAL_PROVIDER = "allanime"
-GENERAL_SELECTOR = "default"
+GENERAL_SELECTOR = lambda: "fzf" if detect.has_fzf() else "default"
 GENERAL_AUTO_SELECT_ANIME_RESULT = True
-GENERAL_ICONS = False
-GENERAL_PREVIEW = "none"
-GENERAL_IMAGE_RENDERER = "chafa"
+GENERAL_ICONS = True
+GENERAL_PREVIEW = lambda: "full" if detect.is_running_kitty_terminal() else "none"
+GENERAL_IMAGE_RENDERER = (
+    lambda: "icat" if detect.is_running_kitty_terminal() else "chafa"
+)
 GENERAL_MANGA_VIEWER = "feh"
 GENERAL_CHECK_FOR_UPDATES = True
 GENERAL_CACHE_REQUESTS = True
@@ -32,6 +35,9 @@ STREAM_YTDLP_FORMAT = "best[height<=1080]/bestvideo[height<=1080]+bestaudio/best
 STREAM_FORCE_FORWARD_TRACKING = True
 STREAM_DEFAULT_MEDIA_LIST_TRACKING = "prompt"
 STREAM_SUB_LANG = "eng"
+STREAM_USE_IPC = (
+    lambda: True if PLATFORM != "win32" and not detect.is_running_in_termux() else False
+)
 
 # ServiceConfig
 SERVICE_ENABLED = False
@@ -58,9 +64,6 @@ ROFI_THEME_PREVIEW = _ROFI_THEMES_DIR / "preview.rasi"
 # MpvConfig
 MPV_ARGS = ""
 MPV_PRE_ARGS = ""
-MPV_DISABLE_POPEN = True
-MPV_USE_PYTHON_MPV = False
-MPV_USE_IPC = False
 
 # VlcConfig
 VLC_ARGS = ""

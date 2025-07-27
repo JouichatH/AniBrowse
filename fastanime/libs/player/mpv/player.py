@@ -73,10 +73,6 @@ class MpvPlayer(BasePlayer):
             return self._stream_on_desktop_with_webtorrent_cli(params)
         elif params.syncplay:
             return self._stream_on_desktop_with_syncplay(params)
-        elif self.config.use_ipc:
-            return self._stream_on_desktop_with_ipc(params)
-        elif self.config.use_python_mpv:
-            return self._stream_on_desktop_with_python_mpv(params)
         else:
             return self._stream_on_desktop_with_subprocess(params)
 
@@ -106,15 +102,29 @@ class MpvPlayer(BasePlayer):
                     break
         return PlayerResult(total_time=total_time, stop_time=stop_time)
 
-    def _stream_on_desktop_with_python_mpv(self, params: PlayerParams) -> PlayerResult:
-        return PlayerResult()
-
-    def _stream_on_desktop_with_ipc(self, params: PlayerParams) -> PlayerResult:
+    def play_with_ipc(self, params: PlayerParams, socket_path: str) -> subprocess.Popen:
         """Stream using IPC player for enhanced features."""
-        from .ipc import MpvIPCPlayer
+        mpv_args = [
+            self.executable,
+            f"--input-ipc-server={socket_path}",
+            "--idle=yes",
+            "--force-window=yes",
+            params.url,
+        ]
 
-        ipc_player = MpvIPCPlayer(self.config)
-        return ipc_player.play(params)
+        # Add custom MPV arguments
+        mpv_args.extend(self._create_mpv_cli_options(params))
+
+        # Add pre-args if configured
+        pre_args = self.config.pre_args.split(",") if self.config.pre_args else []
+
+        logger.info(f"Starting MPV with IPC socket: {socket_path}")
+
+        process = subprocess.Popen(
+            pre_args + mpv_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+
+        return process
 
     def _stream_on_desktop_with_webtorrent_cli(
         self, params: PlayerParams

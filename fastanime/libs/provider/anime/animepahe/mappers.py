@@ -59,6 +59,7 @@ def map_to_anime_result(
 ) -> Anime:
     episodes_info = []
     episodes = []
+    anime["data"] = sorted(anime["data"], key=lambda k: float(k["episode"]))
     for ep_info in anime["data"]:
         episodes.append(str(ep_info["episode"]))
         episodes_info.append(

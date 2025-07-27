@@ -58,7 +58,7 @@ def provider_search(ctx: Context, state: State) -> State | InternalDirective:
                 media_title.lower(),
             ),
         )
-        feedback.info("Auto-selecting best match: {best_match_title}")
+        feedback.info(f"Auto-selecting best match: {best_match_title}")
         selected_provider_anime = provider_results_map[best_match_title]
     else:
         choices = list(provider_results_map.keys())
