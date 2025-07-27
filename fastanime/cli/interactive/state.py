@@ -41,6 +41,7 @@ class MenuName(Enum):
     MEDIA_ACTIONS = "MEDIA_ACTIONS"
     DOWNLOADS = "DOWNLOADS"
     DYNAMIC_SEARCH = "DYNAMIC_SEARCH"
+    MEDIA_REVIEW = "MEDIA_REVIEW"
 
 
 class StateModel(BaseModel):

@@ -6,7 +6,7 @@ including image downloads and info text generation with proper lifecycle managem
 """
 
 import logging
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import httpx
 
@@ -19,15 +19,19 @@ from ...core.utils.concurrency import (
     thread_manager,
 )
 from ...core.utils.file import AtomicWriter
-from ...libs.media_api.types import MediaItem
+from ...libs.media_api.types import MediaItem, MediaReview
 
 logger = logging.getLogger(__name__)
-FZF_SCRIPTS_DIR = SCRIPTS_DIR / "fzf"
 
+
+FZF_SCRIPTS_DIR = SCRIPTS_DIR / "fzf"
 TEMPLATE_INFO_SCRIPT = (FZF_SCRIPTS_DIR / "info.template.sh").read_text(
     encoding="utf-8"
 )
 TEMPLATE_EPISODE_INFO_SCRIPT = (FZF_SCRIPTS_DIR / "episode-info.template.sh").read_text(
+    encoding="utf-8"
+)
+TEMPLATE_REVIEW_INFO_SCRIPT = (FZF_SCRIPTS_DIR / "review-info.template.sh").read_text(
     encoding="utf-8"
 )
 
@@ -394,6 +398,81 @@ class EpisodeCacheWorker(ManagedBackgroundWorker):
             logger.debug("Episode cache task completed successfully")
 
 
+class ReviewCacheWorker(ManagedBackgroundWorker):
+    """
+    Specialized background worker for caching fully-rendered media review previews.
+    """
+
+    def __init__(self, reviews_cache_dir, max_workers: int = 10):
+        super().__init__(max_workers=max_workers, name="ReviewCacheWorker")
+        self.reviews_cache_dir = reviews_cache_dir
+
+    def cache_review_previews(
+        self, choice_map: Dict[str, MediaReview], config: AppConfig
+    ) -> None:
+        """
+        Creates cache files containing the final, formatted preview content for each review.
+
+        Args:
+            choice_map: Dictionary mapping the fzf choice string to the MediaReview object.
+            config: The application configuration.
+        """
+        if not self.is_running():
+            raise RuntimeError("ReviewCacheWorker is not running")
+
+        for choice_str, review in choice_map.items():
+            hash_id = self._get_cache_hash(choice_str)
+            info_path = self.reviews_cache_dir / hash_id
+
+            preview_content = self._generate_review_preview_content(review, config)
+            self.submit_function(self._save_preview_content, preview_content, hash_id)
+
+    def _generate_review_preview_content(
+        self, review: MediaReview, config: AppConfig
+    ) -> str:
+        """
+        Generates the final, formatted preview content by injecting data into the template.
+        """
+
+        # Prepare the data for injection
+        reviewer = review.user.name
+        summary = review.summary or "N/A"
+        body = review.body
+
+        # Inject data into the presentation template
+        template = TEMPLATE_REVIEW_INFO_SCRIPT
+        replacements = {
+            "REVIEWER_NAME": formatter.shell_safe(reviewer),
+            "REVIEW_SUMMARY": formatter.shell_safe(summary),
+            "REVIEW_BODY": formatter.shell_safe(body),
+        }
+        for key, value in replacements.items():
+            template = template.replace(f"{{{key}}}", value)
+
+        return template
+
+    def _save_preview_content(self, content: str, hash_id: str) -> None:
+        """Saves the final preview content to the cache."""
+        try:
+            info_path = self.reviews_cache_dir / hash_id
+            with AtomicWriter(info_path) as f:
+                f.write(content)
+            logger.debug(f"Successfully cached review preview: {hash_id}")
+        except IOError as e:
+            logger.error(f"Failed to write review preview cache for {hash_id}: {e}")
+            raise
+
+    def _get_cache_hash(self, text: str) -> str:
+        from hashlib import sha256
+
+        return sha256(text.encode("utf-8")).hexdigest()
+
+    def _on_task_completed(self, task: WorkerTask, future) -> None:
+        super()._on_task_completed(task, future)
+        if future.exception():
+            logger.warning(f"Review cache task failed: {future.exception()}")
+
+
 class PreviewWorkerManager:
     """
     High-level manager for preview caching workers.
@@ -402,7 +481,7 @@ class PreviewWorkerManager:
     caching workers with automatic lifecycle management.
     """
 
-    def __init__(self, images_cache_dir, info_cache_dir):
+    def __init__(self, images_cache_dir, info_cache_dir, reviews_cache_dir):
         """
         Initialize the preview worker manager.
 
@@ -412,8 +491,10 @@ class PreviewWorkerManager:
         """
         self.images_cache_dir = images_cache_dir
         self.info_cache_dir = info_cache_dir
+        self.reviews_cache_dir = reviews_cache_dir
         self._preview_worker: Optional[PreviewCacheWorker] = None
         self._episode_worker: Optional[EpisodeCacheWorker] = None
+        self._review_worker: Optional[ReviewCacheWorker] = None
 
     def get_preview_worker(self) -> PreviewCacheWorker:
         """Get or create the preview cache worker."""
@@ -444,6 +525,19 @@ class PreviewWorkerManager:
             thread_manager.register_worker("episode_cache_worker", self._episode_worker)
 
         return self._episode_worker
+
+    def get_review_worker(self) -> ReviewCacheWorker:
+        """Get or create the episode cache worker."""
+        if self._review_worker is None or not self._review_worker.is_running():
+            if self._episode_worker:
+                # Clean up old worker
+                thread_manager.shutdown_worker("review_cache_worker")
+
+            self._review_worker = ReviewCacheWorker(self.reviews_cache_dir)
+            self._review_worker.start()
+            thread_manager.register_worker("review_cache_worker", self._review_worker)
+
+        return self._review_worker
 
     def shutdown_all(self, wait: bool = True, timeout: Optional[float] = 30.0) -> None:
         """Shutdown all managed workers."""

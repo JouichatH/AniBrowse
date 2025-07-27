@@ -105,3 +105,10 @@ class MediaRelationsParams:
 @dataclass(frozen=True)
 class MediaAiringScheduleParams:
     id: int
+
+
+@dataclass(frozen=True)
+class MediaReviewsParams:
+    id: int
+    page: int = 1
+    per_page: Optional[int] = None

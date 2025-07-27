@@ -7,11 +7,12 @@ from .params import (
     MediaCharactersParams,
     MediaRecommendationParams,
     MediaRelationsParams,
+    MediaReviewsParams,
     MediaSearchParams,
     UpdateUserMediaListEntryParams,
     UserMediaListSearchParams,
 )
-from .types import MediaItem, MediaSearchResult, UserProfile
+from .types import MediaItem, MediaReview, MediaSearchResult, UserProfile
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -77,6 +78,12 @@ class BaseApiClient(abc.ABC):
     def get_airing_schedule_for(
         self, params: MediaAiringScheduleParams
     ) -> Optional[Dict]:
+        pass
+
+    @abc.abstractmethod
+    def get_reviews_for(
+        self, params: MediaReviewsParams
+    ) -> Optional[List[MediaReview]]:
         pass
 
     @abc.abstractmethod

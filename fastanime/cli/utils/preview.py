@@ -1,11 +1,11 @@
 import logging
 import os
 import re
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from ...core.config import AppConfig
 from ...core.constants import APP_CACHE_DIR, PLATFORM, SCRIPTS_DIR
-from ...libs.media_api.types import MediaItem
+from ...libs.media_api.types import MediaItem, MediaReview
 from . import ansi
 from .preview_workers import PreviewWorkerManager
 
@@ -16,12 +16,16 @@ os.environ["SHELL"] = "bash"
 PREVIEWS_CACHE_DIR = APP_CACHE_DIR / "previews"
 IMAGES_CACHE_DIR = PREVIEWS_CACHE_DIR / "images"
 INFO_CACHE_DIR = PREVIEWS_CACHE_DIR / "info"
+REVIEWS_CACHE_DIR = PREVIEWS_CACHE_DIR / "reviews"
 
 FZF_SCRIPTS_DIR = SCRIPTS_DIR / "fzf"
 TEMPLATE_PREVIEW_SCRIPT = (FZF_SCRIPTS_DIR / "preview.template.sh").read_text(
     encoding="utf-8"
 )
-DYNAMIC_PREVIEW_SCRIPT = (FZF_SCRIPTS_DIR / "dynamic_preview.template.sh").read_text(
+TEMPLATE_REVIEW_PREVIEW_SCRIPT = (
+    FZF_SCRIPTS_DIR / "review-preview.template.sh"
+).read_text(encoding="utf-8")
+DYNAMIC_PREVIEW_SCRIPT = (FZF_SCRIPTS_DIR / "dynamic-preview.template.sh").read_text(
     encoding="utf-8"
 )
 
@@ -87,6 +91,14 @@ class PreviewContext:
         if not self._manager:
             self._manager = _get_preview_manager()
         return get_dynamic_anime_preview(config)
+
+    def get_review_preview(
+        self, choice_map: Dict[str, MediaReview], config: AppConfig
+    ) -> str:
+        """Get review preview script with managed workers."""
+        if not self._manager:
+            self._manager = _get_preview_manager()
+        return get_review_preview(choice_map, config)
 
     def cancel_all_tasks(self) -> int:
         """Cancel all running preview tasks."""
@@ -247,9 +259,6 @@ def get_dynamic_anime_preview(config: AppConfig) -> str:
     # Use the dynamic preview script template
     preview_script = DYNAMIC_PREVIEW_SCRIPT
 
-    # We need to return the path to the search results file
-    from ...core.constants import APP_CACHE_DIR
-
     search_cache_dir = APP_CACHE_DIR / "search"
     search_results_file = search_cache_dir / "current_search_results.json"
 
@@ -282,7 +291,9 @@ def _get_preview_manager() -> PreviewWorkerManager:
     """Get or create the global preview worker manager."""
     global _preview_manager
     if _preview_manager is None:
-        _preview_manager = PreviewWorkerManager(IMAGES_CACHE_DIR, INFO_CACHE_DIR)
+        _preview_manager = PreviewWorkerManager(
+            IMAGES_CACHE_DIR, INFO_CACHE_DIR, REVIEWS_CACHE_DIR
+        )
     return _preview_manager
 
 
@@ -306,3 +317,38 @@ def get_preview_worker_status() -> dict:
     if _preview_manager:
         return _preview_manager.get_status()
     return {"preview_worker": None, "episode_worker": None}
+
+
+def get_review_preview(choice_map: Dict[str, MediaReview], config: AppConfig) -> str:
+    """
+    Generate the generic loader script for review previews and start background caching.
+    """
+
+    REVIEWS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    preview_manager = _get_preview_manager()
+    worker = preview_manager.get_review_worker()
+    worker.cache_review_previews(choice_map, config)
+    logger.debug("Started background caching for review previews")
+
+    # Use the generic loader script
+    preview_script = TEMPLATE_REVIEW_PREVIEW_SCRIPT
+    path_sep = "\\" if PLATFORM == "win32" else "/"
+
+    # Inject the correct cache path and color codes
+    replacements = {
+        "PREVIEW_MODE": config.general.preview,
+        "INFO_CACHE_DIR": str(REVIEWS_CACHE_DIR),
+        "PATH_SEP": path_sep,
+        "C_TITLE": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),
+        "C_KEY": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),
+        "C_VALUE": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),
+        "C_RULE": ansi.get_true_fg(
+            config.fzf.preview_separator_color.split(","), bold=True
+        ),
+        "RESET": ansi.RESET,
+    }
+
+    for key, value in replacements.items():
+        preview_script = preview_script.replace(f"{{{key}}}", value)
+
+    return preview_script

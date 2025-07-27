@@ -1,4 +1,11 @@
-from typing import Literal, TypedDict
+from typing import Literal, Optional, TypedDict
+
+
+class AnilistPageInfo(TypedDict):
+    total: int
+    perPage: int
+    currentPage: int
+    hasNextPage: bool
 
 
 class AnilistMediaTitle(TypedDict):
@@ -16,7 +23,7 @@ class AnilistImage(TypedDict):
 class AnilistCurrentlyLoggedInUser(TypedDict):
     id: int
     name: str
-    bannerImage: str | None
+    bannerImage: Optional[str]
     avatar: AnilistImage
     token: str
 
@@ -31,9 +38,9 @@ class AnilistViewerData(TypedDict):
 
 class AnilistUser(TypedDict):
     name: str
-    about: str | None
+    about: Optional[str]
     avatar: AnilistImage
-    bannerImage: str | None
+    bannerImage: Optional[str]
 
 
 class AnilistUserInfo(TypedDict):
@@ -74,15 +81,6 @@ class AnilistMediaNextAiringEpisode(TypedDict):
     timeUntilAiring: int
     airingAt: int
     episode: int
-
-
-class AnilistReview(TypedDict):
-    summary: str
-    user: AnilistCurrentlyLoggedInUser
-
-
-class AnilistReviewNodes(TypedDict):
-    nodes: list[AnilistReview]
 
 
 class AnilistMediaRanking(TypedDict):
@@ -151,6 +149,29 @@ class StreamingEpisode(TypedDict):
     thumbnail: str
 
 
+class AnilistReview(TypedDict):
+    summary: str
+    user: AnilistCurrentlyLoggedInUser
+    body: Optional[str]
+
+
+class AnilistReviewPage(TypedDict):
+    pageInfo: AnilistPageInfo
+    reviews: list[AnilistReview]
+
+
+class AnilistReviewPages(TypedDict):
+    Page: AnilistReviewPage
+
+
+class AnilistReviews(TypedDict):
+    data: AnilistReviewPages
+
+
+class AnilistReviewNodes(TypedDict):
+    nodes: list[AnilistReview]
+
+
 class AnilistBaseMediaDataSchema(TypedDict):
     """
     This a convenience class is used to type the received Anilist data to enhance dev experience
@@ -190,13 +211,6 @@ class AnilistBaseMediaDataSchema(TypedDict):
     characters: AnilistCharactersEdges
     format: str
     mediaListEntry: AnilistMediaList_ | None
-
-
-class AnilistPageInfo(TypedDict):
-    total: int
-    perPage: int
-    currentPage: int
-    hasNextPage: bool
 
 
 class AnilistPage(TypedDict):

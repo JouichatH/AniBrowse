@@ -22,9 +22,14 @@ class PlayerService:
         self.player = create_player(app_config)
 
     def play(
-        self, params: PlayerParams, anime: Anime, media_item: Optional[MediaItem] = None
+        self,
+        params: PlayerParams,
+        anime: Optional[Anime] = None,
+        media_item: Optional[MediaItem] = None,
     ) -> PlayerResult:
         if self.app_config.stream.use_ipc:
+            if not anime:
+                raise FastAnimeError("Anime object is required to run with ipc support")
             return self._play_with_ipc(params, anime, media_item)
         else:
             return self.player.play(params)

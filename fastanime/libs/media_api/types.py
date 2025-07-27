@@ -199,7 +199,24 @@ class UserProfile(BaseMediaApiModel):
     banner_url: Optional[str] = None
 
 
+class Reviewer(BaseMediaApiModel):
+    """A generic representation of a user who wrote a review."""
+
+    name: str
+    avatar_url: Optional[str] = None
+
+
+class MediaReview(BaseMediaApiModel):
+    """A generic representation of a media review."""
+
+    summary: Optional[str] = None
+    body: str
+    user: Reviewer
+
+
 # ENUMS
+
+
 class MediaTag(Enum):
     # Cast
     POLYAMOROUS = "Polyamorous"

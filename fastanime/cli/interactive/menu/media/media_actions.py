@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Literal, Optional
+from typing import Callable, Dict, List, Literal, Optional, Union
 
 from .....libs.media_api.params import (
     MediaAiringScheduleParams,
@@ -7,7 +7,12 @@ from .....libs.media_api.params import (
     MediaRelationsParams,
     UpdateUserMediaListEntryParams,
 )
-from .....libs.media_api.types import MediaItem, MediaStatus, UserMediaListStatus
+from .....libs.media_api.types import (
+    MediaItem,
+    MediaReview,
+    MediaStatus,
+    UserMediaListStatus,
+)
 from .....libs.player.params import PlayerParams
 from ...session import Context, session
 from ...state import InternalDirective, MediaApiState, MenuName, State
@@ -40,6 +45,7 @@ def media_actions(ctx: Context, state: State) -> State | InternalDirective:
         f"{'🔄 ' if icons else ''}Related Anime": _view_relations(ctx, state),
         f"{'👥 ' if icons else ''}Characters": _view_characters(ctx, state),
         f"{'📅 ' if icons else ''}Airing Schedule": _view_airing_schedule(ctx, state),
+        f"{'📝 ' if icons else ''}View Reviews": _view_reviews(ctx, state),
         f"{'➕ ' if icons else ''}Add/Update List": _manage_user_media_list(ctx, state),
         f"{'⭐ ' if icons else ''}Score Anime": _score_anime(ctx, state),
         f"{'ℹ️ ' if icons else ''}View Info": _view_info(ctx, state),
@@ -127,7 +133,9 @@ def _watch_trailer(ctx: Context, state: State) -> MenuAction:
         else:
             trailer_url = f"https://www.youtube.com/watch?v={media_item.trailer.id}"
 
-            ctx.player.play(PlayerParams(url=trailer_url, title=""))
+            ctx.player.play(
+                PlayerParams(url=trailer_url, query="", episode="", title="")
+            )
 
         return InternalDirective.RELOAD
 
@@ -772,5 +780,14 @@ def _view_airing_schedule(ctx: Context, state: State) -> MenuAction:
             feedback.error(f"Error displaying airing schedule: {e}")
 
         return InternalDirective.RELOAD
+
+    return action
+
+
+def _view_reviews(ctx: Context, state: State) -> MenuAction:
+    """Action to transition to the review selection menu."""
+
+    def action() -> State | InternalDirective:
+        return State(menu_name=MenuName.MEDIA_REVIEW, media_api=state.media_api)
 
     return action

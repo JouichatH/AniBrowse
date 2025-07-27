@@ -12,6 +12,7 @@ from ..types import (
     MediaGenre,
     MediaImage,
     MediaItem,
+    MediaReview,
     MediaSearchResult,
     MediaStatus,
     MediaTag,
@@ -19,6 +20,7 @@ from ..types import (
     MediaTitle,
     MediaTrailer,
     PageInfo,
+    Reviewer,
     StreamingEpisode,
     Studio,
     UserListItem,
@@ -38,6 +40,8 @@ from .types import (
     AnilistMediaTitle,
     AnilistMediaTrailer,
     AnilistPageInfo,
+    AnilistReview,
+    AnilistReviews,
     AnilistStudioNodes,
     AnilistViewerData,
 )
@@ -349,3 +353,38 @@ def to_generic_recommendations(data: dict) -> Optional[List[MediaItem]]:
                 continue
 
     return result if result else None
+
+
+def _to_generic_reviewer(anilist_user: AnilistCurrentlyLoggedInUser) -> Reviewer:
+    """Maps an AniList user object to a generic Reviewer."""
+    return Reviewer(
+        name=anilist_user["name"],
+        avatar_url=anilist_user["avatar"]["large"]
+        if anilist_user.get("avatar")
+        else None,
+    )
+
+
+def _to_generic_review(anilist_review: AnilistReview) -> MediaReview:
+    """Maps a single AniList review to a generic Review."""
+    return MediaReview(
+        summary=anilist_review.get("summary"),
+        body=anilist_review.get("body", "No review body provided.") or "",
+        user=_to_generic_reviewer(anilist_review["user"]),
+    )
+
+
+def to_generic_reviews_list(data: AnilistReviews) -> Optional[List[MediaReview]]:
+    """Top-level mapper for a list of reviews."""
+    if not data or "data" not in data:
+        return None
+
+    page_data = data["data"].get("Page", {})
+    if not page_data:
+        return None
+
+    raw_reviews = page_data.get("reviews", [])
+    if not raw_reviews:
+        return []
+
+    return [_to_generic_review(review) for review in raw_reviews if review]

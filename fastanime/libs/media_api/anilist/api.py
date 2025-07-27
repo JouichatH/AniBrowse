@@ -14,11 +14,18 @@ from ..params import (
     MediaCharactersParams,
     MediaRecommendationParams,
     MediaRelationsParams,
+    MediaReviewsParams,
     MediaSearchParams,
     UpdateUserMediaListEntryParams,
     UserMediaListSearchParams,
 )
-from ..types import MediaItem, MediaSearchResult, UserMediaListStatus, UserProfile
+from ..types import (
+    MediaItem,
+    MediaReview,
+    MediaSearchResult,
+    UserMediaListStatus,
+    UserProfile,
+)
 from . import gql, mapper
 
 logger = logging.getLogger(__name__)
@@ -247,6 +254,21 @@ class AniListApi(BaseApiClient):
         )
         # TODO: standardize airing schedule type
         return response.json()
+
+    def get_reviews_for(
+        self, params: MediaReviewsParams
+    ) -> Optional[List[MediaReview]]:
+        variables = {
+            "id": params.id,
+            "page": params.page,
+            "per_page": params.per_page or 10,  # Default to 10 reviews
+        }
+        response = execute_graphql(
+            ANILIST_ENDPOINT, self.http_client, gql.GET_REVIEWS, variables
+        )
+        if response and "errors" not in response.json():
+            return mapper.to_generic_reviews_list(response.json())
+        return None
 
     def transform_raw_search_data(self, raw_data: Any) -> Optional[MediaSearchResult]:
         """
