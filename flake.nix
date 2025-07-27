@@ -2,68 +2,103 @@
   description = "FastAnime Project Flake";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # The nixpkgs unstable latest commit breaks the plyer python package
+    nixpkgs.url = "github:nixos/nixpkgs/3ff0e34b1383648053bba8ed03f201d3466f90c9";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }: flake-utils.lib.eachDefaultSystem (system:
-    let
-      pkgs = import nixpkgs { inherit system; };
-
-      python = pkgs.python312;
-      pythonPackages = python.pkgs;
-      fastanimeEnv = pythonPackages.buildPythonApplication {
-        pname = "fastanime";
-        version = "2.9.9";
-
-        src = self;
-
-        preBuild = ''
-          sed -i 's/rich>=13.9.2/rich>=13.8.1/' pyproject.toml
-          sed -i 's/pycryptodome>=3.21.0/pycryptodome>=3.20.0/' pyproject.toml
-        '';
-
-        # Add runtime dependencies
-        propagatedBuildInputs = with pythonPackages; [
-          click
-          inquirerpy
-          requests
-          rich
-          thefuzz
-          yt-dlp
-          dbus-python
-          hatchling
-          plyer
-          mpv
-          fastapi
-          pycryptodome
-          pypresence
-        ];
-
-        # Ensure compatibility with the pyproject.toml
-        format = "pyproject";
-      };
-
-    in
+  outputs =
     {
-      packages.default = fastanimeEnv;
+      self,
+      nixpkgs,
+      flake-utils,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        inherit (pkgs) lib python3Packages;
 
-      # DevShell for development
-      devShells.default = pkgs.mkShell {
-        LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.libxcrypt-legacy ];
-        buildInputs = [
-          fastanimeEnv
-          pythonPackages.hatchling
-          pkgs.mpv
-          pkgs.fzf
-          pkgs.rofi
-          pkgs.uv
-          pkgs.pyright
-        ];
-        shellHook = ''
-          uv venv -q
-          source ./.venv/bin/activate
-        '';
-      };
-    });
+        version = "2.9.9";
+      in
+      {
+        packages.default = python3Packages.buildPythonApplication {
+          pname = "fastanime";
+          inherit version;
+          pyproject = true;
+
+          src = self;
+
+          build-system = with python3Packages; [ hatchling ];
+
+          dependencies = with python3Packages; [
+            click
+            inquirerpy
+            requests
+            rich
+            thefuzz
+            yt-dlp
+            dbus-python
+            hatchling
+            plyer
+            mpv
+            fastapi
+            pycryptodome
+            pypresence
+            httpx
+          ];
+
+          postPatch = ''
+            substituteInPlace pyproject.toml \
+              --replace-fail "pydantic>=2.11.7" "pydantic>=2.11.4"
+          '';
+
+          makeWrapperArgs = [
+            "--prefix PATH : ${
+              lib.makeBinPath (
+                with pkgs;
+                [
+                  mpv
+                ]
+              )
+            }"
+          ];
+
+          # Needs to be adapted for the nix derivation build
+          doCheck = false;
+
+          pythonImportsCheck = [ "fastanime" ];
+
+          meta = {
+            description = "Your browser anime experience from the terminal";
+            homepage = "https://github.com/Benexl/FastAnime";
+            changelog = "https://github.com/Benexl/FastAnime/releases/tag/v${version}";
+            mainProgram = "fastanime";
+            license = lib.licenses.unlicense;
+            maintainers = with lib.maintainers; [ theobori ];
+          };
+        };
+
+        devShells.default = pkgs.mkShell {
+          venvDir = ".venv";
+
+          env.LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.libxcrypt-legacy ];
+
+          packages =
+            with pkgs;
+            [
+              mpv
+              fzf
+              rofi
+              uv
+              pyright
+            ]
+            ++ (with python3Packages; [
+              venvShellHook
+              hatchling
+            ])
+            ++ self.packages.${system}.default.dependencies;
+        };
+      }
+    );
 }
