@@ -4,7 +4,7 @@ import click
 from click.core import ParameterSource
 
 from ..core.config import AppConfig
-from ..core.constants import PROJECT_NAME, USER_CONFIG_PATH, __version__
+from ..core.constants import PROJECT_NAME, USER_CONFIG, __version__
 from .config import ConfigLoader
 from .options import options_from_model
 from .utils.exception import setup_exceptions_handler
@@ -66,7 +66,7 @@ def cli(ctx: click.Context, **options: "Unpack[Options]"):
     """
     The main entry point for the FastAnime CLI.
     """
-    setup_logging(options["log"], options["log_to_file"])
+    setup_logging(options["log"])
     setup_exceptions_handler(
         options["trace"],
         options["dev"],
@@ -94,7 +94,7 @@ def cli(ctx: click.Context, **options: "Unpack[Options]"):
                     cli_overrides[model_name] = {}
                 cli_overrides[model_name][field_name] = param_value
 
-    loader = ConfigLoader(config_path=USER_CONFIG_PATH)
+    loader = ConfigLoader(config_path=USER_CONFIG)
     config = (
         AppConfig.model_validate(cli_overrides)
         if options["no_config"]

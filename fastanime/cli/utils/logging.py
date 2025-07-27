@@ -1,11 +1,16 @@
 import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-from ...core.constants import LOG_FILE_PATH
+from ...core.constants import LOG_FILE
+
+logger = logging.getLogger(__name__)
 
 
-def setup_logging(log: bool | None, log_file: bool | None) -> None:
+def setup_logging(log: bool | None) -> None:
     """Configures the application's logging based on CLI flags."""
 
+    _setup_default_logger()
     if log:
         from rich.logging import RichHandler
 
@@ -16,13 +21,27 @@ def setup_logging(log: bool | None, log_file: bool | None) -> None:
             handlers=[RichHandler()],
         )
         logging.getLogger(__name__).info("Rich logging initialized.")
-    elif log_file:
-        logging.basicConfig(
-            level="DEBUG",
-            filename=LOG_FILE_PATH,
-            format="%(asctime)s %(levelname)s: %(message)s",
-            datefmt="[%d/%m/%Y@%H:%M:%S]",
-            filemode="w",
-        )
     else:
         logging.basicConfig(level="CRITICAL")
+
+
+def _setup_default_logger(
+    log_file_path: Path = LOG_FILE,
+    max_bytes=10 * 1024 * 1024,  # 10mb
+    backup_count=5,
+    level=logging.DEBUG,
+):
+    logger.setLevel(level)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(process)d - %(thread)d - %(filename)s:%(lineno)d - %(message)s"
+    )
+
+    file_handler = RotatingFileHandler(
+        log_file_path,
+        maxBytes=max_bytes,
+        backupCount=backup_count,
+        encoding="utf-8",
+    )
+    file_handler.setLevel(level)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
