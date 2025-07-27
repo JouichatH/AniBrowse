@@ -52,8 +52,8 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
     server_map: Dict[str, Server] = {s.name: s for s in all_servers}
     selected_server: Server | None = None
 
-    preferred_server = config.stream.server.value.lower()
-    if preferred_server == "top":
+    preferred_server = config.stream.server.value
+    if preferred_server == "TOP":
         selected_server = all_servers[0]
         feedback.info(f"Auto-selecting top server: {selected_server.name}")
     elif preferred_server in server_map:
@@ -76,54 +76,30 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
     final_title = (
         media_item.streaming_episodes[episode_number].title
         if media_item.streaming_episodes.get(episode_number)
-        else f"{media_item.title.english} - Ep {episode_number}"
+        else f"{media_item.title.english}; Episode {episode_number}"
     )
     feedback.info(f"[bold green]Launching player for:[/] {final_title}")
 
-    # TODO: Refine implementation mpv ipc player
-    # Check if IPC player should be used and if we have the required data
-    if (
-        config.mpv.use_ipc
-        and state.provider.anime
-        and provider_anime
-        and episode_number
-    ):
-        # Get available episodes for current translation type
-        available_episodes = getattr(
-            provider_anime.episodes, config.stream.translation_type, []
-        )
-
-        # Create player params with IPC dependencies for episode navigation
-        player_result = ctx.player.play(
-            PlayerParams(
-                url=stream_link_obj.link,
-                title=final_title,
-                subtitles=[sub.url for sub in selected_server.subtitles],
-                headers=selected_server.headers,
-                start_time=state.provider.start_time,
-                # IPC-specific parameters for episode navigation
-                anime_provider=provider,
-                current_anime=provider_anime,
-                available_episodes=available_episodes,
-                current_episode=episode_number,
-                current_anime_id=provider_anime.id,
-                current_anime_title=provider_anime.title,
-                current_translation_type=config.stream.translation_type,
-            )
-        )
-    else:
-        # Use regular player without IPC features
-        player_result = ctx.player.play(
-            PlayerParams(
-                url=stream_link_obj.link,
-                title=final_title,
-                subtitles=[sub.url for sub in selected_server.subtitles],
-                headers=selected_server.headers,
-                start_time=state.provider.start_time,
-            )
-        )
+    if not state.media_api.media_item or not state.provider.anime:
+        return InternalDirective.BACKX3
+    player_result = ctx.player.play(
+        PlayerParams(
+            url=stream_link_obj.link,
+            title=final_title,
+            query=(
+                state.media_api.media_item.title.romaji
+                or state.media_api.media_item.title.english
+            ),
+            episode=episode_number,
+            subtitles=[sub.url for sub in selected_server.subtitles],
+            headers=selected_server.headers,
+            start_time=state.provider.start_time,
+        ),
+        state.provider.anime,
+        state.media_api.media_item,
+    )
     if media_item and episode_number:
-        ctx.watch_history.track(media_item, episode_number, player_result)
+        ctx.watch_history.track(media_item, player_result)
 
     return State(
         menu_name=MenuName.PLAYER_CONTROLS,

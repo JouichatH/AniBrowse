@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     class Options(TypedDict):
         no_config: bool | None
         trace: bool | None
-        log_to_file: bool | None
         dev: bool | None
         log: bool | None
         rich_traceback: bool | None
@@ -53,7 +52,6 @@ commands = {
 )
 @click.option("--dev", is_flag=True, help="Controls Whether the app is in dev mode")
 @click.option("--log", is_flag=True, help="Controls Whether to log")
-@click.option("--log-to-file", is_flag=True, help="Controls Whether to log to a file")
 @click.option(
     "--rich-traceback",
     is_flag=True,

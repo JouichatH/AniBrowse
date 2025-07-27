@@ -35,7 +35,7 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
         chosen_episode, start_time = ctx.watch_history.get_episode(media_item)
 
     if not chosen_episode or ctx.switch.show_episodes_menu:
-        choices = [*sorted(available_episodes, key=float), "Back"]
+        choices = [*available_episodes, "Back"]
 
         preview_command = None
         if ctx.config.general.preview != "none":

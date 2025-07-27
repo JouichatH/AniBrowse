@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 import click
+from fastanime.cli.service.player.service import PlayerService
 
 from ...core.config import AppConfig
 from ...core.exceptions import FastAnimeError
@@ -130,10 +131,9 @@ def stream_anime(
     from rich.progress import Progress
 
     from ...libs.player.params import PlayerParams
-    from ...libs.player.player import create_player
     from ...libs.provider.anime.params import EpisodeStreamsParams
 
-    player = create_player(config)
+    player_service = PlayerService(config, provider)
 
     with Progress() as progress:
         progress.add_task("Fetching Episode Streams...", total=None)
@@ -163,7 +163,7 @@ def stream_anime(
             progress.add_task("Fetching servers", total=None)
             servers = {server.name: server for server in streams}
         servers_names = list(servers.keys())
-        if config.stream.server in servers_names:
+        if config.stream.server.value in servers_names:
             server = servers[config.stream.server.value]
         else:
             server_name = selector.choose("Select Server", servers_names)
@@ -177,35 +177,14 @@ def stream_anime(
         )
     print(f"[green bold]Now Streaming:[/] {anime.title} Episode: {episode}")
 
-    # Check if IPC player should be used
-    if config.mpv.use_ipc:
-        # Get available episodes for current translation type
-        available_episodes = getattr(anime.episodes, config.stream.translation_type, [])
-
-        # Use IPC player with episode navigation capabilities
-        player.play(
-            PlayerParams(
-                url=stream_link,
-                title=f"{anime.title}; Episode {episode}",
-                subtitles=[sub.url for sub in server.subtitles],
-                headers=server.headers,
-                # IPC-specific parameters for episode navigation
-                anime_provider=provider,
-                current_anime=anime,
-                available_episodes=available_episodes,
-                current_episode=episode,
-                current_anime_id=anime.id,
-                current_anime_title=anime.title,
-                current_translation_type=config.stream.translation_type,
-            )
-        )
-    else:
-        # Use regular player
-        player.play(
-            PlayerParams(
-                url=stream_link,
-                title=f"{anime.title}; Episode {episode}",
-                subtitles=[sub.url for sub in server.subtitles],
-                headers=server.headers,
-            )
-        )
+    player_service.play(
+        PlayerParams(
+            url=stream_link,
+            title=f"{anime.title}; Episode {episode}",
+            query=anime_title,
+            episode=episode,
+            subtitles=[sub.url for sub in server.subtitles],
+            headers=server.headers,
+        ),
+        anime,
+    )

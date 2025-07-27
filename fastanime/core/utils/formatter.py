@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import List, Optional, Dict, Union
+from typing import Dict, List, Optional, Union
 
 from ...libs.media_api.types import AiringSchedule
 
@@ -64,6 +64,14 @@ def format_date(dt: Optional[datetime], format_str: str = "%A, %d %B %Y") -> str
     if not dt:
         return "N/A"
     return dt.strftime(format_str)
+
+
+def format_time(duration_in_secs: float) -> str:
+    """Format duration in seconds to HH:MM:SS format."""
+    h = int(duration_in_secs // 3600)
+    m = int((duration_in_secs % 3600) // 60)
+    s = int(duration_in_secs % 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
 
 
 def _htmlentity_transform(entity_with_semicolon):

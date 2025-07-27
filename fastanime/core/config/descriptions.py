@@ -56,6 +56,7 @@ STREAM_DEFAULT_MEDIA_LIST_TRACKING = (
     "Default behavior for tracking progress on AniList."
 )
 STREAM_SUB_LANG = "Preferred language code for subtitles (e.g., 'en', 'es')."
+STREAM_USE_IPC = "Use IPC communication with the player for advanced features like episode navigation."
 
 # ServiceConfig
 SERVICE_ENABLED = "Whether the background service should be enabled by default."
@@ -87,13 +88,6 @@ ROFI_THEME_INPUT = "Path to the Rofi theme file for user input prompts."
 # MpvConfig
 MPV_ARGS = "Comma-separated arguments to pass to the MPV player."
 MPV_PRE_ARGS = "Comma-separated arguments to prepend before the MPV command."
-MPV_DISABLE_POPEN = (
-    "Disable using subprocess.Popen for MPV, which can be unstable on some systems."
-)
-MPV_USE_PYTHON_MPV = "Use the python-mpv library for enhanced player control."
-MPV_USE_IPC = (
-    "Use IPC communication with MPV for advanced features like episode navigation."
-)
 
 # VlcConfig
 VLC_ARGS = "Comma-separated arguments to pass to the Vlc player."

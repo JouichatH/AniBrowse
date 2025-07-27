@@ -50,9 +50,9 @@ def map_to_anime_result(response: Response) -> Anime:
         id=anime["_id"],
         title=anime["name"],
         episodes=AnimeEpisodes(
-            sub=anime["availableEpisodesDetail"]["sub"],
-            dub=anime["availableEpisodesDetail"]["dub"],
-            raw=anime["availableEpisodesDetail"]["raw"],
+            sub=sorted(anime["availableEpisodesDetail"]["sub"], key=float),
+            dub=sorted(anime["availableEpisodesDetail"]["dub"], key=float),
+            raw=sorted(anime["availableEpisodesDetail"]["raw"], key=float),
         ),
         type=anime.get("__typename"),
     )

@@ -12,11 +12,11 @@ from .state import InternalDirective, MenuName, State
 
 if TYPE_CHECKING:
     from ...libs.media_api.base import BaseApiClient
-    from ...libs.player.base import BasePlayer
     from ...libs.provider.anime.base import BaseAnimeProvider
     from ...libs.selectors.base import BaseSelector
     from ..service.auth import AuthService
     from ..service.feedback import FeedbackService
+    from ..service.player import PlayerService
     from ..service.registry import MediaRegistryService
     from ..service.session import SessionsService
     from ..service.watch_history import WatchHistoryService
@@ -72,7 +72,6 @@ class Context:
     switch: Switch = field(default_factory=Switch)
     _provider: Optional["BaseAnimeProvider"] = None
     _selector: Optional["BaseSelector"] = None
-    _player: Optional["BasePlayer"] = None
     _media_api: Optional["BaseApiClient"] = None
 
     _feedback: Optional["FeedbackService"] = None
@@ -80,6 +79,7 @@ class Context:
     _watch_history: Optional["WatchHistoryService"] = None
     _session: Optional["SessionsService"] = None
     _auth: Optional["AuthService"] = None
+    _player: Optional["PlayerService"] = None
 
     @property
     def provider(self) -> "BaseAnimeProvider":
@@ -118,11 +118,11 @@ class Context:
         return self._media_api
 
     @property
-    def player(self) -> "BasePlayer":
+    def player(self) -> "PlayerService":
         if not self._player:
-            from ...libs.player.player import create_player
+            from ..service.player import PlayerService
 
-            self._player = create_player(self.config)
+            self._player = PlayerService(self.config, self.provider)
         return self._player
 
     @property

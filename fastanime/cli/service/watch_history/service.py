@@ -22,7 +22,10 @@ class WatchHistoryService:
         self.media_registry = media_registry
         self.media_api = media_api
 
-    def track(self, media_item: MediaItem, episode: str, player_result: PlayerResult):
+    def track(self, media_item: MediaItem, player_result: PlayerResult):
+        logger.info(
+            f"Updating watch history for {media_item.title.english} ({media_item.id}) with Episode={player_result.episode}; Stop Time={player_result.stop_time}; Total Duration={player_result.total_time}"
+        )
         status = None
         self.media_registry.update_media_index_entry(
             media_id=media_item.id,
@@ -30,7 +33,7 @@ class WatchHistoryService:
             media_item=media_item,
             last_watch_position=player_result.stop_time,
             total_duration=player_result.total_time,
-            progress=episode,
+            progress=player_result.episode,
             status=status,
         )
 
@@ -38,7 +41,7 @@ class WatchHistoryService:
             self.media_api.update_list_entry(
                 UpdateUserMediaListEntryParams(
                     media_id=media_item.id,
-                    progress=episode,
+                    progress=player_result.episode,
                     status=status,
                 )
             )

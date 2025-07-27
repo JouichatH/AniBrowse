@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Literal
 
@@ -30,7 +29,7 @@ class GeneralConfig(BaseModel):
         description=desc.GENERAL_PROVIDER,
     )
     selector: Literal["default", "fzf", "rofi"] = Field(
-        default=defaults.GENERAL_SELECTOR,
+        default_factory=defaults.GENERAL_SELECTOR,
         description=desc.GENERAL_SELECTOR,
     )
     auto_select_anime_result: bool = Field(
@@ -39,13 +38,11 @@ class GeneralConfig(BaseModel):
     )
     icons: bool = Field(default=defaults.GENERAL_ICONS, description=desc.GENERAL_ICONS)
     preview: Literal["full", "text", "image", "none"] = Field(
-        default=defaults.GENERAL_PREVIEW,
+        default_factory=defaults.GENERAL_PREVIEW,
         description=desc.GENERAL_PREVIEW,
     )
     image_renderer: Literal["icat", "chafa", "imgcat"] = Field(
-        default="icat"
-        if os.environ.get("KITTY_WINDOW_ID")
-        else defaults.GENERAL_IMAGE_RENDERER,
+        default_factory=defaults.GENERAL_IMAGE_RENDERER,
         description=desc.GENERAL_IMAGE_RENDERER,
     )
     manga_viewer: Literal["feh", "icat"] = Field(
@@ -135,6 +132,11 @@ class StreamConfig(BaseModel):
     sub_lang: str = Field(
         default=defaults.STREAM_SUB_LANG,
         description=desc.STREAM_SUB_LANG,
+    )
+
+    use_ipc: bool = Field(
+        default_factory=defaults.STREAM_USE_IPC,
+        description=desc.STREAM_USE_IPC,
     )
 
 
@@ -264,18 +266,6 @@ class MpvConfig(OtherConfig):
     pre_args: str = Field(
         default=defaults.MPV_PRE_ARGS,
         description=desc.MPV_PRE_ARGS,
-    )
-    disable_popen: bool = Field(
-        default=defaults.MPV_DISABLE_POPEN,
-        description=desc.MPV_DISABLE_POPEN,
-    )
-    use_python_mpv: bool = Field(
-        default=defaults.MPV_USE_PYTHON_MPV,
-        description=desc.MPV_USE_PYTHON_MPV,
-    )
-    use_ipc: bool = Field(
-        default=defaults.MPV_USE_IPC,
-        description=desc.MPV_USE_IPC,
     )
 
 
