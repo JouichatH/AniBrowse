@@ -12,7 +12,7 @@ GET_AIRING_SCHEDULE = _QUERIES_PATH / "media-airing-schedule.gql"
 GET_MEDIA_CHARACTERS = _QUERIES_PATH / "media-characters.gql"
 GET_MEDIA_RECOMMENDATIONS = _QUERIES_PATH / "media-recommendations.gql"
 GET_MEDIA_RELATIONS = _QUERIES_PATH / "media-relations.gql"
-GET_MEDIA_LIST_ITEM = _QUERIES_PATH / "get-medialist-item.gql"
+GET_MEDIA_LIST_ITEM = _QUERIES_PATH / "media-list-item.gql"
 
 GET_LOGGED_IN_USER = _QUERIES_PATH / "logged-in-user.gql"
 GET_NOTIFICATIONS = _QUERIES_PATH / "notifications.gql"
