@@ -1,3 +1,5 @@
+import logging
+import sys
 from typing import TYPE_CHECKING
 
 import click
@@ -25,6 +27,8 @@ if TYPE_CHECKING:
         rich_traceback: bool | None
         rich_traceback_theme: str
 
+
+logger = logging.getLogger(__name__)
 
 commands = {
     "config": "config.config",
@@ -74,6 +78,7 @@ def cli(ctx: click.Context, **options: "Unpack[Options]"):
         options["rich_traceback_theme"],
     )
 
+    logger.info(f"Current Command: {' '.join(sys.argv)}")
     cli_overrides = {}
     param_lookup = {p.name: p for p in ctx.command.params}
 
