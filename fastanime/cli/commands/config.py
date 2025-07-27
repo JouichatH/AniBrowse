@@ -61,12 +61,12 @@ from ...core.config import AppConfig
 def config(
     user_config: AppConfig, path, view, view_json, desktop_entry, update, interactive
 ):
-    from ...core.constants import USER_CONFIG_PATH
+    from ...core.constants import USER_CONFIG
     from ..config.editor import InteractiveConfigEditor
     from ..config.generate import generate_config_ini_from_app_model
 
     if path:
-        print(USER_CONFIG_PATH)
+        print(USER_CONFIG)
     elif view:
         from rich.console import Console
         from rich.syntax import Syntax
@@ -90,15 +90,15 @@ def config(
     elif interactive:
         editor = InteractiveConfigEditor(current_config=user_config)
         new_config = editor.run()
-        with open(USER_CONFIG_PATH, "w", encoding="utf-8") as file:
+        with open(USER_CONFIG, "w", encoding="utf-8") as file:
             file.write(generate_config_ini_from_app_model(new_config))
-        click.echo(f"Configuration saved successfully to {USER_CONFIG_PATH}")
+        click.echo(f"Configuration saved successfully to {USER_CONFIG}")
     elif update:
-        with open(USER_CONFIG_PATH, "w", encoding="utf-8") as file:
+        with open(USER_CONFIG, "w", encoding="utf-8") as file:
             file.write(generate_config_ini_from_app_model(user_config))
         print("update successfull")
     else:
-        click.edit(filename=str(USER_CONFIG_PATH))
+        click.edit(filename=str(USER_CONFIG))
 
 
 def _generate_desktop_entry():

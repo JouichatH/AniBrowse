@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 import click
 
 from ...core.config import AppConfig
-from ...core.constants import APP_DIR, USER_CONFIG_PATH
+from ...core.constants import APP_DIR, USER_CONFIG
 from .state import InternalDirective, MenuName, State
 
 if TYPE_CHECKING:
@@ -191,7 +191,7 @@ class Session:
     def _edit_config(self):
         from ..config import ConfigLoader
 
-        click.edit(filename=str(USER_CONFIG_PATH))
+        click.edit(filename=str(USER_CONFIG))
         logger.debug("Config changed; Reloading context")
         loader = ConfigLoader()
         config = loader.load()

@@ -74,11 +74,14 @@ else:
     USER_VIDEOS_DIR = xdg_videos_dir / APP_NAME
 
 USER_APPLICATIONS = Path.home() / ".local" / "share" / "applications"
+LOG_FOLDER = APP_CACHE_DIR / "logs"
 
 # USER_APPLICATIONS.mkdir(parents=True,exist_ok=True)
 APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
 APP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FOLDER.mkdir(parents=True, exist_ok=True)
 USER_VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 
-USER_CONFIG_PATH = APP_DATA_DIR / "config.ini"
-LOG_FILE_PATH = APP_CACHE_DIR / "fastanime.log"
+USER_CONFIG = APP_DATA_DIR / "config.ini"
+
+LOG_FILE = LOG_FOLDER / "app.log"

@@ -6,7 +6,7 @@ import click
 from pydantic import ValidationError
 
 from ...core.config import AppConfig
-from ...core.constants import USER_CONFIG_PATH
+from ...core.constants import USER_CONFIG
 from ...core.exceptions import ConfigError
 
 
@@ -19,7 +19,7 @@ class ConfigLoader:
     AppConfig object.
     """
 
-    def __init__(self, config_path: Path = USER_CONFIG_PATH):
+    def __init__(self, config_path: Path = USER_CONFIG):
         """
         Initializes the loader with the path to the configuration file.
 
