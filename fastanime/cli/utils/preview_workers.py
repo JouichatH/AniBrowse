@@ -140,7 +140,9 @@ class PreviewCacheWorker(ManagedBackgroundWorker):
                 media_item.title.english or media_item.title.romaji
             ),
             "STATUS": formatter.shell_safe(media_item.status.value),
-            "FORMAT": formatter.shell_safe(media_item.format.value),
+            "FORMAT": formatter.shell_safe(
+                media_item.format.value if media_item.format else "UNKNOWN"
+            ),
             "NEXT_EPISODE": formatter.shell_safe(
                 f"Episode {media_item.next_airing.episode} on {formatter.format_date(media_item.next_airing.airing_at, '%A, %d %B %Y at %X)')}"
                 if media_item.next_airing
