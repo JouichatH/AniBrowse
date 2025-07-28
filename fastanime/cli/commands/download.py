@@ -261,11 +261,12 @@ def download_anime(
             episode_title=f"{anime.title}; Episode {episode}",
             subtitles=[sub.url for sub in server.subtitles],
             headers=server.headers,
-            vid_format=config.stream.ytdlp_format,
+            vid_format=config.downloads.ytdlp_format,
             force_unknown_ext=download_options["force_unknown_ext"],
             verbose=download_options["verbose"],
             hls_use_mpegts=download_options["hls_use_mpegts"],
             hls_use_h264=download_options["hls_use_h264"],
             silent=download_options["silent"],
+            no_check_certificate=config.downloads.no_check_certificate,
         )
     )

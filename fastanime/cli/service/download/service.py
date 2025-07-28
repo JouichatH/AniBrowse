@@ -1,10 +1,8 @@
 import logging
-import time
-from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List
 
 from ....core.config.model import AppConfig
-from ....core.downloader import DownloadParams, DownloadResult, create_downloader
+from ....core.downloader import DownloadParams, create_downloader
 from ....core.utils.concurrency import ManagedBackgroundWorker, thread_manager
 from ....core.utils.fuzzy import fuzz
 from ....core.utils.normalizer import normalize_title
@@ -132,7 +130,6 @@ class DownloadService:
                 media_item.title.english or media_item.title.romaji or "Unknown"
             )
 
-            # --- START OF FIX: REPLICATE WORKING LOGIC ---
             # 1. Search the provider to get the provider-specific ID
             provider_search_title = normalize_title(
                 media_title,
@@ -172,8 +169,6 @@ class DownloadService:
                     f"Failed to get full details for '{best_match_title}' from provider."
                 )
 
-            # --- END OF FIX ---
-
             # 4. Get stream links using the now-validated provider_anime ID
             streams_iterator = self.provider.episode_streams(
                 EpisodeStreamsParams(
@@ -190,8 +185,17 @@ class DownloadService:
             if not server or not server.links:
                 raise ValueError(f"No stream links found for Episode {episode_number}")
 
-            stream_link = server.links[0]
+            if server.name != self.config.downloads.server.value:
+                while True:
+                    try:
+                        _server = next(streams_iterator)
+                        if _server.name == self.config.downloads.server.value:
+                            server = _server
+                            break
+                    except StopIteration:
+                        break
 
+            stream_link = server.links[0]
             # 5. Perform the download
             download_params = DownloadParams(
                 url=stream_link.link,
@@ -202,6 +206,7 @@ class DownloadService:
                 subtitles=[sub.url for sub in server.subtitles],
                 merge=self.config.downloads.merge_subtitles,
                 clean=self.config.downloads.cleanup_after_merge,
+                no_check_certificate=self.config.downloads.no_check_certificate,
             )
 
             result = self.downloader.download(download_params)
@@ -223,7 +228,6 @@ class DownloadService:
                     provider_name=self.config.general.provider.value,
                     server_name=server.name,
                     subtitle_paths=result.subtitle_paths,
-                    download_date=datetime.now(),
                 )
                 logger.info(
                     f"Successfully downloaded Episode {episode_number} of '{media_title}'"

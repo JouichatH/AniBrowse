@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Literal, Optional
+from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field
 
