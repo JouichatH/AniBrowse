@@ -103,15 +103,17 @@ dependencies = [
     { name = "click" },
     { name = "httpx" },
     { name = "inquirerpy" },
-    { name = "pycryptodomex" },
     { name = "pydantic" },
     { name = "rich" },
-    { name = "yt-dlp" },
 ]
 
 [package.optional-dependencies]
 discord = [
     { name = "pypresence" },
+]
+download = [
+    { name = "pycryptodomex" },
+    { name = "yt-dlp" },
 ]
 lxml = [
     { name = "lxml" },
@@ -127,8 +129,10 @@ standard = [
     { name = "lxml" },
     { name = "mpv" },
     { name = "plyer" },
+    { name = "pycryptodomex" },
     { name = "pypresence" },
     { name = "thefuzz" },
+    { name = "yt-dlp" },
 ]
 torrent = [
     { name = "libtorrent" },
@@ -157,15 +161,17 @@ requires-dist = [
     { name = "mpv", marker = "extra == 'standard'", specifier = ">=1.0.7" },
     { name = "plyer", marker = "extra == 'notifications'", specifier = ">=2.1.0" },
     { name = "plyer", marker = "extra == 'standard'", specifier = ">=2.1.0" },
-    { name = "pycryptodomex", specifier = ">=3.23.0" },
+    { name = "pycryptodomex", marker = "extra == 'download'", specifier = ">=3.23.0" },
+    { name = "pycryptodomex", marker = "extra == 'standard'", specifier = ">=3.23.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pypresence", marker = "extra == 'discord'", specifier = ">=4.3.0" },
     { name = "pypresence", marker = "extra == 'standard'", specifier = ">=4.3.0" },
     { name = "rich", specifier = ">=13.9.2" },
     { name = "thefuzz", marker = "extra == 'standard'", specifier = ">=0.22.1" },
-    { name = "yt-dlp", specifier = ">=2025.7.21" },
+    { name = "yt-dlp", marker = "extra == 'download'", specifier = ">=2025.7.21" },
+    { name = "yt-dlp", marker = "extra == 'standard'", specifier = ">=2025.7.21" },
 ]
-provides-extras = ["standard", "notifications", "mpv", "torrent", "lxml", "discord"]
+provides-extras = ["standard", "notifications", "mpv", "torrent", "lxml", "discord", "download"]
 
 [package.metadata.requires-dev]
 dev = [
