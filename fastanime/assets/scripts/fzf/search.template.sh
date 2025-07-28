@@ -12,7 +12,7 @@ SEARCH_RESULTS_FILE="{SEARCH_RESULTS_FILE}"
 AUTH_HEADER="{AUTH_HEADER}"
 
 # Get the current query from fzf
-QUERY="$1"
+QUERY="{{q}}"
 
 # If query is empty, exit with empty results
 if [ -z "$QUERY" ]; then

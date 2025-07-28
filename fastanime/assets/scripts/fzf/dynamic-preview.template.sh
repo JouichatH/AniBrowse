@@ -191,13 +191,13 @@ try:
         year = media.get('startDate', {}).get('year', 'Unknown') if media.get('startDate') else 'Unknown'
         status = media.get('status', 'Unknown')
         genres = ', '.join(media.get('genres', [])[:3]) or 'Unknown'
-        
         display_format = f'{english_title} ({year}) [{status}] - {genres}'
-        
+        # Debug output for matching
+        print(f"DEBUG: selected_item='{selected_item.strip()}' display_format='{display_format.strip()}'", file=sys.stderr)
         if selected_item.strip() == display_format.strip():
             json.dump(media, sys.stdout, indent=2)
             sys.exit(0)
-    
+    print(f"DEBUG: No match found for selected_item='{selected_item.strip()}'", file=sys.stderr)
     sys.exit(1)
 except Exception as e:
     print(f'Error: {e}', file=sys.stderr)
