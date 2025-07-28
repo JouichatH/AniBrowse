@@ -122,7 +122,7 @@ class FzfSelector(BaseSelector):
             "--prompt",
             f"{prompt.title()}: ",
             "--header",
-            header or self.header,
+            self.header,
             "--header-first",
             "--bind",
             f"change:reload({search_command})",
