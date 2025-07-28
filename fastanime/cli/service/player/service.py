@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from ....core.config import AppConfig
@@ -9,6 +10,8 @@ from ....libs.player.player import create_player
 from ....libs.player.types import PlayerResult
 from ....libs.provider.anime.base import BaseAnimeProvider
 from ....libs.provider.anime.types import Anime
+
+logger = logging.getLogger(__name__)
 
 
 class PlayerService:
@@ -28,11 +31,13 @@ class PlayerService:
         media_item: Optional[MediaItem] = None,
     ) -> PlayerResult:
         if self.app_config.stream.use_ipc:
-            if not anime:
-                raise FastAnimeError("Anime object is required to run with ipc support")
-            return self._play_with_ipc(params, anime, media_item)
-        else:
-            return self.player.play(params)
+            if anime:
+                return self._play_with_ipc(params, anime, media_item)
+            else:
+                logger.warning(
+                    f"Ipc player won't be used since Anime Object has not been given for url={params.url}"
+                )
+        return self.player.play(params)
 
     def _play_with_ipc(
         self, params: PlayerParams, anime: Anime, media_item: Optional[MediaItem] = None
