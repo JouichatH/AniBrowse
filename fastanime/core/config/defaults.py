@@ -39,6 +39,11 @@ STREAM_USE_IPC = (
     lambda: True if PLATFORM != "win32" and not detect.is_running_in_termux() else False
 )
 
+# WorkerConfig
+WORKER_ENABLED = True
+WORKER_NOTIFICATION_CHECK_INTERVAL = 15  # minutes
+WORKER_DOWNLOAD_CHECK_INTERVAL = 5  # minutes
+
 # FzfConfig
 FZF_OPTS = DEFAULTS_DIR / "fzf-opts"
 FZF_HEADER_COLOR = "95,135,175"

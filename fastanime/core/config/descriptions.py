@@ -58,6 +58,13 @@ STREAM_DEFAULT_MEDIA_LIST_TRACKING = (
 STREAM_SUB_LANG = "Preferred language code for subtitles (e.g., 'en', 'es')."
 STREAM_USE_IPC = "Use IPC communication with the player for advanced features like episode navigation."
 
+# WorkerConfig
+APP_WORKER = "Configuration for the background worker service."
+WORKER_ENABLED = "Enable the background worker for notifications and queued downloads."
+WORKER_NOTIFICATION_CHECK_INTERVAL = (
+    "How often to check for new AniList notifications (in minutes)."
+)
+WORKER_DOWNLOAD_CHECK_INTERVAL = "How often to process the download queue (in minutes)."
 
 # FzfConfig
 FZF_HEADER_COLOR = "RGB color for the main TUI header."

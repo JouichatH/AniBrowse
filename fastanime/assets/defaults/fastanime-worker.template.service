@@ -1,0 +1,16 @@
+# values in {NAME} syntax are provided by python using .replace()
+# 
+[Unit]
+Description=FastAnime Background Worker
+After=network-online.target
+
+[Service]
+Type=simple
+# Ensure you have the full path to your fastanime executable
+# Use `which fastanime` to find it
+ExecStart={EXECUTABLE} worker --log
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=default.target

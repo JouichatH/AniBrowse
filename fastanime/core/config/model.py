@@ -144,6 +144,25 @@ class OtherConfig(BaseModel):
     pass
 
 
+class WorkerConfig(OtherConfig):
+    """Configuration for the background worker service."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Enable the background worker for notifications and queued downloads.",
+    )
+    notification_check_interval: int = Field(
+        default=15,  # in minutes
+        ge=1,
+        description="How often to check for new AniList notifications (in minutes).",
+    )
+    download_check_interval: int = Field(
+        default=5,  # in minutes
+        ge=1,
+        description="How often to process the download queue (in minutes).",
+    )
+
+
 class SessionsConfig(OtherConfig):
     dir: Path = Field(
         default_factory=lambda: defaults.SESSIONS_DIR,
@@ -381,4 +400,8 @@ class AppConfig(BaseModel):
     )
     sessions: SessionsConfig = Field(
         default_factory=SessionsConfig, description=desc.APP_SESSIONS
+    )
+    worker: WorkerConfig = Field(
+        default_factory=WorkerConfig,
+        description="Configuration for the background worker service.",
     )
