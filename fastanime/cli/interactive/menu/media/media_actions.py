@@ -54,12 +54,12 @@ def media_actions(ctx: Context, state: State) -> State | InternalDirective:
             ctx, state
         )
         options[f"{'💿 ' if icons else ''}Episodes (Downloads)"] = _stream_downloads(
-            ctx, state
+            ctx, state, force_episodes_menu=True
         )
 
     options.update(
         {
-            f"{'📥 ' if icons else ''}Download": _queue_downloads(ctx, state),
+            f"{'📥 ' if icons else ''}Download": _download_episodes(ctx, state),
             f"{'📼 ' if icons else ''}Watch Trailer": _watch_trailer(ctx, state),
             f"{'🔗 ' if icons else ''}Recommendations": _view_recommendations(
                 ctx, state
@@ -144,14 +144,18 @@ def _stream(ctx: Context, state: State, force_episodes_menu=False) -> MenuAction
     return action
 
 
-def _stream_downloads(ctx: Context, state: State) -> MenuAction:
+def _stream_downloads(
+    ctx: Context, state: State, force_episodes_menu=False
+) -> MenuAction:
     def action():
+        if force_episodes_menu:
+            ctx.switch.force_episodes_menu()
         return State(menu_name=MenuName.PLAY_DOWNLOADS, media_api=state.media_api)
 
     return action
 
 
-def _queue_downloads(ctx: Context, state: State) -> MenuAction:
+def _download_episodes(ctx: Context, state: State) -> MenuAction:
     def action():
         return State(menu_name=MenuName.DOWNLOAD_EPISODES, media_api=state.media_api)
 

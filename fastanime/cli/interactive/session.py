@@ -34,6 +34,7 @@ class Switch:
     _provider_results: bool = False
     _episodes: bool = False
     _servers: bool = False
+    _dont_play: bool = False
 
     @property
     def show_provider_results_menu(self):
@@ -44,6 +45,16 @@ class Switch:
 
     def force_provider_results_menu(self):
         self._provider_results = True
+
+    @property
+    def dont_play(self):
+        if self._dont_play:
+            self._dont_play = False
+            return True
+        return False
+
+    def force_dont_play(self):
+        self._dont_play = True
 
     @property
     def show_episodes_menu(self):

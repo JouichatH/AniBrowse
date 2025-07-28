@@ -78,6 +78,8 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
 
     if choice and choice in options:
         return options[choice]()
+    else:
+        return InternalDirective.RELOAD
 
 
 def _next_episode(ctx: Context, state: State) -> MenuAction:
