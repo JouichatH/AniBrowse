@@ -91,16 +91,16 @@ print_kv() {
     if [ "$padding_len" -lt 1 ]; then
         padding_len=1
         value=$(echo $value| fold -s -w "$((WIDTH - key_len - 3))")
-        printf "${C_KEY}%s:${RESET}%*s%s\\n" "$key" "$padding_len" "" " $value"
+        printf "{C_KEY}%s:{RESET}%*s%s\\n" "$key" "$padding_len" "" " $value"
     else
-        printf "${C_KEY}%s:${RESET}%*s%s\\n" "$key" "$padding_len" "" " $value"
+        printf "{C_KEY}%s:{RESET}%*s%s\\n" "$key" "$padding_len" "" " $value"
     fi
 }
 
 draw_rule() {
     ll=2
     while [ $ll -le $FZF_PREVIEW_COLUMNS ];do
-        echo -n -e "${C_RULE}─${RESET}"
+        echo -n -e "{C_RULE}─{RESET}"
         ((ll++))
     done
     echo
@@ -156,20 +156,15 @@ if [ -z "$SELECTED_ITEM" ] || [ ! -f "$SEARCH_RESULTS_FILE" ]; then
     fi
     exit 0
 fi
-
+# HACK: the extra dot is cause theres weird character at start
+ANIME_ID=$(echo "$SELECTED_ITEM"|sed -E 's/^[[:space:]]+|[[:space:]]+$//g'|sed -E 's/^.\[([0-9]+)\] .*/\1/g')
 # Parse the search results JSON and find the matching item
 if command -v jq >/dev/null 2>&1; then
     # Use jq for faster and more reliable JSON parsing
-    MEDIA_DATA=$(cat "$SEARCH_RESULTS_FILE" | jq --arg selected "$SELECTED_ITEM" '
+    MEDIA_DATA=$(cat "$SEARCH_RESULTS_FILE" | jq --arg anime_id "$ANIME_ID" '
         .data.Page.media[]? | 
-        select(
-            ((.title.english // .title.romaji // .title.native // "Unknown") + 
-             " (" + (.startDate.year // "Unknown" | tostring) + ") " +
-             "[" + (.status // "Unknown") + "] - " +
-             ((.genres[:3] // []) | join(", ") | if . == "" then "Unknown" else . end)
-            ) == $selected
-        )
-    ' 2>/dev/null)
+        select(.id == ($anime_id | tonumber) )
+    ' )
 else
     # Fallback to Python for JSON parsing
     MEDIA_DATA=$(cat "$SEARCH_RESULTS_FILE" | python3 -c "
@@ -274,7 +269,7 @@ CACHE_HASH=$(generate_sha256 "$SELECTED_ITEM")
 
 # Try to show image if available
 if [ "{PREVIEW_MODE}" = "full" ] || [ "{PREVIEW_MODE}" = "image" ]; then
-    image_file="${IMAGE_CACHE_PATH}${PATH_SEP}${CACHE_HASH}.png"
+    image_file="{IMAGE_CACHE_PATH}{PATH_SEP}${CACHE_HASH}.png"
     
     # If image not cached and we have a URL, try to download it quickly
     if [ ! -f "$image_file" ] && [ -n "$COVER_IMAGE" ]; then

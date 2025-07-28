@@ -122,7 +122,10 @@ class PreviewContext:
         return get_character_preview(choice_map, config)
 
     def get_airing_schedule_preview(
-        self, schedule_result: AiringScheduleResult, config: AppConfig, anime_title: str = "Anime"
+        self,
+        schedule_result: AiringScheduleResult,
+        config: AppConfig,
+        anime_title: str = "Anime",
     ) -> str:
         """Get airing schedule preview script with managed workers."""
         if not self._manager:
@@ -152,8 +155,8 @@ class PreviewContext:
         if self._manager:
             return self._manager.get_status()
         return {
-            "preview_worker": None, 
-            "episode_worker": None, 
+            "preview_worker": None,
+            "episode_worker": None,
             "review_worker": None,
             "character_worker": None,
             "airing_schedule_worker": None,
@@ -430,7 +433,9 @@ def get_character_preview(choice_map: Dict[str, Character], config: AppConfig) -
     return preview_script
 
 
-def get_airing_schedule_preview(schedule_result: AiringScheduleResult, config: AppConfig, anime_title: str = "Anime") -> str:
+def get_airing_schedule_preview(
+    schedule_result: AiringScheduleResult, config: AppConfig, anime_title: str = "Anime"
+) -> str:
     """
     Generate the generic loader script for airing schedule previews and start background caching.
     """
