@@ -440,7 +440,8 @@ class MpvIPCPlayer(BaseIPCPlayer):
             self._handle_property_change(message)
         elif event == "client-message":
             self._handle_client_message(message)
-        elif event == "file-loaded" and not self.registry:
+        elif event == "file-loaded":
+            time.sleep(0.1)
             self._configure_player()
         elif event:
             logger.debug(f"MPV event: {event}")
@@ -596,11 +597,11 @@ class MpvIPCPlayer(BaseIPCPlayer):
                 self.player_state.reset()
                 self.player_state.episode = target_episode
                 self.ipc_client.send_command(["loadfile", str(file_path)])
-                time.sleep(1)
-                self.ipc_client.send_command(["seek", 0, "absolute"])
-                self.ipc_client.send_command(
-                    ["set_property", "title", self.player_state.episode_title]
-                )
+                # time.sleep(1)
+                # self.ipc_client.send_command(["seek", 0, "absolute"])
+                # self.ipc_client.send_command(
+                #     ["set_property", "title", self.player_state.episode_title]
+                # )
                 self._show_text(f"Fetched {file_path}")
                 self.player_fetching = False
 

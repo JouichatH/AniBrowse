@@ -38,13 +38,23 @@ class WatchHistoryService:
         )
 
         if self.media_api and self.media_api.is_authenticated():
-            self.media_api.update_list_entry(
+            if not self.media_api.update_list_entry(
                 UpdateUserMediaListEntryParams(
                     media_id=media_item.id,
-                    progress=player_result.episode,
                     status=status,
+                    progress=player_result.episode,
                 )
-            )
+            ):
+                logger.info(
+                    "successfully updated remote progress with {player_result.episode}"
+                )
+
+            else:
+                logger.warning(
+                    "failed to update remote progress with {player_result.episode}"
+                )
+        else:
+            logger.warning("Not logged in")
 
     def get_episode(self, media_item: MediaItem):
         index_entry = self.media_registry.get_media_index_entry(media_item.id)
@@ -116,6 +126,9 @@ class WatchHistoryService:
                     progress=progress,
                 )
             )
+            logger.info("updating remote progressd")
+        else:
+            logger.warning("Not logged in")
 
     def add_media_to_list_if_not_present(self, media_item: MediaItem):
         """Adds a media item to the user's PLANNING list if it's not already on any list."""

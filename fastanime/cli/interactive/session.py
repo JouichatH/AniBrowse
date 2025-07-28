@@ -113,18 +113,18 @@ class Context:
         if not self._media_api:
             from ...libs.media_api.api import create_api_client
 
-            self._media_api = create_api_client(
-                self.config.general.media_api, self.config
-            )
+            media_api = create_api_client(self.config.general.media_api, self.config)
 
-            if auth_profile := self.auth.get_auth():
-                p = self._media_api.authenticate(auth_profile.token)
+            auth = self.auth
+            if auth_profile := auth.get_auth():
+                p = media_api.authenticate(auth_profile.token)
                 if p:
                     logger.debug(f"Authenticated as {p.name}")
                 else:
                     logger.warning(f"Failed to authenticate with {auth_profile.token}")
             else:
                 logger.debug("Not authenticated")
+            self._media_api = media_api
 
         return self._media_api
 
@@ -162,7 +162,7 @@ class Context:
             from ..service.watch_history.service import WatchHistoryService
 
             self._watch_history = WatchHistoryService(
-                self.config, self.media_registry, self._media_api
+                self.config, self.media_registry, self.media_api
             )
         return self._watch_history
 
