@@ -17,6 +17,7 @@ from ....libs.media_api.types import (
 from .models import (
     REGISTRY_VERSION,
     DownloadStatus,
+    MediaEpisode,
     MediaRecord,
     MediaRegistryIndex,
     MediaRegistryIndexEntry,

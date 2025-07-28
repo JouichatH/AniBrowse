@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -28,8 +28,8 @@ class MediaEpisode(BaseModel):
     episode_number: str
 
     download_status: DownloadStatus = DownloadStatus.NOT_DOWNLOADED
-    file_path: Path
-    download_date: datetime = Field(default_factory=datetime.now)
+    file_path: Optional[Path] = None
+    download_date: Optional[datetime] = None
 
     # Additional download metadata
     file_size: Optional[int] = None  # File size in bytes
@@ -39,6 +39,8 @@ class MediaEpisode(BaseModel):
     subtitle_paths: list[Path] = Field(default_factory=list)  # Paths to subtitle files
     download_attempts: int = 0  # Number of download attempts
     last_error: Optional[str] = None  # Last error message if failed
+
+    model_config = {"arbitrary_types_allowed": True}
 
 
 class MediaRecord(BaseModel):

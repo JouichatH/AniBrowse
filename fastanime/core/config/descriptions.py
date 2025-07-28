@@ -1,6 +1,3 @@
-# GeneralConfig
-from .defaults import SESSIONS_DIR
-
 GENERAL_PYGMENT_STYLE = "The pygment style to use"
 GENERAL_API_CLIENT = "The media database API to use (e.g., 'anilist', 'jikan')."
 GENERAL_PREFERRED_TRACKER = (
