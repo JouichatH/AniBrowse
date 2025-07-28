@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from httpx import Client
 
@@ -230,7 +230,9 @@ class AniListApi(BaseApiClient):
         )
         return mapper.to_generic_recommendations(response.json())
 
-    def get_characters_of(self, params: MediaCharactersParams) -> Optional[CharacterSearchResult]:
+    def get_characters_of(
+        self, params: MediaCharactersParams
+    ) -> Optional[CharacterSearchResult]:
         variables = {"id": params.id, "type": "ANIME"}
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_CHARACTERS, variables

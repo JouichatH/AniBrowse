@@ -39,12 +39,12 @@ TEMPLATE_EPISODE_INFO_SCRIPT = (FZF_SCRIPTS_DIR / "episode-info.template.sh").re
 TEMPLATE_REVIEW_INFO_SCRIPT = (FZF_SCRIPTS_DIR / "review-info.template.sh").read_text(
     encoding="utf-8"
 )
-TEMPLATE_CHARACTER_INFO_SCRIPT = (FZF_SCRIPTS_DIR / "character-info.template.sh").read_text(
-    encoding="utf-8"
-)
-TEMPLATE_AIRING_SCHEDULE_INFO_SCRIPT = (FZF_SCRIPTS_DIR / "airing-schedule-info.template.sh").read_text(
-    encoding="utf-8"
-)
+TEMPLATE_CHARACTER_INFO_SCRIPT = (
+    FZF_SCRIPTS_DIR / "character-info.template.sh"
+).read_text(encoding="utf-8")
+TEMPLATE_AIRING_SCHEDULE_INFO_SCRIPT = (
+    FZF_SCRIPTS_DIR / "airing-schedule-info.template.sh"
+).read_text(encoding="utf-8")
 
 
 class PreviewCacheWorker(ManagedBackgroundWorker):
@@ -510,7 +510,9 @@ class CharacterCacheWorker(ManagedBackgroundWorker):
             hash_id = self._get_cache_hash(choice_str)
             info_path = self.characters_cache_dir / hash_id
 
-            preview_content = self._generate_character_preview_content(character, config)
+            preview_content = self._generate_character_preview_content(
+                character, config
+            )
             self.submit_function(self._save_preview_content, preview_content, hash_id)
 
     def _generate_character_preview_content(
@@ -519,18 +521,25 @@ class CharacterCacheWorker(ManagedBackgroundWorker):
         """
         Generates the final, formatted preview content by injecting character data into the template.
         """
-        character_name = character.name.full or character.name.first or "Unknown Character"
+        character_name = (
+            character.name.full or character.name.first or "Unknown Character"
+        )
         native_name = character.name.native or "N/A"
         gender = character.gender or "Unknown"
         age = str(character.age) if character.age else "Unknown"
         blood_type = character.blood_type or "N/A"
         favourites = f"{character.favourites:,}" if character.favourites else "0"
-        birthday = character.date_of_birth.strftime("%B %d, %Y") if character.date_of_birth else "N/A"
-        
+        birthday = (
+            character.date_of_birth.strftime("%B %d, %Y")
+            if character.date_of_birth
+            else "N/A"
+        )
+
         # Clean and format description
         description = character.description or "No description available"
         if description:
             import re
+
             description = re.sub(r"<[^>]+>", "", description)
             description = (
                 description.replace("&quot;", '"')
@@ -571,6 +580,7 @@ class CharacterCacheWorker(ManagedBackgroundWorker):
 
     def _get_cache_hash(self, text: str) -> str:
         from hashlib import sha256
+
         return sha256(text.encode("utf-8")).hexdigest()
 
     def _on_task_completed(self, task: WorkerTask, future) -> None:
@@ -619,16 +629,21 @@ class AiringScheduleCacheWorker(ManagedBackgroundWorker):
         from datetime import datetime
 
         total_episodes = len(schedule_result.schedule_items)
-        upcoming_episodes = sum(1 for ep in schedule_result.schedule_items 
-                              if ep.airing_at and ep.airing_at > datetime.now())
+        upcoming_episodes = sum(
+            1
+            for ep in schedule_result.schedule_items
+            if ep.airing_at and ep.airing_at > datetime.now()
+        )
 
         # Generate schedule table text
         schedule_lines = []
-        sorted_episodes = sorted(schedule_result.schedule_items, key=lambda x: x.episode)
-        
+        sorted_episodes = sorted(
+            schedule_result.schedule_items, key=lambda x: x.episode
+        )
+
         for episode in sorted_episodes[:10]:  # Show next 10 episodes
             ep_num = str(episode.episode)
-            
+
             if episode.airing_at:
                 formatted_date = episode.airing_at.strftime("%Y-%m-%d %H:%M")
                 now = datetime.now()
@@ -650,13 +665,15 @@ class AiringScheduleCacheWorker(ManagedBackgroundWorker):
                 elif hours > 0:
                     time_str = f"{hours}h"
                 else:
-                    time_str = f"<1h"
+                    time_str = "<1h"
             elif episode.airing_at and episode.airing_at < datetime.now():
                 time_str = "Aired"
             else:
                 time_str = "Unknown"
 
-            schedule_lines.append(f"Episode {ep_num:>3}: {formatted_date} ({time_str}) - {status}")
+            schedule_lines.append(
+                f"Episode {ep_num:>3}: {formatted_date} ({time_str}) - {status}"
+            )
 
         schedule_table = "\n".join(schedule_lines)
 
@@ -681,11 +698,14 @@ class AiringScheduleCacheWorker(ManagedBackgroundWorker):
                 f.write(content)
             logger.debug(f"Successfully cached airing schedule preview: {hash_id}")
         except IOError as e:
-            logger.error(f"Failed to write airing schedule preview cache for {hash_id}: {e}")
+            logger.error(
+                f"Failed to write airing schedule preview cache for {hash_id}: {e}"
+            )
             raise
 
     def _get_cache_hash(self, text: str) -> str:
         from hashlib import sha256
+
         return sha256(text.encode("utf-8")).hexdigest()
 
     def _on_task_completed(self, task: WorkerTask, future) -> None:
@@ -772,20 +792,29 @@ class PreviewWorkerManager:
 
             self._character_worker = CharacterCacheWorker(self.info_cache_dir)
             self._character_worker.start()
-            thread_manager.register_worker("character_cache_worker", self._character_worker)
+            thread_manager.register_worker(
+                "character_cache_worker", self._character_worker
+            )
 
         return self._character_worker
 
     def get_airing_schedule_worker(self) -> AiringScheduleCacheWorker:
         """Get or create the airing schedule cache worker."""
-        if self._airing_schedule_worker is None or not self._airing_schedule_worker.is_running():
+        if (
+            self._airing_schedule_worker is None
+            or not self._airing_schedule_worker.is_running()
+        ):
             if self._airing_schedule_worker:
                 # Clean up old worker
                 thread_manager.shutdown_worker("airing_schedule_cache_worker")
 
-            self._airing_schedule_worker = AiringScheduleCacheWorker(self.info_cache_dir)
+            self._airing_schedule_worker = AiringScheduleCacheWorker(
+                self.info_cache_dir
+            )
             self._airing_schedule_worker.start()
-            thread_manager.register_worker("airing_schedule_cache_worker", self._airing_schedule_worker)
+            thread_manager.register_worker(
+                "airing_schedule_cache_worker", self._airing_schedule_worker
+            )
 
         return self._airing_schedule_worker
 

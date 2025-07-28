@@ -14,7 +14,6 @@ from .params import (
 )
 from .types import (
     AiringScheduleResult,
-    Character,
     CharacterSearchResult,
     MediaItem,
     MediaReview,
@@ -73,7 +72,9 @@ class BaseApiClient(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_characters_of(self, params: MediaCharactersParams) -> Optional[CharacterSearchResult]:
+    def get_characters_of(
+        self, params: MediaCharactersParams
+    ) -> Optional[CharacterSearchResult]:
         pass
 
     @abc.abstractmethod

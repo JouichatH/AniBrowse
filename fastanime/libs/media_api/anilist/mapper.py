@@ -400,7 +400,7 @@ def _to_generic_character_name(anilist_name: Optional[Dict]) -> CharacterName:
     """Maps an AniList character name object to a generic CharacterName."""
     if not anilist_name:
         return CharacterName()
-    
+
     return CharacterName(
         first=anilist_name.get("first"),
         middle=anilist_name.get("middle"),
@@ -410,11 +410,13 @@ def _to_generic_character_name(anilist_name: Optional[Dict]) -> CharacterName:
     )
 
 
-def _to_generic_character_image(anilist_image: Optional[Dict]) -> Optional[CharacterImage]:
+def _to_generic_character_image(
+    anilist_image: Optional[Dict],
+) -> Optional[CharacterImage]:
     """Maps an AniList character image object to a generic CharacterImage."""
     if not anilist_image:
         return None
-    
+
     return CharacterImage(
         medium=anilist_image.get("medium"),
         large=anilist_image.get("large"),
@@ -425,7 +427,7 @@ def _to_generic_character(anilist_character: Dict) -> Optional[Character]:
     """Maps an AniList character object to a generic Character."""
     if not anilist_character:
         return None
-    
+
     # Parse date of birth if available
     date_of_birth = None
     if dob := anilist_character.get("dateOfBirth"):
@@ -437,7 +439,7 @@ def _to_generic_character(anilist_character: Dict) -> Optional[Character]:
                 date_of_birth = datetime(year, month, day)
         except (ValueError, TypeError):
             pass
-    
+
     return Character(
         id=anilist_character.get("id"),
         name=_to_generic_character_name(anilist_character.get("name")),
@@ -460,12 +462,12 @@ def to_generic_characters_result(data: Dict) -> Optional[CharacterSearchResult]:
     try:
         page_data = data["data"]["Page"]["media"][0]
         characters_data = page_data["characters"]["nodes"]
-        
+
         characters = []
         for char_data in characters_data:
             if character := _to_generic_character(char_data):
                 characters.append(character)
-        
+
         return CharacterSearchResult(
             characters=characters,
             page_info=None,  # Characters don't typically have pagination
@@ -475,18 +477,20 @@ def to_generic_characters_result(data: Dict) -> Optional[CharacterSearchResult]:
         return None
 
 
-def _to_generic_airing_schedule_item(anilist_episode: Dict) -> Optional[AiringScheduleItem]:
+def _to_generic_airing_schedule_item(
+    anilist_episode: Dict,
+) -> Optional[AiringScheduleItem]:
     """Maps an AniList airing schedule episode to a generic AiringScheduleItem."""
     if not anilist_episode:
         return None
-    
+
     airing_at = None
     if airing_timestamp := anilist_episode.get("airingAt"):
         try:
             airing_at = datetime.fromtimestamp(airing_timestamp)
         except (ValueError, TypeError):
             pass
-    
+
     return AiringScheduleItem(
         episode=anilist_episode.get("episode", 0),
         airing_at=airing_at,
@@ -503,12 +507,12 @@ def to_generic_airing_schedule_result(data: Dict) -> Optional[AiringScheduleResu
     try:
         page_data = data["data"]["Page"]["media"][0]
         schedule_data = page_data["airingSchedule"]["nodes"]
-        
+
         schedule_items = []
         for episode_data in schedule_data:
             if item := _to_generic_airing_schedule_item(episode_data):
                 schedule_items.append(item)
-        
+
         return AiringScheduleResult(
             schedule_items=schedule_items,
             page_info=None,  # Schedule doesn't typically have pagination

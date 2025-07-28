@@ -1,15 +1,12 @@
-from typing import Callable, Dict, List, Literal, Optional, Union
+from typing import Callable, Dict, Literal, Optional
 
 from .....libs.media_api.params import (
-    MediaAiringScheduleParams,
-    MediaCharactersParams,
     MediaRecommendationParams,
     MediaRelationsParams,
     UpdateUserMediaListEntryParams,
 )
 from .....libs.media_api.types import (
     MediaItem,
-    MediaReview,
     MediaStatus,
     UserMediaListStatus,
 )
@@ -610,7 +607,9 @@ def _view_airing_schedule(ctx: Context, state: State) -> MenuAction:
     """Action to transition to the airing schedule menu."""
 
     def action() -> State | InternalDirective:
-        return State(menu_name=MenuName.MEDIA_AIRING_SCHEDULE, media_api=state.media_api)
+        return State(
+            menu_name=MenuName.MEDIA_AIRING_SCHEDULE, media_api=state.media_api
+        )
 
     return action
 

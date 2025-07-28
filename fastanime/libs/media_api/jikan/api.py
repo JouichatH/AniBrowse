@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from ..base import BaseApiClient
 from ..params import (
@@ -138,9 +138,13 @@ class JikanApi(BaseApiClient):
             logger.error(f"Failed to fetch recommendations for media {params.id}: {e}")
             return None
 
-    def get_characters_of(self, params: MediaCharactersParams) -> Optional[CharacterSearchResult]:
+    def get_characters_of(
+        self, params: MediaCharactersParams
+    ) -> Optional[CharacterSearchResult]:
         """Fetches characters for a given anime."""
-        logger.warning("Jikan API does not support fetching character data in the standardized format.")
+        logger.warning(
+            "Jikan API does not support fetching character data in the standardized format."
+        )
         return None
 
     def get_related_anime_for(

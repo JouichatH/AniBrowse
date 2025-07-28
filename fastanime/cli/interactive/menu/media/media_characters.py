@@ -1,5 +1,5 @@
 import re
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional, Union
 
 from .....libs.media_api.types import Character, CharacterSearchResult
 from ...session import Context, session
@@ -13,9 +13,6 @@ def media_characters(ctx: Context, state: State) -> Union[State, InternalDirecti
     Shows character details upon selection or in the preview pane.
     """
     from rich.console import Console
-    from rich.panel import Panel
-    from rich.table import Table
-    from rich.text import Text
 
     feedback = ctx.feedback
     selector = ctx.selector
@@ -29,9 +26,7 @@ def media_characters(ctx: Context, state: State) -> Union[State, InternalDirecti
 
     from .....libs.media_api.params import MediaCharactersParams
 
-    loading_message = (
-        f"Fetching characters for {media_item.title.english or media_item.title.romaji}..."
-    )
+    loading_message = f"Fetching characters for {media_item.title.english or media_item.title.romaji}..."
     characters_result: Optional[CharacterSearchResult] = None
 
     with feedback.progress(loading_message):
@@ -45,7 +40,7 @@ def media_characters(ctx: Context, state: State) -> Union[State, InternalDirecti
 
     characters = characters_result.characters
     choice_map: Dict[str, Character] = {}
-    
+
     # Create display names for characters
     for character in characters:
         display_name = character.name.full or character.name.first or "Unknown"
@@ -53,7 +48,7 @@ def media_characters(ctx: Context, state: State) -> Union[State, InternalDirecti
             display_name += f" ({character.gender})"
         if character.age:
             display_name += f" - Age {character.age}"
-        
+
         choice_map[display_name] = character
 
     choices = list(choice_map.keys()) + ["Back"]
@@ -81,18 +76,16 @@ def media_characters(ctx: Context, state: State) -> Union[State, InternalDirecti
         # Display character details
         anime_title = media_item.title.english or media_item.title.romaji or "Unknown"
         _display_character_details(console, selected_character, anime_title)
-        
+
         selector.ask("\nPress Enter to return to the character list...")
 
 
 def _display_character_details(console, character: Character, anime_title: str):
     """Display detailed character information in a formatted panel."""
     from rich.columns import Columns
-    from rich.console import Console
     from rich.panel import Panel
     from rich.table import Table
     from rich.text import Text
-    import re
 
     # Character name panel
     name_text = Text()
@@ -165,7 +158,7 @@ def _display_character_details(console, character: Character, anime_title: str):
     # Display everything
     console.print(name_panel)
     console.print()
-    
+
     # Show panels side by side if there's basic info
     if info_table.rows:
         console.print(Columns([info_panel, description_panel], equal=True, expand=True))

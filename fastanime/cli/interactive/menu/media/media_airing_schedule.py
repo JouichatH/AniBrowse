@@ -6,16 +6,15 @@ from ...state import InternalDirective, State
 
 
 @session.menu
-def media_airing_schedule(ctx: Context, state: State) -> Union[State, InternalDirective]:
+def media_airing_schedule(
+    ctx: Context, state: State
+) -> Union[State, InternalDirective]:
     """
     Fetches and displays the airing schedule for an anime.
     Shows upcoming episodes with air dates and countdown timers.
     """
-    from datetime import datetime
     from rich.console import Console
     from rich.panel import Panel
-    from rich.table import Table
-    from rich.text import Text
 
     feedback = ctx.feedback
     selector = ctx.selector
@@ -28,9 +27,7 @@ def media_airing_schedule(ctx: Context, state: State) -> Union[State, InternalDi
 
     from .....libs.media_api.params import MediaAiringScheduleParams
 
-    loading_message = (
-        f"Fetching airing schedule for {media_item.title.english or media_item.title.romaji}..."
-    )
+    loading_message = f"Fetching airing schedule for {media_item.title.english or media_item.title.romaji}..."
     schedule_result: Optional[AiringScheduleResult] = None
 
     with feedback.progress(loading_message):
@@ -41,7 +38,7 @@ def media_airing_schedule(ctx: Context, state: State) -> Union[State, InternalDi
     if not schedule_result or not schedule_result.schedule_items:
         feedback.warning(
             "No airing schedule found",
-            "This anime doesn't have upcoming episodes or airing data"
+            "This anime doesn't have upcoming episodes or airing data",
         )
         return InternalDirective.BACK
 
@@ -54,7 +51,7 @@ def media_airing_schedule(ctx: Context, state: State) -> Union[State, InternalDi
             display_name += f" - {airing_time.strftime('%Y-%m-%d %H:%M')}"
         if item.time_until_airing:
             display_name += f" (in {item.time_until_airing})"
-        
+
         choice_map[display_name] = item
 
     choices = list(choice_map.keys()) + ["View Full Schedule", "Back"]
@@ -65,7 +62,9 @@ def media_airing_schedule(ctx: Context, state: State) -> Union[State, InternalDi
 
         anime_title = media_item.title.english or media_item.title.romaji or "Unknown"
         with create_preview_context() as preview_ctx:
-            preview_command = preview_ctx.get_airing_schedule_preview(schedule_result, ctx.config, anime_title)
+            preview_command = preview_ctx.get_airing_schedule_preview(
+                schedule_result, ctx.config, anime_title
+            )
 
     while True:
         chosen_title = selector.choose(
@@ -76,11 +75,13 @@ def media_airing_schedule(ctx: Context, state: State) -> Union[State, InternalDi
 
         if not chosen_title or chosen_title == "Back":
             return InternalDirective.BACK
-        
+
         if chosen_title == "View Full Schedule":
             console.clear()
             # Display airing schedule
-            anime_title = media_item.title.english or media_item.title.romaji or "Unknown"
+            anime_title = (
+                media_item.title.english or media_item.title.romaji or "Unknown"
+            )
             _display_airing_schedule(console, schedule_result, anime_title)
             selector.ask("\nPress Enter to return...")
             continue
@@ -88,37 +89,40 @@ def media_airing_schedule(ctx: Context, state: State) -> Union[State, InternalDi
         # Show individual episode details
         selected_item = choice_map[chosen_title]
         console.clear()
-        
-        from rich.panel import Panel
-        from datetime import datetime
-        
+
         episode_info = []
         episode_info.append(f"[bold cyan]Episode {selected_item.episode}[/bold cyan]")
-        
+
         if selected_item.airing_at:
             airing_time = selected_item.airing_at
-            episode_info.append(f"[green]Airs at:[/green] {airing_time.strftime('%Y-%m-%d %H:%M:%S')}")
-            
+            episode_info.append(
+                f"[green]Airs at:[/green] {airing_time.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+
         if selected_item.time_until_airing:
-            episode_info.append(f"[yellow]Time until airing:[/yellow] {selected_item.time_until_airing}")
-        
+            episode_info.append(
+                f"[yellow]Time until airing:[/yellow] {selected_item.time_until_airing}"
+            )
+
         episode_content = "\n".join(episode_info)
-        
+
         console.print(
             Panel(
                 episode_content,
                 title=f"Episode Details - {media_item.title.english or media_item.title.romaji}",
                 border_style="blue",
-                expand=True
+                expand=True,
             )
         )
-        
+
         selector.ask("\nPress Enter to return to the schedule list...")
 
     return InternalDirective.BACK
 
 
-def _display_airing_schedule(console, schedule_result: AiringScheduleResult, anime_title: str):
+def _display_airing_schedule(
+    console, schedule_result: AiringScheduleResult, anime_title: str
+):
     """Display the airing schedule in a formatted table."""
     from datetime import datetime
     from rich.panel import Panel
@@ -144,7 +148,7 @@ def _display_airing_schedule(console, schedule_result: AiringScheduleResult, ani
         # Format air date
         if episode.airing_at:
             formatted_date = episode.airing_at.strftime("%Y-%m-%d %H:%M")
-            
+
             # Check if episode has already aired
             now = datetime.now()
             if episode.airing_at < now:
@@ -181,15 +185,18 @@ def _display_airing_schedule(console, schedule_result: AiringScheduleResult, ani
 
     # Add summary information
     total_episodes = len(schedule_result.schedule_items)
-    upcoming_episodes = sum(1 for ep in schedule_result.schedule_items 
-                          if ep.airing_at and ep.airing_at > datetime.now())
-    
+    upcoming_episodes = sum(
+        1
+        for ep in schedule_result.schedule_items
+        if ep.airing_at and ep.airing_at > datetime.now()
+    )
+
     summary_text = Text()
-    summary_text.append(f"Total episodes in schedule: ", style="bold")
+    summary_text.append("Total episodes in schedule: ", style="bold")
     summary_text.append(f"{total_episodes}", style="cyan")
-    summary_text.append(f"\nUpcoming episodes: ", style="bold")
+    summary_text.append("\nUpcoming episodes: ", style="bold")
     summary_text.append(f"{upcoming_episodes}", style="green")
-    
+
     summary_panel = Panel(
         summary_text,
         title="[bold]Summary[/bold]",

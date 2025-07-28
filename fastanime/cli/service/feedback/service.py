@@ -1,4 +1,3 @@
-import time
 from contextlib import contextmanager
 from typing import Optional
 
