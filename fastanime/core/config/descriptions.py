@@ -1,3 +1,6 @@
+# GeneralConfig
+from .defaults import SESSIONS_DIR
+
 GENERAL_PYGMENT_STYLE = "The pygment style to use"
 GENERAL_API_CLIENT = "The media database API to use (e.g., 'anilist', 'jikan')."
 GENERAL_PREFERRED_TRACKER = (
@@ -99,22 +102,16 @@ ANILIST_PREFERRED_LANGUAGE = "Preferred language for anime titles from AniList."
 DOWNLOADS_DOWNLOADER = "The downloader to use"
 DOWNLOADS_DOWNLOADS_DIR = "The default directory to save downloaded anime."
 DOWNLOADS_ENABLE_TRACKING = "Enable download tracking and management"
-DOWNLOADS_AUTO_ORGANIZE = "Automatically organize downloads by anime title"
-DOWNLOADS_MAX_CONCURRENT = "Maximum concurrent downloads"
-DOWNLOADS_AUTO_CLEANUP_FAILED = "Automatically cleanup failed downloads"
-DOWNLOADS_RETENTION_DAYS = "Days to keep failed downloads before cleanup"
-DOWNLOADS_SYNC_WITH_WATCH_HISTORY = "Sync download status with watch history"
-DOWNLOADS_AUTO_MARK_OFFLINE = (
-    "Automatically mark downloaded episodes as available offline"
-)
-DOWNLOADS_NAMING_TEMPLATE = "File naming template for downloaded episodes"
-DOWNLOADS_PREFERRED_QUALITY = "Preferred download quality"
-DOWNLOADS_DOWNLOAD_SUBTITLES = "Download subtitles when available"
-DOWNLOADS_SUBTITLE_LANGUAGES = "Preferred subtitle languages"
-DOWNLOADS_QUEUE_MAX_SIZE = "Maximum number of items in download queue"
-DOWNLOADS_AUTO_START_DOWNLOADS = "Automatically start downloads when items are queued"
+DOWNLOADS_MAX_CONCURRENT = "Maximum number of concurrent downloads"
 DOWNLOADS_RETRY_ATTEMPTS = "Number of retry attempts for failed downloads"
 DOWNLOADS_RETRY_DELAY = "Delay between retry attempts in seconds"
+DOWNLOADS_MERGE_SUBTITLES = (
+    "Automatically merge subtitles into the video file after download."
+)
+DOWNLOADS_CLEANUP_AFTER_MERGE = (
+    "Delete the original video and subtitle files after a successful merge."
+)
+
 
 # RegistryConfig
 MEDIA_REGISTRY_DIR = "The default directory to save media registry"

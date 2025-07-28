@@ -116,3 +116,15 @@ class WatchHistoryService:
                     progress=progress,
                 )
             )
+
+    def add_media_to_list_if_not_present(self, media_item: MediaItem):
+        """Adds a media item to the user's PLANNING list if it's not already on any list."""
+        if not self.media_api or not self.media_api.is_authenticated():
+            return
+
+        # If user_status is None, it means the item is not on the user's list.
+        if media_item.user_status is None:
+            logger.info(
+                f"'{media_item.title.english}' not on list. Adding to 'Planning'."
+            )
+            self.update(media_item, status=UserMediaListStatus.PLANNING)

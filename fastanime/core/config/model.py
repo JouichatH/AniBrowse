@@ -284,16 +284,36 @@ class DownloadsConfig(OtherConfig):
     downloader: Literal["auto", "default", "yt-dlp"] = Field(
         default=defaults.DOWNLOADS_DOWNLOADER, description=desc.DOWNLOADS_DOWNLOADER
     )
-
     downloads_dir: Path = Field(
         default_factory=lambda: defaults.DOWNLOADS_DOWNLOADS_DIR,
         description=desc.DOWNLOADS_DOWNLOADS_DIR,
     )
-
-    # Download tracking configuration
     enable_tracking: bool = Field(
         default=defaults.DOWNLOADS_ENABLE_TRACKING,
         description=desc.DOWNLOADS_ENABLE_TRACKING,
+    )
+    max_concurrent_downloads: int = Field(
+        default=defaults.DOWNLOADS_MAX_CONCURRENT,
+        ge=1,
+        description=desc.DOWNLOADS_MAX_CONCURRENT,
+    )
+    retry_attempts: int = Field(
+        default=defaults.DOWNLOADS_RETRY_ATTEMPTS,
+        ge=0,
+        description=desc.DOWNLOADS_RETRY_ATTEMPTS,
+    )
+    retry_delay: int = Field(
+        default=defaults.DOWNLOADS_RETRY_DELAY,
+        ge=0,
+        description=desc.DOWNLOADS_RETRY_DELAY,
+    )
+    merge_subtitles: bool = Field(
+        default=defaults.DOWNLOADS_MERGE_SUBTITLES,
+        description=desc.DOWNLOADS_MERGE_SUBTITLES,
+    )
+    cleanup_after_merge: bool = Field(
+        default=defaults.DOWNLOADS_CLEANUP_AFTER_MERGE,
+        description=desc.DOWNLOADS_CLEANUP_AFTER_MERGE,
     )
 
 
