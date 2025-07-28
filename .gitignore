@@ -209,3 +209,6 @@ __marimo__/
 # custom
 repomix-output.xml
 .project/
+
+# Nix artifact
+result

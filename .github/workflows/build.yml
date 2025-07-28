@@ -1,11 +1,11 @@
-name: debug_build
+name: build
 on:
   workflow_run:
     workflows: ["Test Workflow"]
     types:
       - completed
 jobs:
-  debug_build:
+  build:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
@@ -29,3 +29,15 @@ jobs:
           name: fastanime_debug_build
           path: |
             dist
+
+      - name: Install nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Use GitHub Action built-in cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Nix Flake check (evaluation + tests)
+        run: nix flake check
+
+      - name: Build the nix derivation
+        run: nix build
