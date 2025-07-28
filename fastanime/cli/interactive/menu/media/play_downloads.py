@@ -136,7 +136,9 @@ def downloads_player_controls(
                 query=media_item.title.english or media_item.title.romaji or "",
                 episode=current_episode_num,
                 start_time=current_start_time,
-            )
+            ),
+            media_item=media_item,
+            local=True,
         )
 
         # Track watch history after playing

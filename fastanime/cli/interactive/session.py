@@ -133,7 +133,9 @@ class Context:
         if not self._player:
             from ..service.player import PlayerService
 
-            self._player = PlayerService(self.config, self.provider)
+            self._player = PlayerService(
+                self.config, self.provider, self.media_registry
+            )
         return self._player
 
     @property

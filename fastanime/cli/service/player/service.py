@@ -10,6 +10,7 @@ from ....libs.player.player import create_player
 from ....libs.player.types import PlayerResult
 from ....libs.provider.anime.base import BaseAnimeProvider
 from ....libs.provider.anime.types import Anime
+from ..registry import MediaRegistryService
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +19,18 @@ class PlayerService:
     app_config: AppConfig
     provider: BaseAnimeProvider
     player: BasePlayer
+    registry: Optional[MediaRegistryService] = None
+    local: bool = False
 
-    def __init__(self, app_config: AppConfig, provider: BaseAnimeProvider):
+    def __init__(
+        self,
+        app_config: AppConfig,
+        provider: BaseAnimeProvider,
+        registry: Optional[MediaRegistryService] = None,
+    ):
         self.app_config = app_config
         self.provider = provider
+        self.registry = registry
         self.player = create_player(app_config)
 
     def play(
@@ -29,9 +38,11 @@ class PlayerService:
         params: PlayerParams,
         anime: Optional[Anime] = None,
         media_item: Optional[MediaItem] = None,
+        local: bool = False,
     ) -> PlayerResult:
+        self.local = local
         if self.app_config.stream.use_ipc:
-            if anime:
+            if anime or self.registry:
                 return self._play_with_ipc(params, anime, media_item)
             else:
                 logger.warning(
@@ -40,13 +51,17 @@ class PlayerService:
         return self.player.play(params)
 
     def _play_with_ipc(
-        self, params: PlayerParams, anime: Anime, media_item: Optional[MediaItem] = None
+        self,
+        params: PlayerParams,
+        anime: Optional[Anime] = None,
+        media_item: Optional[MediaItem] = None,
     ) -> PlayerResult:
         if self.app_config.stream.player == "mpv":
             from .ipc.mpv import MpvIPCPlayer
 
+            registry = self.registry if self.local else None
             return MpvIPCPlayer(self.app_config.stream).play(
-                self.player, params, self.provider, anime, media_item
+                self.player, params, self.provider, anime, registry, media_item
             )
         else:
             raise FastAnimeError("Not implemented")
