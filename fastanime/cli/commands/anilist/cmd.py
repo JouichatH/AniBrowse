@@ -10,6 +10,7 @@ commands = {
     "download": "download.download",
     "auth": "auth.auth",
     "stats": "stats.stats",
+    "notifications": "notifications.notifications",
 }
 
 

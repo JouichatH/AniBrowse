@@ -1,4 +1,4 @@
-from typing import Literal, Optional, TypedDict
+from typing import List, Literal, Optional, TypedDict
 
 
 class AnilistPageInfo(TypedDict):
@@ -226,28 +226,6 @@ class AnilistDataSchema(TypedDict):
     data: AnilistPages
 
 
-class AnilistNotification(TypedDict):
-    id: int
-    type: str
-    episode: int
-    context: str
-    createdAt: str
-    media: AnilistBaseMediaDataSchema
-
-
-class AnilistNotificationPage(TypedDict):
-    pageInfo: AnilistPageInfo
-    notifications: list[AnilistNotification]
-
-
-class AnilistNotificationPages(TypedDict):
-    Page: AnilistNotificationPage
-
-
-class AnilistNotifications(TypedDict):
-    data: AnilistNotificationPages
-
-
 class AnilistMediaList(TypedDict):
     media: AnilistBaseMediaDataSchema
     status: AnilistMediaListStatus
@@ -271,3 +249,25 @@ class AnilistMediaListPages(TypedDict):
 
 class AnilistMediaLists(TypedDict):
     data: AnilistMediaListPages
+
+
+class AnilistNotification(TypedDict):
+    id: int
+    type: str
+    episode: int
+    contexts: List[str]
+    createdAt: int  # This is a Unix timestamp
+    media: AnilistBaseMediaDataSchema  # This will be a partial response
+
+
+class AnilistNotificationPage(TypedDict):
+    pageInfo: AnilistPageInfo
+    notifications: list[AnilistNotification]
+
+
+class AnilistNotificationPages(TypedDict):
+    Page: AnilistNotificationPage
+
+
+class AnilistNotifications(TypedDict):
+    data: AnilistNotificationPages
