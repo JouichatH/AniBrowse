@@ -136,7 +136,6 @@ celerybeat.pid
 
 # Environments
 .env
-.envrc
 .venv
 env/
 venv/
@@ -209,6 +208,5 @@ __marimo__/
 # custom
 repomix-output.xml
 .project/
-
-# Nix artifact
 result
+.direnv
