@@ -140,49 +140,6 @@ class StreamConfig(BaseModel):
     )
 
 
-class ServiceConfig(BaseModel):
-    """Configuration for the background download service."""
-
-    enabled: bool = Field(
-        default=defaults.SERVICE_ENABLED,
-        description=desc.SERVICE_ENABLED,
-    )
-    watchlist_check_interval: int = Field(
-        default=defaults.SERVICE_WATCHLIST_CHECK_INTERVAL,
-        ge=5,
-        le=180,
-        description=desc.SERVICE_WATCHLIST_CHECK_INTERVAL,
-    )
-    queue_process_interval: int = Field(
-        default=defaults.SERVICE_QUEUE_PROCESS_INTERVAL,
-        ge=1,
-        le=60,
-        description=desc.SERVICE_QUEUE_PROCESS_INTERVAL,
-    )
-    max_concurrent_downloads: int = Field(
-        default=defaults.SERVICE_MAX_CONCURRENT_DOWNLOADS,
-        ge=1,
-        le=10,
-        description=desc.SERVICE_MAX_CONCURRENT_DOWNLOADS,
-    )
-    auto_retry_count: int = Field(
-        default=defaults.SERVICE_AUTO_RETRY_COUNT,
-        ge=0,
-        le=10,
-        description=desc.SERVICE_AUTO_RETRY_COUNT,
-    )
-    cleanup_completed_days: int = Field(
-        default=defaults.SERVICE_CLEANUP_COMPLETED_DAYS,
-        ge=1,
-        le=30,
-        description=desc.SERVICE_CLEANUP_COMPLETED_DAYS,
-    )
-    notification_enabled: bool = Field(
-        default=defaults.SERVICE_NOTIFICATION_ENABLED,
-        description=desc.SERVICE_NOTIFICATION_ENABLED,
-    )
-
-
 class OtherConfig(BaseModel):
     pass
 
@@ -338,72 +295,6 @@ class DownloadsConfig(OtherConfig):
         default=defaults.DOWNLOADS_ENABLE_TRACKING,
         description=desc.DOWNLOADS_ENABLE_TRACKING,
     )
-    auto_organize: bool = Field(
-        default=defaults.DOWNLOADS_AUTO_ORGANIZE,
-        description=desc.DOWNLOADS_AUTO_ORGANIZE,
-    )
-    max_concurrent: int = Field(
-        default=defaults.DOWNLOADS_MAX_CONCURRENT,
-        gt=0,
-        le=10,
-        description=desc.DOWNLOADS_MAX_CONCURRENT,
-    )
-    auto_cleanup_failed: bool = Field(
-        default=defaults.DOWNLOADS_AUTO_CLEANUP_FAILED,
-        description=desc.DOWNLOADS_AUTO_CLEANUP_FAILED,
-    )
-    retention_days: int = Field(
-        default=defaults.DOWNLOADS_RETENTION_DAYS,
-        gt=0,
-        description=desc.DOWNLOADS_RETENTION_DAYS,
-    )
-
-    # Integration with watch history
-    sync_with_watch_history: bool = Field(
-        default=defaults.DOWNLOADS_SYNC_WITH_WATCH_HISTORY,
-        description=desc.DOWNLOADS_SYNC_WITH_WATCH_HISTORY,
-    )
-    auto_mark_offline: bool = Field(
-        default=defaults.DOWNLOADS_AUTO_MARK_OFFLINE,
-        description=desc.DOWNLOADS_AUTO_MARK_OFFLINE,
-    )
-
-    # File organization
-    naming_template: str = Field(
-        default=defaults.DOWNLOADS_NAMING_TEMPLATE,
-        description=desc.DOWNLOADS_NAMING_TEMPLATE,
-    )
-
-    # Quality and subtitles
-    preferred_quality: Literal["360", "480", "720", "1080", "best"] = Field(
-        default=defaults.DOWNLOADS_PREFERRED_QUALITY,
-        description=desc.DOWNLOADS_PREFERRED_QUALITY,
-    )
-    download_subtitles: bool = Field(
-        default=defaults.DOWNLOADS_DOWNLOAD_SUBTITLES,
-        description=desc.DOWNLOADS_DOWNLOAD_SUBTITLES,
-    )
-
-    # Queue management
-    queue_max_size: int = Field(
-        default=defaults.DOWNLOADS_QUEUE_MAX_SIZE,
-        gt=0,
-        description=desc.DOWNLOADS_QUEUE_MAX_SIZE,
-    )
-    auto_start_downloads: bool = Field(
-        default=defaults.DOWNLOADS_AUTO_START_DOWNLOADS,
-        description=desc.DOWNLOADS_AUTO_START_DOWNLOADS,
-    )
-    retry_attempts: int = Field(
-        default=defaults.DOWNLOADS_RETRY_ATTEMPTS,
-        ge=0,
-        description=desc.DOWNLOADS_RETRY_ATTEMPTS,
-    )
-    retry_delay: int = Field(
-        default=defaults.DOWNLOADS_RETRY_DELAY,
-        ge=0,
-        description=desc.DOWNLOADS_RETRY_DELAY,
-    )
 
 
 class MediaRegistryConfig(OtherConfig):
@@ -442,11 +333,6 @@ class AppConfig(BaseModel):
         default_factory=JikanConfig,
         description=desc.APP_JIKAN,
     )
-    service: ServiceConfig = Field(
-        default_factory=ServiceConfig,
-        description=desc.APP_SERVICE,
-    )
-
     fzf: FzfConfig = Field(
         default_factory=FzfConfig,
         description=desc.APP_FZF,
@@ -456,10 +342,6 @@ class AppConfig(BaseModel):
         description=desc.APP_ROFI,
     )
     mpv: MpvConfig = Field(default_factory=MpvConfig, description=desc.APP_MPV)
-    service: ServiceConfig = Field(
-        default_factory=ServiceConfig,
-        description=desc.APP_SERVICE,
-    )
     media_registry: MediaRegistryConfig = Field(
         default_factory=MediaRegistryConfig, description=desc.APP_MEDIA_REGISTRY
     )
