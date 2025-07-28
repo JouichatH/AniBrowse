@@ -5,7 +5,12 @@ from typing import Dict, List, Optional
 
 from ...core.config import AppConfig
 from ...core.constants import APP_CACHE_DIR, PLATFORM, SCRIPTS_DIR
-from ...libs.media_api.types import MediaItem, MediaReview
+from ...libs.media_api.types import (
+    AiringScheduleResult,
+    Character,
+    MediaItem,
+    MediaReview,
+)
 from . import ansi
 from .preview_workers import PreviewWorkerManager
 
@@ -17,6 +22,8 @@ PREVIEWS_CACHE_DIR = APP_CACHE_DIR / "previews"
 IMAGES_CACHE_DIR = PREVIEWS_CACHE_DIR / "images"
 INFO_CACHE_DIR = PREVIEWS_CACHE_DIR / "info"
 REVIEWS_CACHE_DIR = PREVIEWS_CACHE_DIR / "reviews"
+CHARACTERS_CACHE_DIR = PREVIEWS_CACHE_DIR / "characters"
+AIRING_SCHEDULE_CACHE_DIR = PREVIEWS_CACHE_DIR / "airing_schedule"
 
 FZF_SCRIPTS_DIR = SCRIPTS_DIR / "fzf"
 TEMPLATE_PREVIEW_SCRIPT = (FZF_SCRIPTS_DIR / "preview.template.sh").read_text(
@@ -24,6 +31,12 @@ TEMPLATE_PREVIEW_SCRIPT = (FZF_SCRIPTS_DIR / "preview.template.sh").read_text(
 )
 TEMPLATE_REVIEW_PREVIEW_SCRIPT = (
     FZF_SCRIPTS_DIR / "review-preview.template.sh"
+).read_text(encoding="utf-8")
+TEMPLATE_CHARACTER_PREVIEW_SCRIPT = (
+    FZF_SCRIPTS_DIR / "character-preview.template.sh"
+).read_text(encoding="utf-8")
+TEMPLATE_AIRING_SCHEDULE_PREVIEW_SCRIPT = (
+    FZF_SCRIPTS_DIR / "airing-schedule-preview.template.sh"
 ).read_text(encoding="utf-8")
 DYNAMIC_PREVIEW_SCRIPT = (FZF_SCRIPTS_DIR / "dynamic-preview.template.sh").read_text(
     encoding="utf-8"
@@ -100,6 +113,22 @@ class PreviewContext:
             self._manager = _get_preview_manager()
         return get_review_preview(choice_map, config)
 
+    def get_character_preview(
+        self, choice_map: Dict[str, Character], config: AppConfig
+    ) -> str:
+        """Get character preview script with managed workers."""
+        if not self._manager:
+            self._manager = _get_preview_manager()
+        return get_character_preview(choice_map, config)
+
+    def get_airing_schedule_preview(
+        self, schedule_result: AiringScheduleResult, config: AppConfig, anime_title: str = "Anime"
+    ) -> str:
+        """Get airing schedule preview script with managed workers."""
+        if not self._manager:
+            self._manager = _get_preview_manager()
+        return get_airing_schedule_preview(schedule_result, config, anime_title)
+
     def cancel_all_tasks(self) -> int:
         """Cancel all running preview tasks."""
         if not self._manager:
@@ -110,13 +139,25 @@ class PreviewContext:
             cancelled += self._manager._preview_worker.cancel_all_tasks()
         if self._manager._episode_worker:
             cancelled += self._manager._episode_worker.cancel_all_tasks()
+        if self._manager._review_worker:
+            cancelled += self._manager._review_worker.cancel_all_tasks()
+        if self._manager._character_worker:
+            cancelled += self._manager._character_worker.cancel_all_tasks()
+        if self._manager._airing_schedule_worker:
+            cancelled += self._manager._airing_schedule_worker.cancel_all_tasks()
         return cancelled
 
     def get_status(self) -> dict:
         """Get status of workers in this context."""
         if self._manager:
             return self._manager.get_status()
-        return {"preview_worker": None, "episode_worker": None}
+        return {
+            "preview_worker": None, 
+            "episode_worker": None, 
+            "review_worker": None,
+            "character_worker": None,
+            "airing_schedule_worker": None,
+        }
 
 
 def get_anime_preview(
@@ -338,6 +379,76 @@ def get_review_preview(choice_map: Dict[str, MediaReview], config: AppConfig) ->
     replacements = {
         "PREVIEW_MODE": config.general.preview,
         "INFO_CACHE_DIR": str(REVIEWS_CACHE_DIR),
+        "PATH_SEP": path_sep,
+        "C_TITLE": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),
+        "C_KEY": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),
+        "C_VALUE": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),
+        "C_RULE": ansi.get_true_fg(
+            config.fzf.preview_separator_color.split(","), bold=True
+        ),
+        "RESET": ansi.RESET,
+    }
+
+    for key, value in replacements.items():
+        preview_script = preview_script.replace(f"{{{key}}}", value)
+
+    return preview_script
+
+
+def get_character_preview(choice_map: Dict[str, Character], config: AppConfig) -> str:
+    """
+    Generate the generic loader script for character previews and start background caching.
+    """
+
+    INFO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    preview_manager = _get_preview_manager()
+    worker = preview_manager.get_character_worker()
+    worker.cache_character_previews(choice_map, config)
+    logger.debug("Started background caching for character previews")
+
+    # Use the generic loader script
+    preview_script = TEMPLATE_CHARACTER_PREVIEW_SCRIPT
+    path_sep = "\\" if PLATFORM == "win32" else "/"
+
+    # Inject the correct cache path and color codes
+    replacements = {
+        "PREVIEW_MODE": config.general.preview,
+        "INFO_CACHE_DIR": str(INFO_CACHE_DIR),
+        "PATH_SEP": path_sep,
+        "C_TITLE": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),
+        "C_KEY": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),
+        "C_VALUE": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),
+        "C_RULE": ansi.get_true_fg(
+            config.fzf.preview_separator_color.split(","), bold=True
+        ),
+        "RESET": ansi.RESET,
+    }
+
+    for key, value in replacements.items():
+        preview_script = preview_script.replace(f"{{{key}}}", value)
+
+    return preview_script
+
+
+def get_airing_schedule_preview(schedule_result: AiringScheduleResult, config: AppConfig, anime_title: str = "Anime") -> str:
+    """
+    Generate the generic loader script for airing schedule previews and start background caching.
+    """
+
+    INFO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    preview_manager = _get_preview_manager()
+    worker = preview_manager.get_airing_schedule_worker()
+    worker.cache_airing_schedule_preview(anime_title, schedule_result, config)
+    logger.debug("Started background caching for airing schedule previews")
+
+    # Use the generic loader script
+    preview_script = TEMPLATE_AIRING_SCHEDULE_PREVIEW_SCRIPT
+    path_sep = "\\" if PLATFORM == "win32" else "/"
+
+    # Inject the correct cache path and color codes
+    replacements = {
+        "PREVIEW_MODE": config.general.preview,
+        "INFO_CACHE_DIR": str(INFO_CACHE_DIR),
         "PATH_SEP": path_sep,
         "C_TITLE": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),
         "C_KEY": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),

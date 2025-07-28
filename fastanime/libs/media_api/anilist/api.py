@@ -20,6 +20,8 @@ from ..params import (
     UserMediaListSearchParams,
 )
 from ..types import (
+    AiringScheduleResult,
+    CharacterSearchResult,
     MediaItem,
     MediaReview,
     MediaSearchResult,
@@ -228,13 +230,14 @@ class AniListApi(BaseApiClient):
         )
         return mapper.to_generic_recommendations(response.json())
 
-    def get_characters_of(self, params: MediaCharactersParams) -> Optional[Dict]:
+    def get_characters_of(self, params: MediaCharactersParams) -> Optional[CharacterSearchResult]:
         variables = {"id": params.id, "type": "ANIME"}
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_CHARACTERS, variables
         )
-        # TODO: standardize character type
-        return response.json()
+        if response and "errors" not in response.json():
+            return mapper.to_generic_characters_result(response.json())
+        return None
 
     def get_related_anime_for(
         self, params: MediaRelationsParams
@@ -247,13 +250,14 @@ class AniListApi(BaseApiClient):
 
     def get_airing_schedule_for(
         self, params: MediaAiringScheduleParams
-    ) -> Optional[Dict]:
+    ) -> Optional[AiringScheduleResult]:
         variables = {"id": params.id, "type": "ANIME"}
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_AIRING_SCHEDULE, variables
         )
-        # TODO: standardize airing schedule type
-        return response.json()
+        if response and "errors" not in response.json():
+            return mapper.to_generic_airing_schedule_result(response.json())
+        return None
 
     def get_reviews_for(
         self, params: MediaReviewsParams

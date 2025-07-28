@@ -101,6 +101,59 @@ class AiringSchedule(BaseMediaApiModel):
     airing_at: Optional[datetime] = None
 
 
+class CharacterName(BaseMediaApiModel):
+    """A generic representation of a character's name."""
+
+    first: Optional[str] = None
+    middle: Optional[str] = None
+    last: Optional[str] = None
+    full: Optional[str] = None
+    native: Optional[str] = None
+
+
+class CharacterImage(BaseMediaApiModel):
+    """A generic representation of a character's image."""
+
+    medium: Optional[str] = None
+    large: Optional[str] = None
+
+
+class Character(BaseMediaApiModel):
+    """A generic representation of an anime character."""
+
+    id: Optional[int] = None
+    name: CharacterName
+    image: Optional[CharacterImage] = None
+    description: Optional[str] = None
+    gender: Optional[str] = None
+    age: Optional[int] = None
+    blood_type: Optional[str] = None
+    favourites: Optional[int] = None
+    date_of_birth: Optional[datetime] = None
+
+
+class AiringScheduleItem(BaseMediaApiModel):
+    """A generic representation of an airing schedule item."""
+
+    episode: int
+    airing_at: Optional[datetime] = None
+    time_until_airing: Optional[int] = None  # In seconds
+
+
+class CharacterSearchResult(BaseMediaApiModel):
+    """A generic representation of character search results."""
+
+    characters: List[Character] = Field(default_factory=list)
+    page_info: Optional[PageInfo] = None
+
+
+class AiringScheduleResult(BaseMediaApiModel):
+    """A generic representation of airing schedule results."""
+
+    schedule_items: List[AiringScheduleItem] = Field(default_factory=list)
+    page_info: Optional[PageInfo] = None
+
+
 class Studio(BaseMediaApiModel):
     """A generic representation of an animation studio."""
 

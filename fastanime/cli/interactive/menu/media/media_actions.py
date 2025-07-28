@@ -598,188 +598,19 @@ def _view_relations(ctx: Context, state: State) -> MenuAction:
 
 
 def _view_characters(ctx: Context, state: State) -> MenuAction:
-    def action():
-        feedback = ctx.feedback
-        media_item = state.media_api.media_item
+    """Action to transition to the character selection menu."""
 
-        if not media_item:
-            feedback.error("Media item is not in state")
-            return InternalDirective.RELOAD
-
-        loading_message = "Fetching characters..."
-        characters_data = None
-
-        with feedback.progress(loading_message):
-            characters_data = ctx.media_api.get_characters_of(
-                MediaCharactersParams(id=media_item.id)
-            )
-
-        if not characters_data or not characters_data.get("data"):
-            feedback.warning(
-                "No character information found",
-                "This anime doesn't have character data available",
-            )
-            return InternalDirective.RELOAD
-
-        try:
-            # Extract characters from the nested response structure
-            page_data = characters_data["data"]["Page"]["media"][0]
-            characters = page_data["characters"]["nodes"]
-
-            if not characters:
-                feedback.warning("No characters found for this anime")
-                return InternalDirective.RELOAD
-
-            # Display characters using rich
-            from rich.console import Console
-            from rich.panel import Panel
-            from rich.table import Table
-            from rich.text import Text
-
-            console = Console()
-            console.clear()
-
-            # Create title
-            anime_title = media_item.title.english or media_item.title.romaji
-            title = Text(f"Characters in {anime_title}", style="bold cyan")
-
-            # Create table for characters
-            table = Table(show_header=True, header_style="bold magenta")
-            table.add_column("Name", style="cyan", no_wrap=True)
-            table.add_column("Gender", style="green")
-            table.add_column("Age", style="yellow")
-            table.add_column("Favorites", style="red")
-            table.add_column("Description", style="dim", max_width=50)
-
-            for char in characters[:20]:  # Show first 20 characters
-                name = char["name"]["full"] or char["name"]["first"] or "Unknown"
-                gender = char.get("gender") or "Unknown"
-                age = str(char.get("age") or "Unknown")
-                favorites = str(char.get("favourites") or "0")
-
-                # Clean up description (remove HTML tags and truncate)
-                description = char.get("description") or "No description"
-                if description:
-                    import re
-
-                    description = re.sub(
-                        r"<[^>]+>", "", description
-                    )  # Remove HTML tags
-                    if len(description) > 100:
-                        description = description[:97] + "..."
-
-                table.add_row(name, gender, age, favorites, description)
-
-            # Display in a panel
-            panel = Panel(table, title=title, border_style="blue")
-            console.print(panel)
-
-            ctx.selector.ask("Press Enter to continue...")
-
-        except (KeyError, IndexError, TypeError) as e:
-            feedback.error(f"Error displaying characters: {e}")
-
-        return InternalDirective.RELOAD
+    def action() -> State | InternalDirective:
+        return State(menu_name=MenuName.MEDIA_CHARACTERS, media_api=state.media_api)
 
     return action
 
 
 def _view_airing_schedule(ctx: Context, state: State) -> MenuAction:
-    def action():
-        feedback = ctx.feedback
-        media_item = state.media_api.media_item
+    """Action to transition to the airing schedule menu."""
 
-        if not media_item:
-            feedback.error("Media item is not in state")
-            return InternalDirective.RELOAD
-
-        loading_message = "Fetching airing schedule..."
-        schedule_data = None
-
-        with feedback.progress(loading_message):
-            schedule_data = ctx.media_api.get_airing_schedule_for(
-                MediaAiringScheduleParams(id=media_item.id)
-            )
-
-        if not schedule_data or not schedule_data.get("data"):
-            feedback.warning(
-                "No airing schedule found",
-                "This anime doesn't have upcoming episodes or airing data",
-            )
-            return InternalDirective.RELOAD
-
-        try:
-            # Extract schedule from the nested response structure
-            page_data = schedule_data["data"]["Page"]["media"][0]
-            schedule_nodes = page_data["airingSchedule"]["nodes"]
-
-            if not schedule_nodes:
-                feedback.info(
-                    "No upcoming episodes",
-                    "This anime has no scheduled upcoming episodes",
-                )
-                return InternalDirective.RELOAD
-
-            # Display schedule using rich
-            from datetime import datetime
-
-            from rich.console import Console
-            from rich.panel import Panel
-            from rich.table import Table
-            from rich.text import Text
-
-            console = Console()
-            console.clear()
-
-            # Create title
-            anime_title = media_item.title.english or media_item.title.romaji
-            title = Text(f"Airing Schedule for {anime_title}", style="bold cyan")
-
-            # Create table for episodes
-            table = Table(show_header=True, header_style="bold magenta")
-            table.add_column("Episode", style="cyan", justify="center")
-            table.add_column("Air Date", style="green")
-            table.add_column("Time Until Airing", style="yellow")
-
-            for episode in schedule_nodes[:10]:  # Show next 10 episodes
-                ep_num = str(episode.get("episode", "?"))
-
-                # Format air date
-                airing_at = episode.get("airingAt")
-                if airing_at:
-                    air_date = datetime.fromtimestamp(airing_at)
-                    formatted_date = air_date.strftime("%Y-%m-%d %H:%M")
-                else:
-                    formatted_date = "Unknown"
-
-                # Format time until airing
-                time_until = episode.get("timeUntilAiring")
-                if time_until:
-                    days = time_until // 86400
-                    hours = (time_until % 86400) // 3600
-                    minutes = (time_until % 3600) // 60
-
-                    if days > 0:
-                        time_str = f"{days}d {hours}h {minutes}m"
-                    elif hours > 0:
-                        time_str = f"{hours}h {minutes}m"
-                    else:
-                        time_str = f"{minutes}m"
-                else:
-                    time_str = "Unknown"
-
-                table.add_row(ep_num, formatted_date, time_str)
-
-            # Display in a panel
-            panel = Panel(table, title=title, border_style="blue")
-            console.print(panel)
-
-            ctx.selector.ask("Press Enter to continue...")
-
-        except (KeyError, IndexError, TypeError) as e:
-            feedback.error(f"Error displaying airing schedule: {e}")
-
-        return InternalDirective.RELOAD
+    def action() -> State | InternalDirective:
+        return State(menu_name=MenuName.MEDIA_AIRING_SCHEDULE, media_api=state.media_api)
 
     return action
 

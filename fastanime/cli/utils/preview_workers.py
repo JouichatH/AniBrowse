@@ -19,7 +19,12 @@ from ...core.utils.concurrency import (
     thread_manager,
 )
 from ...core.utils.file import AtomicWriter
-from ...libs.media_api.types import MediaItem, MediaReview
+from ...libs.media_api.types import (
+    AiringScheduleResult,
+    Character,
+    MediaItem,
+    MediaReview,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +37,12 @@ TEMPLATE_EPISODE_INFO_SCRIPT = (FZF_SCRIPTS_DIR / "episode-info.template.sh").re
     encoding="utf-8"
 )
 TEMPLATE_REVIEW_INFO_SCRIPT = (FZF_SCRIPTS_DIR / "review-info.template.sh").read_text(
+    encoding="utf-8"
+)
+TEMPLATE_CHARACTER_INFO_SCRIPT = (FZF_SCRIPTS_DIR / "character-info.template.sh").read_text(
+    encoding="utf-8"
+)
+TEMPLATE_AIRING_SCHEDULE_INFO_SCRIPT = (FZF_SCRIPTS_DIR / "airing-schedule-info.template.sh").read_text(
     encoding="utf-8"
 )
 
@@ -473,6 +484,216 @@ class ReviewCacheWorker(ManagedBackgroundWorker):
             logger.warning(f"Review cache task failed: {future.exception()}")
 
 
+class CharacterCacheWorker(ManagedBackgroundWorker):
+    """
+    Specialized background worker for caching character preview data.
+    """
+
+    def __init__(self, characters_cache_dir, max_workers: int = 10):
+        super().__init__(max_workers=max_workers, name="CharacterCacheWorker")
+        self.characters_cache_dir = characters_cache_dir
+
+    def cache_character_previews(
+        self, choice_map: Dict[str, Character], config: AppConfig
+    ) -> None:
+        """
+        Creates cache files containing the final, formatted preview content for each character.
+
+        Args:
+            choice_map: Dictionary mapping the fzf choice string to the Character object.
+            config: The application configuration.
+        """
+        if not self.is_running():
+            raise RuntimeError("CharacterCacheWorker is not running")
+
+        for choice_str, character in choice_map.items():
+            hash_id = self._get_cache_hash(choice_str)
+            info_path = self.characters_cache_dir / hash_id
+
+            preview_content = self._generate_character_preview_content(character, config)
+            self.submit_function(self._save_preview_content, preview_content, hash_id)
+
+    def _generate_character_preview_content(
+        self, character: Character, config: AppConfig
+    ) -> str:
+        """
+        Generates the final, formatted preview content by injecting character data into the template.
+        """
+        character_name = character.name.full or character.name.first or "Unknown Character"
+        native_name = character.name.native or "N/A"
+        gender = character.gender or "Unknown"
+        age = str(character.age) if character.age else "Unknown"
+        blood_type = character.blood_type or "N/A"
+        favourites = f"{character.favourites:,}" if character.favourites else "0"
+        birthday = character.date_of_birth.strftime("%B %d, %Y") if character.date_of_birth else "N/A"
+        
+        # Clean and format description
+        description = character.description or "No description available"
+        if description:
+            import re
+            description = re.sub(r"<[^>]+>", "", description)
+            description = (
+                description.replace("&quot;", '"')
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&#039;", "'")
+                .replace("&nbsp;", " ")
+            )
+
+        # Inject data into the presentation template
+        template = TEMPLATE_CHARACTER_INFO_SCRIPT
+        replacements = {
+            "CHARACTER_NAME": formatter.shell_safe(character_name),
+            "CHARACTER_NATIVE_NAME": formatter.shell_safe(native_name),
+            "CHARACTER_GENDER": formatter.shell_safe(gender),
+            "CHARACTER_AGE": formatter.shell_safe(age),
+            "CHARACTER_BLOOD_TYPE": formatter.shell_safe(blood_type),
+            "CHARACTER_BIRTHDAY": formatter.shell_safe(birthday),
+            "CHARACTER_FAVOURITES": formatter.shell_safe(favourites),
+            "CHARACTER_DESCRIPTION": formatter.shell_safe(description),
+        }
+        for key, value in replacements.items():
+            template = template.replace(f"{{{key}}}", value)
+
+        return template
+
+    def _save_preview_content(self, content: str, hash_id: str) -> None:
+        """Saves the final preview content to the cache."""
+        try:
+            info_path = self.characters_cache_dir / hash_id
+            with AtomicWriter(info_path) as f:
+                f.write(content)
+            logger.debug(f"Successfully cached character preview: {hash_id}")
+        except IOError as e:
+            logger.error(f"Failed to write character preview cache for {hash_id}: {e}")
+            raise
+
+    def _get_cache_hash(self, text: str) -> str:
+        from hashlib import sha256
+        return sha256(text.encode("utf-8")).hexdigest()
+
+    def _on_task_completed(self, task: WorkerTask, future) -> None:
+        super()._on_task_completed(task, future)
+        if future.exception():
+            logger.warning(f"Character cache task failed: {future.exception()}")
+
+
+class AiringScheduleCacheWorker(ManagedBackgroundWorker):
+    """
+    Specialized background worker for caching airing schedule preview data.
+    """
+
+    def __init__(self, airing_schedule_cache_dir, max_workers: int = 10):
+        super().__init__(max_workers=max_workers, name="AiringScheduleCacheWorker")
+        self.airing_schedule_cache_dir = airing_schedule_cache_dir
+
+    def cache_airing_schedule_preview(
+        self, anime_title: str, schedule_result: AiringScheduleResult, config: AppConfig
+    ) -> None:
+        """
+        Creates cache files containing the final, formatted preview content for airing schedule.
+
+        Args:
+            anime_title: The title of the anime
+            schedule_result: The airing schedule result object
+            config: The application configuration.
+        """
+        if not self.is_running():
+            raise RuntimeError("AiringScheduleCacheWorker is not running")
+
+        hash_id = self._get_cache_hash(anime_title)
+        info_path = self.airing_schedule_cache_dir / hash_id
+
+        preview_content = self._generate_airing_schedule_preview_content(
+            anime_title, schedule_result, config
+        )
+        self.submit_function(self._save_preview_content, preview_content, hash_id)
+
+    def _generate_airing_schedule_preview_content(
+        self, anime_title: str, schedule_result: AiringScheduleResult, config: AppConfig
+    ) -> str:
+        """
+        Generates the final, formatted preview content by injecting schedule data into the template.
+        """
+        from datetime import datetime
+
+        total_episodes = len(schedule_result.schedule_items)
+        upcoming_episodes = sum(1 for ep in schedule_result.schedule_items 
+                              if ep.airing_at and ep.airing_at > datetime.now())
+
+        # Generate schedule table text
+        schedule_lines = []
+        sorted_episodes = sorted(schedule_result.schedule_items, key=lambda x: x.episode)
+        
+        for episode in sorted_episodes[:10]:  # Show next 10 episodes
+            ep_num = str(episode.episode)
+            
+            if episode.airing_at:
+                formatted_date = episode.airing_at.strftime("%Y-%m-%d %H:%M")
+                now = datetime.now()
+                if episode.airing_at < now:
+                    status = "Aired"
+                else:
+                    status = "Upcoming"
+            else:
+                formatted_date = "Unknown"
+                status = "TBA"
+
+            # Format time until airing
+            if episode.time_until_airing and episode.time_until_airing > 0:
+                time_until = episode.time_until_airing
+                days = time_until // 86400
+                hours = (time_until % 86400) // 3600
+                if days > 0:
+                    time_str = f"{days}d {hours}h"
+                elif hours > 0:
+                    time_str = f"{hours}h"
+                else:
+                    time_str = f"<1h"
+            elif episode.airing_at and episode.airing_at < datetime.now():
+                time_str = "Aired"
+            else:
+                time_str = "Unknown"
+
+            schedule_lines.append(f"Episode {ep_num:>3}: {formatted_date} ({time_str}) - {status}")
+
+        schedule_table = "\n".join(schedule_lines)
+
+        # Inject data into the presentation template
+        template = TEMPLATE_AIRING_SCHEDULE_INFO_SCRIPT
+        replacements = {
+            "ANIME_TITLE": formatter.shell_safe(anime_title),
+            "TOTAL_EPISODES": formatter.shell_safe(str(total_episodes)),
+            "UPCOMING_EPISODES": formatter.shell_safe(str(upcoming_episodes)),
+            "SCHEDULE_TABLE": formatter.shell_safe(schedule_table),
+        }
+        for key, value in replacements.items():
+            template = template.replace(f"{{{key}}}", value)
+
+        return template
+
+    def _save_preview_content(self, content: str, hash_id: str) -> None:
+        """Saves the final preview content to the cache."""
+        try:
+            info_path = self.airing_schedule_cache_dir / hash_id
+            with AtomicWriter(info_path) as f:
+                f.write(content)
+            logger.debug(f"Successfully cached airing schedule preview: {hash_id}")
+        except IOError as e:
+            logger.error(f"Failed to write airing schedule preview cache for {hash_id}: {e}")
+            raise
+
+    def _get_cache_hash(self, text: str) -> str:
+        from hashlib import sha256
+        return sha256(text.encode("utf-8")).hexdigest()
+
+    def _on_task_completed(self, task: WorkerTask, future) -> None:
+        super()._on_task_completed(task, future)
+        if future.exception():
+            logger.warning(f"Airing schedule cache task failed: {future.exception()}")
+
+
 class PreviewWorkerManager:
     """
     High-level manager for preview caching workers.
@@ -488,6 +709,7 @@ class PreviewWorkerManager:
         Args:
             images_cache_dir: Directory to cache images
             info_cache_dir: Directory to cache info text
+            reviews_cache_dir: Directory to cache reviews
         """
         self.images_cache_dir = images_cache_dir
         self.info_cache_dir = info_cache_dir
@@ -495,6 +717,8 @@ class PreviewWorkerManager:
         self._preview_worker: Optional[PreviewCacheWorker] = None
         self._episode_worker: Optional[EpisodeCacheWorker] = None
         self._review_worker: Optional[ReviewCacheWorker] = None
+        self._character_worker: Optional[CharacterCacheWorker] = None
+        self._airing_schedule_worker: Optional[AiringScheduleCacheWorker] = None
 
     def get_preview_worker(self) -> PreviewCacheWorker:
         """Get or create the preview cache worker."""
@@ -527,9 +751,9 @@ class PreviewWorkerManager:
         return self._episode_worker
 
     def get_review_worker(self) -> ReviewCacheWorker:
-        """Get or create the episode cache worker."""
+        """Get or create the review cache worker."""
         if self._review_worker is None or not self._review_worker.is_running():
-            if self._episode_worker:
+            if self._review_worker:
                 # Clean up old worker
                 thread_manager.shutdown_worker("review_cache_worker")
 
@@ -539,6 +763,32 @@ class PreviewWorkerManager:
 
         return self._review_worker
 
+    def get_character_worker(self) -> CharacterCacheWorker:
+        """Get or create the character cache worker."""
+        if self._character_worker is None or not self._character_worker.is_running():
+            if self._character_worker:
+                # Clean up old worker
+                thread_manager.shutdown_worker("character_cache_worker")
+
+            self._character_worker = CharacterCacheWorker(self.info_cache_dir)
+            self._character_worker.start()
+            thread_manager.register_worker("character_cache_worker", self._character_worker)
+
+        return self._character_worker
+
+    def get_airing_schedule_worker(self) -> AiringScheduleCacheWorker:
+        """Get or create the airing schedule cache worker."""
+        if self._airing_schedule_worker is None or not self._airing_schedule_worker.is_running():
+            if self._airing_schedule_worker:
+                # Clean up old worker
+                thread_manager.shutdown_worker("airing_schedule_cache_worker")
+
+            self._airing_schedule_worker = AiringScheduleCacheWorker(self.info_cache_dir)
+            self._airing_schedule_worker.start()
+            thread_manager.register_worker("airing_schedule_cache_worker", self._airing_schedule_worker)
+
+        return self._airing_schedule_worker
+
     def shutdown_all(self, wait: bool = True, timeout: Optional[float] = 30.0) -> None:
         """Shutdown all managed workers."""
         thread_manager.shutdown_worker(
@@ -547,8 +797,20 @@ class PreviewWorkerManager:
         thread_manager.shutdown_worker(
             "episode_cache_worker", wait=wait, timeout=timeout
         )
+        thread_manager.shutdown_worker(
+            "review_cache_worker", wait=wait, timeout=timeout
+        )
+        thread_manager.shutdown_worker(
+            "character_cache_worker", wait=wait, timeout=timeout
+        )
+        thread_manager.shutdown_worker(
+            "airing_schedule_cache_worker", wait=wait, timeout=timeout
+        )
         self._preview_worker = None
         self._episode_worker = None
+        self._review_worker = None
+        self._character_worker = None
+        self._airing_schedule_worker = None
 
     def get_status(self) -> dict:
         """Get status of all managed workers."""
@@ -558,6 +820,15 @@ class PreviewWorkerManager:
             else None,
             "episode_worker": self._episode_worker.get_completion_stats()
             if self._episode_worker
+            else None,
+            "review_worker": self._review_worker.get_completion_stats()
+            if self._review_worker
+            else None,
+            "character_worker": self._character_worker.get_completion_stats()
+            if self._character_worker
+            else None,
+            "airing_schedule_worker": self._airing_schedule_worker.get_completion_stats()
+            if self._airing_schedule_worker
             else None,
         }
 

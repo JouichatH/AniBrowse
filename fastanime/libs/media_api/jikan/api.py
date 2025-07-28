@@ -13,7 +13,15 @@ from ..params import (
     UpdateUserMediaListEntryParams,
     UserMediaListSearchParams,
 )
-from ..types import MediaImage, MediaItem, MediaSearchResult, MediaTitle, UserProfile
+from ..types import (
+    AiringScheduleResult,
+    CharacterSearchResult,
+    MediaImage,
+    MediaItem,
+    MediaSearchResult,
+    MediaTitle,
+    UserProfile,
+)
 from . import mapper
 
 if TYPE_CHECKING:
@@ -130,19 +138,10 @@ class JikanApi(BaseApiClient):
             logger.error(f"Failed to fetch recommendations for media {params.id}: {e}")
             return None
 
-    def get_characters_of(self, params: MediaCharactersParams) -> Optional[Dict]:
+    def get_characters_of(self, params: MediaCharactersParams) -> Optional[CharacterSearchResult]:
         """Fetches characters for a given anime."""
-        try:
-            endpoint = f"/anime/{params.id}/characters"
-            raw_data = self._execute_request(endpoint)
-            if not raw_data:
-                return None
-
-            # Return the raw character data as Jikan provides it
-            return raw_data
-        except Exception as e:
-            logger.error(f"Failed to fetch characters for media {params.id}: {e}")
-            return None
+        logger.warning("Jikan API does not support fetching character data in the standardized format.")
+        return None
 
     def get_related_anime_for(
         self, params: MediaRelationsParams
@@ -182,7 +181,7 @@ class JikanApi(BaseApiClient):
 
     def get_airing_schedule_for(
         self, params: MediaAiringScheduleParams
-    ) -> Optional[Dict]:
+    ) -> Optional[AiringScheduleResult]:
         """Jikan doesn't provide a direct airing schedule endpoint per anime."""
         logger.warning(
             "Jikan API does not support fetching airing schedules for individual anime."

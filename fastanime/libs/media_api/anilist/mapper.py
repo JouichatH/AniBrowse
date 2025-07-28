@@ -8,6 +8,12 @@ from ....core.utils.formatter import (
 )
 from ..types import (
     AiringSchedule,
+    AiringScheduleItem,
+    AiringScheduleResult,
+    Character,
+    CharacterImage,
+    CharacterName,
+    CharacterSearchResult,
     MediaFormat,
     MediaGenre,
     MediaImage,
@@ -388,3 +394,125 @@ def to_generic_reviews_list(data: AnilistReviews) -> Optional[List[MediaReview]]
         return []
 
     return [_to_generic_review(review) for review in raw_reviews if review]
+
+
+def _to_generic_character_name(anilist_name: Optional[Dict]) -> CharacterName:
+    """Maps an AniList character name object to a generic CharacterName."""
+    if not anilist_name:
+        return CharacterName()
+    
+    return CharacterName(
+        first=anilist_name.get("first"),
+        middle=anilist_name.get("middle"),
+        last=anilist_name.get("last"),
+        full=anilist_name.get("full"),
+        native=anilist_name.get("native"),
+    )
+
+
+def _to_generic_character_image(anilist_image: Optional[Dict]) -> Optional[CharacterImage]:
+    """Maps an AniList character image object to a generic CharacterImage."""
+    if not anilist_image:
+        return None
+    
+    return CharacterImage(
+        medium=anilist_image.get("medium"),
+        large=anilist_image.get("large"),
+    )
+
+
+def _to_generic_character(anilist_character: Dict) -> Optional[Character]:
+    """Maps an AniList character object to a generic Character."""
+    if not anilist_character:
+        return None
+    
+    # Parse date of birth if available
+    date_of_birth = None
+    if dob := anilist_character.get("dateOfBirth"):
+        try:
+            year = dob.get("year")
+            month = dob.get("month")
+            day = dob.get("day")
+            if year and month and day:
+                date_of_birth = datetime(year, month, day)
+        except (ValueError, TypeError):
+            pass
+    
+    return Character(
+        id=anilist_character.get("id"),
+        name=_to_generic_character_name(anilist_character.get("name")),
+        image=_to_generic_character_image(anilist_character.get("image")),
+        description=anilist_character.get("description"),
+        gender=anilist_character.get("gender"),
+        age=anilist_character.get("age"),
+        blood_type=anilist_character.get("bloodType"),
+        favourites=anilist_character.get("favourites"),
+        date_of_birth=date_of_birth,
+    )
+
+
+def to_generic_characters_result(data: Dict) -> Optional[CharacterSearchResult]:
+    """Maps AniList character data to a generic CharacterSearchResult."""
+    if not data or "data" not in data:
+        logger.error("Invalid character data structure")
+        return None
+
+    try:
+        page_data = data["data"]["Page"]["media"][0]
+        characters_data = page_data["characters"]["nodes"]
+        
+        characters = []
+        for char_data in characters_data:
+            if character := _to_generic_character(char_data):
+                characters.append(character)
+        
+        return CharacterSearchResult(
+            characters=characters,
+            page_info=None,  # Characters don't typically have pagination
+        )
+    except (KeyError, IndexError, TypeError) as e:
+        logger.error(f"Error parsing character data: {e}")
+        return None
+
+
+def _to_generic_airing_schedule_item(anilist_episode: Dict) -> Optional[AiringScheduleItem]:
+    """Maps an AniList airing schedule episode to a generic AiringScheduleItem."""
+    if not anilist_episode:
+        return None
+    
+    airing_at = None
+    if airing_timestamp := anilist_episode.get("airingAt"):
+        try:
+            airing_at = datetime.fromtimestamp(airing_timestamp)
+        except (ValueError, TypeError):
+            pass
+    
+    return AiringScheduleItem(
+        episode=anilist_episode.get("episode", 0),
+        airing_at=airing_at,
+        time_until_airing=anilist_episode.get("timeUntilAiring"),
+    )
+
+
+def to_generic_airing_schedule_result(data: Dict) -> Optional[AiringScheduleResult]:
+    """Maps AniList airing schedule data to a generic AiringScheduleResult."""
+    if not data or "data" not in data:
+        logger.error("Invalid airing schedule data structure")
+        return None
+
+    try:
+        page_data = data["data"]["Page"]["media"][0]
+        schedule_data = page_data["airingSchedule"]["nodes"]
+        
+        schedule_items = []
+        for episode_data in schedule_data:
+            if item := _to_generic_airing_schedule_item(episode_data):
+                schedule_items.append(item)
+        
+        return AiringScheduleResult(
+            schedule_items=schedule_items,
+            page_info=None,  # Schedule doesn't typically have pagination
+        )
+    except (KeyError, IndexError, TypeError) as e:
+        logger.error(f"Error parsing airing schedule data: {e}")
+        return None
