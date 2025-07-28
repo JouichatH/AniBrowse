@@ -21,7 +21,7 @@ C_RULE="{C_RULE}"
 RESET="{RESET}"
 
 # Selected item from fzf
-SELECTED_ITEM="$1"
+SELECTED_ITEM="{}"
 
 generate_sha256() {
     local input="$1"
@@ -145,6 +145,15 @@ if [ -z "$SELECTED_ITEM" ] || [ ! -f "$SEARCH_RESULTS_FILE" ]; then
     draw_rule
     echo "Type to search for anime..."
     echo "Results will appear here as you type."
+    echo
+    echo "DEBUG:"
+    echo "SELECTED_ITEM='$SELECTED_ITEM'"
+    echo "SEARCH_RESULTS_FILE='$SEARCH_RESULTS_FILE'"
+    if [ -f "$SEARCH_RESULTS_FILE" ]; then
+        echo "Search results file exists"
+    else
+        echo "Search results file missing"
+    fi
     exit 0
 fi
 
@@ -202,6 +211,16 @@ if [ $? -ne 0 ] || [ -z "$MEDIA_DATA" ]; then
     draw_rule
     echo "Could not load preview data for:"
     echo "$SELECTED_ITEM"
+    echo
+    echo "DEBUG INFO:"
+    echo "Search results file: $SEARCH_RESULTS_FILE"
+    if [ -f "$SEARCH_RESULTS_FILE" ]; then
+        echo "File exists, size: $(wc -c < "$SEARCH_RESULTS_FILE") bytes"
+        echo "First few lines of search results:"
+        head -3 "$SEARCH_RESULTS_FILE" 2>/dev/null || echo "Cannot read file"
+    else
+        echo "Search results file does not exist"
+    fi
     exit 0
 fi
 
@@ -250,8 +269,8 @@ fi
 START_DATE=$(format_date "$START_DATE_OBJ")
 END_DATE=$(format_date "$END_DATE_OBJ")
 
-# Generate cache hash for this item
-CACHE_HASH=$(generate_sha256 "dynamic_search_$TITLE")
+# Generate cache hash for this item (using selected item like regular preview)
+CACHE_HASH=$(generate_sha256 "$SELECTED_ITEM")
 
 # Try to show image if available
 if [ "{PREVIEW_MODE}" = "full" ] || [ "{PREVIEW_MODE}" = "image" ]; then
