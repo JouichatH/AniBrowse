@@ -58,18 +58,6 @@ STREAM_DEFAULT_MEDIA_LIST_TRACKING = (
 STREAM_SUB_LANG = "Preferred language code for subtitles (e.g., 'en', 'es')."
 STREAM_USE_IPC = "Use IPC communication with the player for advanced features like episode navigation."
 
-# ServiceConfig
-SERVICE_ENABLED = "Whether the background service should be enabled by default."
-SERVICE_WATCHLIST_CHECK_INTERVAL = (
-    "Minutes between checking AniList watchlist for new episodes."
-)
-SERVICE_QUEUE_PROCESS_INTERVAL = "Minutes between processing the download queue."
-SERVICE_MAX_CONCURRENT_DOWNLOADS = "Maximum number of concurrent downloads."
-SERVICE_AUTO_RETRY_COUNT = "Number of times to retry failed downloads."
-SERVICE_CLEANUP_COMPLETED_DAYS = (
-    "Days to keep completed/failed jobs in queue before cleanup."
-)
-SERVICE_NOTIFICATION_ENABLED = "Whether to show notifications for new episodes."
 
 # FzfConfig
 FZF_HEADER_COLOR = "RGB color for the main TUI header."
@@ -103,6 +91,7 @@ DOWNLOADS_DOWNLOADER = "The downloader to use"
 DOWNLOADS_DOWNLOADS_DIR = "The default directory to save downloaded anime."
 DOWNLOADS_ENABLE_TRACKING = "Enable download tracking and management"
 DOWNLOADS_MAX_CONCURRENT = "Maximum number of concurrent downloads"
+DOWNLOADS_NO_CHECK_CERTIFICATE = "Whether or not to check certificates"
 DOWNLOADS_RETRY_ATTEMPTS = "Number of retry attempts for failed downloads"
 DOWNLOADS_RETRY_DELAY = "Delay between retry attempts in seconds"
 DOWNLOADS_MERGE_SUBTITLES = (

@@ -316,6 +316,20 @@ class DownloadsConfig(OtherConfig):
         description=desc.DOWNLOADS_CLEANUP_AFTER_MERGE,
     )
 
+    server: ProviderServer = Field(
+        default=ProviderServer.TOP,
+        description=desc.STREAM_SERVER,
+    )
+
+    ytdlp_format: str = Field(
+        default=defaults.STREAM_YTDLP_FORMAT,
+        description=desc.STREAM_YTDLP_FORMAT,
+    )
+    no_check_certificate: bool = Field(
+        default=defaults.DOWNLOADS_NO_CHECK_CERTIFICATE,
+        description=desc.DOWNLOADS_NO_CHECK_CERTIFICATE,
+    )
+
 
 class MediaRegistryConfig(OtherConfig):
     """Configuration for registry related options"""
