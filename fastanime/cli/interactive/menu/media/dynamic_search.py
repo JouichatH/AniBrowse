@@ -96,23 +96,8 @@ def dynamic_search(ctx: Context, state: State) -> State | InternalDirective:
     # Find the selected media item by matching the choice with the displayed format
     selected_media = None
     for media_item in search_result.media:
-        title = (
-            media_item.title.english
-            or media_item.title.romaji
-            or media_item.title.native
-            or "Unknown"
-        )
-        year = media_item.start_date.year if media_item.start_date else "Unknown"
-        status = media_item.status.value if media_item.status else "Unknown"
-        genres = (
-            ", ".join([genre.value for genre in media_item.genres[:3]])
-            if media_item.genres
-            else "Unknown"
-        )
-
-        display_format = f"{title} ({year}) [{status}] - {genres}"
-
-        if choice.strip() == display_format.strip():
+        anime_id = media_item.id
+        if f"[{anime_id}] " in choice.strip():
             selected_media = media_item
             break
 
