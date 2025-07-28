@@ -1,7 +1,3 @@
-Of course. Here is the updated `contributions.md` file with the additional sections on how to contribute new players, selectors, and CLI commands.
-
-***
-
 # Contributing to FastAnime
 
 First off, thank you for considering contributing to FastAnime! We welcome any help, whether it's reporting a bug, proposing a feature, or writing code. This document will guide you through the process.
