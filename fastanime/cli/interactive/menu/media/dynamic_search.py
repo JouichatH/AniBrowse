@@ -96,8 +96,10 @@ def dynamic_search(ctx: Context, state: State) -> State | InternalDirective:
     # Find the selected media item by matching the choice with the displayed format
     selected_media = None
     for media_item in search_result.media:
-        anime_id = media_item.id
-        if f"[{anime_id}] " in choice.strip():
+        if (
+            media_item.title.english == choice.strip()
+            or media_item.title.romaji == choice.strip()
+        ):
             selected_media = media_item
             break
 
@@ -109,7 +111,7 @@ def dynamic_search(ctx: Context, state: State) -> State | InternalDirective:
     return State(
         menu_name=MenuName.MEDIA_ACTIONS,
         media_api=MediaApiState(
-            search_result={selected_media.id: selected_media},
+            search_result={media.id: media for media in search_result.media},
             media_id=selected_media.id,
             search_params=MediaSearchParams(),
             page_info=search_result.page_info,
