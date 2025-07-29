@@ -141,7 +141,7 @@ def stream_anime(
 
     player_service = PlayerService(config, provider)
 
-    with feedback.progress(f"Fetching episode streams"):
+    with feedback.progress("Fetching episode streams"):
         streams = provider.episode_streams(
             EpisodeStreamsParams(
                 anime_id=anime.id,
@@ -156,14 +156,14 @@ def stream_anime(
             )
 
     if config.stream.server.value == "TOP":
-        with feedback.progress(f"Fetching top server"):
+        with feedback.progress("Fetching top server"):
             server = next(streams, None)
             if not server:
                 raise FastAnimeError(
                     f"Failed to get server for anime: {anime.title}, episode: {episode}"
                 )
     else:
-        with feedback.progress(f"Fetching servers"):
+        with feedback.progress("Fetching servers"):
             servers = {server.name: server for server in streams}
         servers_names = list(servers.keys())
         if config.stream.server.value in servers_names:

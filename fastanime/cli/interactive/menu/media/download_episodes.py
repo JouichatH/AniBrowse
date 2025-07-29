@@ -1,7 +1,4 @@
-from .....core.utils.fuzzy import fuzz
-from .....core.utils.normalizer import normalize_title
 from .....libs.provider.anime.params import AnimeParams, SearchParams
-from ....service.download.service import DownloadService
 from ...session import Context, session
 from ...state import InternalDirective, State
 
@@ -9,6 +6,10 @@ from ...state import InternalDirective, State
 @session.menu
 def download_episodes(ctx: Context, state: State) -> State | InternalDirective:
     """Menu to select and download episodes synchronously."""
+    from .....core.utils.fuzzy import fuzz
+    from .....core.utils.normalizer import normalize_title
+    from ....service.download.service import DownloadService
+
     feedback = ctx.feedback
     selector = ctx.selector
     media_item = state.media_api.media_item

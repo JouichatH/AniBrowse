@@ -1,7 +1,6 @@
 from typing import Callable, Dict, Literal, Union
 
 from .....libs.player.params import PlayerParams
-from ....service.registry.models import DownloadStatus
 from ...session import Context, session
 from ...state import InternalDirective, MenuName, State
 
@@ -11,6 +10,8 @@ MenuAction = Callable[[], Union[State, InternalDirective]]
 @session.menu
 def play_downloads(ctx: Context, state: State) -> State | InternalDirective:
     """Menu to select and play locally downloaded episodes."""
+    from ....service.registry.models import DownloadStatus
+
     feedback = ctx.feedback
     media_item = state.media_api.media_item
     current_episode_num = state.provider.episode
