@@ -3,7 +3,13 @@ from typing import Optional
 
 import click
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+)
 
 console = Console()
 
@@ -60,6 +66,8 @@ class FeedbackService:
     def progress(
         self,
         message: str,
+        total: Optional[float] = None,
+        transient: bool = True,
         success_msg: Optional[str] = None,
         error_msg: Optional[str] = None,
     ):
@@ -67,12 +75,14 @@ class FeedbackService:
         with Progress(
             SpinnerColumn(),
             TextColumn(f"[cyan]{message}..."),
-            transient=True,
+            BarColumn(),
+            TaskProgressColumn(),
+            transient=transient,
             console=console,
         ) as progress:
-            progress.add_task("", total=None)
+            task_id = progress.add_task("", total=total)
             try:
-                yield
+                yield task_id, progress
                 if success_msg:
                     self.success(success_msg)
             except Exception as e:

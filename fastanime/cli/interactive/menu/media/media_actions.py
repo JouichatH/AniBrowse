@@ -73,6 +73,9 @@ def media_actions(ctx: Context, state: State) -> State | InternalDirective:
             f"{'➕ ' if icons else ''}Add/Update List": _manage_user_media_list(
                 ctx, state
             ),
+            f"{'➕ ' if icons else ''}Add/Update List (Bulk)": _manage_user_media_list_in_bulk(
+                ctx, state
+            ),
             f"{'⭐ ' if icons else ''}Score Anime": _score_anime(ctx, state),
             f"{'ℹ️ ' if icons else ''}View Info": _view_info(ctx, state),
             f"{'📀 ' if icons else ''}Change Provider (Current: {ctx.config.general.provider.value.upper()})": _change_provider(
@@ -202,7 +205,7 @@ def _manage_user_media_list(ctx: Context, state: State) -> MenuAction:
             return InternalDirective.RELOAD
 
         status = ctx.selector.choose(
-            "Select list status:", choices=[t.value for t in UserMediaListStatus]
+            "Select list status", choices=[t.value for t in UserMediaListStatus]
         )
         if status:
             # local
@@ -212,11 +215,84 @@ def _manage_user_media_list(ctx: Context, state: State) -> MenuAction:
                 status=UserMediaListStatus(status),
             )
             # remote
-            ctx.media_api.update_list_entry(
+            if not ctx.media_api.update_list_entry(
                 UpdateUserMediaListEntryParams(
                     media_item.id, status=UserMediaListStatus(status)
                 )
+            ):
+                print(f"Failed to update {media_item.title.english}")
+        return InternalDirective.RELOAD
+
+    return action
+
+
+def _manage_user_media_list_in_bulk(ctx: Context, state: State) -> MenuAction:
+    def action():
+        feedback = ctx.feedback
+        search_result = state.media_api.search_result
+
+        if not search_result:
+            return InternalDirective.RELOAD
+
+        if not ctx.media_api.is_authenticated():
+            feedback.warning(
+                "You are not authenticated",
             )
+            return InternalDirective.RELOAD
+
+        choice_map: Dict[str, MediaItem] = {
+            item.title.english: item for item in search_result.values()
+        }
+        preview_command = None
+        if ctx.config.general.preview != "none":
+            from ....utils.preview import create_preview_context
+
+            with create_preview_context() as preview_ctx:
+                preview_command = preview_ctx.get_anime_preview(
+                    list(choice_map.values()),
+                    list(choice_map.keys()),
+                    ctx.config,
+                )
+                selected_titles = ctx.selector.choose_multiple(
+                    "Select anime to download",
+                    list(choice_map.keys()),
+                    preview=preview_command,
+                )
+        else:
+            selected_titles = ctx.selector.choose_multiple(
+                "Select anime to download",
+                list(choice_map.keys()),
+            )
+        if not selected_titles:
+            feedback.warning("No anime selected. Aborting download.")
+            return InternalDirective.RELOAD
+        anime_to_update_status = [choice_map[title] for title in selected_titles]
+
+        status = ctx.selector.choose(
+            "Select list status", choices=[t.value for t in UserMediaListStatus]
+        )
+        if not status:
+            feedback.warning("No status selected. Aborting bulk action.")
+            return InternalDirective.RELOAD
+        with feedback.progress(
+            "Updating media list...", total=len(anime_to_update_status)
+        ) as (task_id, progress):
+            for media_item in anime_to_update_status:
+                feedback.info(f"Updating media status for {media_item.title.english}")
+                ctx.media_registry.update_media_index_entry(
+                    media_id=media_item.id,
+                    media_item=media_item,
+                    status=UserMediaListStatus(status),
+                )
+                # remote
+
+                if not ctx.media_api.update_list_entry(
+                    UpdateUserMediaListEntryParams(
+                        media_item.id, status=UserMediaListStatus(status)
+                    )
+                ):
+                    print(f"Failed to update {media_item.title.english}")
+                progress.update(task_id, advance=1)
         return InternalDirective.RELOAD
 
     return action
