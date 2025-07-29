@@ -2,6 +2,7 @@
 from .defaults import SESSIONS_DIR
 
 GENERAL_PYGMENT_STYLE = "The pygment style to use"
+GENERAL_PREFERRED_SPINNER = "The spinner to use"
 GENERAL_API_CLIENT = "The media database API to use (e.g., 'anilist', 'jikan')."
 GENERAL_PREFERRED_TRACKER = (
     "The preferred watch history tracker (local,remote) in cases of conflicts"

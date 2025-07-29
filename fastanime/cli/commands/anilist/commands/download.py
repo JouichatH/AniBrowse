@@ -123,7 +123,7 @@ def download(config: AppConfig, **options: "Unpack[DownloadOptions]"):
     from fastanime.libs.selectors import create_selector
     from rich.progress import Progress
 
-    feedback = FeedbackService(config.general.icons)
+    feedback = FeedbackService(config)
     selector = create_selector(config)
     media_api = create_api_client(config.general.media_api, config)
     provider = create_provider(config.general.provider)

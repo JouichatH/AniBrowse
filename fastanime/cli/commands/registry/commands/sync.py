@@ -3,6 +3,7 @@ Registry sync command - synchronize local registry with remote media API
 """
 
 import click
+from fastanime.cli.service.feedback.service import FeedbackService
 from fastanime.cli.service.registry.service import MediaRegistryService
 from rich.progress import Progress
 
@@ -60,7 +61,7 @@ def sync(
     from ....service.feedback import FeedbackService
     from ....service.registry import MediaRegistryService
 
-    feedback = FeedbackService(config.general.icons)
+    feedback = FeedbackService(config)
     auth = AuthService(config.general.media_api)
     registry_service = MediaRegistryService(api, config.media_registry)
 
@@ -100,93 +101,91 @@ def sync(
 
     statuses_to_sync = [status_map[s] for s in status_list]
 
-    with Progress() as progress:
-        if download:
-            _sync_download(
-                media_api_client,
-                registry_service,
-                statuses_to_sync,
-                feedback,
-                progress,
-                dry_run,
-                force,
-            )
+    if download:
+        _sync_download(
+            media_api_client,
+            registry_service,
+            statuses_to_sync,
+            feedback,
+            dry_run,
+            force,
+        )
 
-        if upload:
-            _sync_upload(
-                media_api_client,
-                registry_service,
-                statuses_to_sync,
-                feedback,
-                progress,
-                dry_run,
-                force,
-            )
+    if upload:
+        _sync_upload(
+            media_api_client,
+            registry_service,
+            statuses_to_sync,
+            feedback,
+            dry_run,
+            force,
+        )
 
     feedback.success("Sync Complete", "Registry synchronization finished successfully")
 
 
 def _sync_download(
-    api_client, registry_service, statuses, feedback, progress, dry_run, force
+    api_client, registry_service, statuses, feedback: "FeedbackService", dry_run, force
 ):
     """Download remote media list to local registry."""
     from .....libs.media_api.params import UserMediaListSearchParams
 
     feedback.info("Starting Download", "Fetching remote media lists...")
 
-    download_task = progress.add_task("Downloading media lists...", total=len(statuses))
-
     total_downloaded = 0
     total_updated = 0
+    with feedback.progress("Downloading media lists...", total=len(statuses)) as (
+        task_id,
+        progress,
+    ):
+        for status in statuses:
+            try:
+                # Fetch all pages for this status
+                page = 1
+                while True:
+                    params = UserMediaListSearchParams(
+                        status=status, page=page, per_page=50
+                    )
 
-    for status in statuses:
-        try:
-            # Fetch all pages for this status
-            page = 1
-            while True:
-                params = UserMediaListSearchParams(
-                    status=status, page=page, per_page=50
-                )
+                    result = api_client.search_media_list(params)
+                    if not result or not result.media:
+                        break
 
-                result = api_client.search_media_list(params)
-                if not result or not result.media:
-                    break
-
-                for media_item in result.media:
-                    if dry_run:
-                        feedback.info(
-                            "Would download",
-                            f"{media_item.title.english or media_item.title.romaji} ({status.value})",
-                        )
-                    else:
-                        # Get or create record and update with user status
-                        record = registry_service.get_or_create_record(media_item)
-
-                        # Update index entry with latest status
-                        if media_item.user_status:
-                            registry_service.update_media_index_entry(
-                                media_item.id,
-                                media_item=media_item,
-                                status=media_item.user_status.status,
-                                progress=str(media_item.user_status.progress or 0),
-                                score=media_item.user_status.score,
-                                repeat=media_item.user_status.repeat,
-                                notes=media_item.user_status.notes,
+                    for media_item in result.media:
+                        if dry_run:
+                            feedback.info(
+                                "Would download",
+                                f"{media_item.title.english or media_item.title.romaji} ({status.value})",
                             )
-                            total_updated += 1
+                        else:
+                            # Get or create record and update with user status
+                            record = registry_service.get_or_create_record(media_item)
 
-                        registry_service.save_media_record(record)
-                        total_downloaded += 1
+                            # Update index entry with latest status
+                            if media_item.user_status:
+                                registry_service.update_media_index_entry(
+                                    media_item.id,
+                                    media_item=media_item,
+                                    status=media_item.user_status.status,
+                                    progress=str(media_item.user_status.progress or 0),
+                                    score=media_item.user_status.score,
+                                    repeat=media_item.user_status.repeat,
+                                    notes=media_item.user_status.notes,
+                                )
+                                total_updated += 1
 
-                if not result.page_info.has_next_page:
-                    break
-                page += 1
+                            registry_service.save_media_record(record)
+                            total_downloaded += 1
 
-        except Exception as e:
-            feedback.error(f"Download Error ({status.value})", str(e))
-            continue
+                    if not result.page_info.has_next_page:
+                        break
+                    page += 1
 
-        progress.advance(download_task)
+            except Exception as e:
+                feedback.error(f"Download Error ({status.value})", str(e))
+                continue
+
+            progress.advance(task_id)  # type:ignore
 
     if not dry_run:
         feedback.success(
@@ -200,76 +199,72 @@ def _sync_upload(
     registry_service: MediaRegistryService,
     statuses,
     feedback,
-    progress,
     dry_run,
     force,
 ):
     """Upload local registry changes to remote API."""
     feedback.info("Starting Upload", "Syncing local changes to remote...")
 
-    upload_task = progress.add_task("Uploading changes...", total=None)
-
     total_uploaded = 0
     total_errors = 0
 
-    try:
-        # Get all media records from registry
-        all_records = registry_service.get_all_media_records()
+    with feedback.progress("Uploading changes..."):
+        try:
+            # Get all media records from registry
+            all_records = registry_service.get_all_media_records()
 
-        for record in all_records:
-            try:
-                # Get the index entry for this media
-                index_entry = registry_service.get_media_index_entry(
-                    record.media_item.id
-                )
-                if not index_entry or not index_entry.status:
-                    continue
-
-                # Only sync if status is in our target list
-                if index_entry.status.value not in statuses:
-                    continue
-
-                if dry_run:
-                    feedback.info(
-                        "Would upload",
-                        f"{record.media_item.title.english or record.media_item.title.romaji} "
-                        f"({index_entry.status.value}, progress: {index_entry.progress or 0})",
+            for record in all_records:
+                try:
+                    # Get the index entry for this media
+                    index_entry = registry_service.get_media_index_entry(
+                        record.media_item.id
                     )
-                else:
-                    # Update remote list entry
-                    from .....libs.media_api.params import (
-                        UpdateUserMediaListEntryParams,
-                    )
+                    if not index_entry or not index_entry.status:
+                        continue
 
-                    update_params = UpdateUserMediaListEntryParams(
-                        media_id=record.media_item.id,
-                        status=index_entry.status,
-                        progress=index_entry.progress,
-                        score=index_entry.score,
-                    )
+                    # Only sync if status is in our target list
+                    if index_entry.status.value not in statuses:
+                        continue
 
-                    if api_client.update_list_entry(update_params):
-                        total_uploaded += 1
+                    if dry_run:
+                        feedback.info(
+                            "Would upload",
+                            f"{record.media_item.title.english or record.media_item.title.romaji} "
+                            f"({index_entry.status.value}, progress: {index_entry.progress or 0})",
+                        )
                     else:
-                        total_errors += 1
-                        feedback.warning(
-                            "Upload Failed",
-                            f"Failed to upload {record.media_item.title.english or record.media_item.title.romaji}",
+                        # Update remote list entry
+                        from .....libs.media_api.params import (
+                            UpdateUserMediaListEntryParams,
                         )
 
-            except Exception as e:
-                total_errors += 1
-                feedback.error(
-                    "Upload Error",
-                    f"Failed to upload media {record.media_item.id}: {e}",
-                )
-                continue
+                        update_params = UpdateUserMediaListEntryParams(
+                            media_id=record.media_item.id,
+                            status=index_entry.status,
+                            progress=index_entry.progress,
+                            score=index_entry.score,
+                        )
 
-    except Exception as e:
-        feedback.error("Upload Error", f"Failed to get local records: {e}")
-        return
+                        if api_client.update_list_entry(update_params):
+                            total_uploaded += 1
+                        else:
+                            total_errors += 1
+                            feedback.warning(
+                                "Upload Failed",
+                                f"Failed to upload {record.media_item.title.english or record.media_item.title.romaji}",
+                            )
 
-    progress.remove_task(upload_task)
+                except Exception as e:
+                    total_errors += 1
+                    feedback.error(
+                        "Upload Error",
+                        f"Failed to upload media {record.media_item.id}: {e}",
+                    )
+                    continue
+
+        except Exception as e:
+            feedback.error("Upload Error", f"Failed to get local records: {e}")
+            return
 
     if not dry_run:
         feedback.success(

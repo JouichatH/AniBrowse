@@ -19,7 +19,7 @@ def worker(config: AppConfig):
     from fastanime.libs.media_api.api import create_api_client
     from fastanime.libs.provider.anime.provider import create_provider
 
-    feedback = FeedbackService(config.general.icons)
+    feedback = FeedbackService(config)
     if not config.worker.enabled:
         feedback.warning("Worker is disabled in the configuration. Exiting.")
         return

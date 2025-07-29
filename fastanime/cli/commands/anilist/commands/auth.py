@@ -16,7 +16,7 @@ def auth(config: AppConfig, status: bool, logout: bool):
     from ....service.feedback import FeedbackService
 
     auth_service = AuthService("anilist")
-    feedback = FeedbackService(config.general.icons)
+    feedback = FeedbackService(config)
     selector = create_selector(config)
     feedback.clear_console()
 

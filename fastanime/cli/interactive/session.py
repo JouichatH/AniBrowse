@@ -143,7 +143,7 @@ class Context:
         if not self._feedback:
             from ..service.feedback.service import FeedbackService
 
-            self._feedback = FeedbackService()
+            self._feedback = FeedbackService(self.config)
         return self._feedback
 
     @property

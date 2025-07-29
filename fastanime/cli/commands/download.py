@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import TypedDict
 
+    from fastanime.cli.service.feedback.service import FeedbackService
     from typing_extensions import Unpack
 
     from ...libs.provider.anime.base import BaseAnimeProvider
@@ -102,8 +103,7 @@ if TYPE_CHECKING:
 )
 @click.pass_obj
 def download(config: AppConfig, **options: "Unpack[Options]"):
-    from rich import print
-    from rich.progress import Progress
+    from fastanime.cli.service.feedback.service import FeedbackService
 
     from ...core.exceptions import FastAnimeError
     from ...libs.provider.anime.params import (
@@ -113,16 +113,16 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
     from ...libs.provider.anime.provider import create_provider
     from ...libs.selectors.selector import create_selector
 
+    feedback = FeedbackService(config)
     provider = create_provider(config.general.provider)
     selector = create_selector(config)
 
     anime_titles = options["anime_title"]
-    print(f"[green bold]Streaming:[/] {anime_titles}")
+    feedback.info(f"[green bold]Streaming:[/] {anime_titles}")
     for anime_title in anime_titles:
         # ---- search for anime ----
-        print(f"[green bold]Searching for:[/] {anime_title}")
-        with Progress() as progress:
-            progress.add_task("Fetching Search Results...", total=None)
+        feedback.info(f"[green bold]Searching for:[/] {anime_title}")
+        with feedback.progress(f"Fetching anime search results for {anime_title}"):
             search_results = provider.search(
                 SearchParams(
                     query=anime_title, translation_type=config.stream.translation_type
@@ -144,8 +144,7 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
         anime_result = _search_results[selected_anime_title]
 
         # ---- fetch selected anime ----
-        with Progress() as progress:
-            progress.add_task("Fetching Anime...", total=None)
+        with feedback.progress(f"Fetching {anime_result.title}"):
             anime = provider.get(AnimeParams(id=anime_result.id, query=anime_title))
 
         if not anime:
@@ -165,7 +164,14 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
 
                 for episode in episodes_range:
                     download_anime(
-                        config, options, provider, selector, anime, anime_title, episode
+                        config,
+                        options,
+                        provider,
+                        selector,
+                        feedback,
+                        anime,
+                        anime_title,
+                        episode,
                     )
             except (ValueError, IndexError) as e:
                 raise FastAnimeError(f"Invalid episode range: {e}") from e
@@ -177,7 +183,14 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
             if not episode:
                 raise FastAnimeError("No episode selected")
             download_anime(
-                config, options, provider, selector, anime, anime_title, episode
+                config,
+                options,
+                provider,
+                selector,
+                feedback,
+                anime,
+                anime_title,
+                episode,
             )
 
 
@@ -186,35 +199,19 @@ def download_anime(
     download_options: "Options",
     provider: "BaseAnimeProvider",
     selector: "BaseSelector",
+    feedback: "FeedbackService",
     anime: "Anime",
     anime_title: str,
     episode: str,
 ):
     from rich import print
-    from rich.progress import Progress
 
     from ...core.downloader import DownloadParams, create_downloader
     from ...libs.provider.anime.params import EpisodeStreamsParams
 
     downloader = create_downloader(config.downloads)
 
-    with Progress() as progress:
-        progress.add_task("Fetching Episode Streams...", total=None)
-        streams = provider.episode_streams(
-            EpisodeStreamsParams(
-                anime_id=anime.id,
-                episode=episode,
-                query=anime_title,
-                translation_type=config.stream.translation_type,
-            )
-        )
-        if not streams:
-            raise FastAnimeError(
-                f"Failed to get streams for anime: {anime.title}, episode: {episode}"
-            )
-
-    with Progress() as progress:
-        progress.add_task("Fetching Episode Streams...", total=None)
+    with feedback.progress(f"Fetching episode streams"):
         streams = provider.episode_streams(
             EpisodeStreamsParams(
                 anime_id=anime.id,
@@ -229,16 +226,14 @@ def download_anime(
             )
 
     if config.stream.server.value == "TOP":
-        with Progress() as progress:
-            progress.add_task("Fetching top server...", total=None)
+        with feedback.progress(f"Fetching top server"):
             server = next(streams, None)
             if not server:
                 raise FastAnimeError(
                     f"Failed to get server for anime: {anime.title}, episode: {episode}"
                 )
     else:
-        with Progress() as progress:
-            progress.add_task("Fetching servers", total=None)
+        with feedback.progress(f"Fetching servers"):
             servers = {server.name: server for server in streams}
         servers_names = list(servers.keys())
         if config.stream.server in servers_names:
@@ -253,7 +248,7 @@ def download_anime(
         raise FastAnimeError(
             f"Failed to get stream link for anime: {anime.title}, episode: {episode}"
         )
-    print(f"[green bold]Now Downloading:[/] {anime.title} Episode: {episode}")
+    feedback.info(f"[green bold]Now Downloading:[/] {anime.title} Episode: {episode}")
     downloader.download(
         DownloadParams(
             url=stream_link,

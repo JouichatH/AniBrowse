@@ -292,7 +292,8 @@ def _manage_user_media_list_in_bulk(ctx: Context, state: State) -> MenuAction:
                     )
                 ):
                     print(f"Failed to update {media_item.title.english}")
-                progress.update(task_id, advance=1)
+
+                progress.update(task_id, advance=1)  # type: ignore
         return InternalDirective.RELOAD
 
     return action

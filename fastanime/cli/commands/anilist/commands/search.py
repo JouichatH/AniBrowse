@@ -19,6 +19,7 @@ from .. import examples
 
 if TYPE_CHECKING:
     from typing import TypedDict
+
     from typing_extensions import Unpack
 
     class SearchOptions(TypedDict, total=False):
@@ -196,7 +197,7 @@ def search(config: AppConfig, **options: "Unpack[SearchOptions]"):
     from .....libs.media_api.params import MediaSearchParams
     from ....service.feedback import FeedbackService
 
-    feedback = FeedbackService(config.general.icons)
+    feedback = FeedbackService(config)
 
     try:
         # Create API client

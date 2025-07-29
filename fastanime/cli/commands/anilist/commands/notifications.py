@@ -16,7 +16,7 @@ def notifications(config: AppConfig):
 
     from ....service.auth import AuthService
 
-    feedback = FeedbackService(config.general.icons)
+    feedback = FeedbackService(config)
     console = Console()
     auth = AuthService(config.general.media_api)
     api_client = create_api_client(config.general.media_api, config)

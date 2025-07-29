@@ -42,7 +42,7 @@ def registry(ctx: click.Context, api: str):
     from ...service.registry import MediaRegistryService
 
     config: AppConfig = ctx.obj
-    feedback = FeedbackService()
+    feedback = FeedbackService(config)
 
     if ctx.invoked_subcommand is None:
         # Show registry overview and statistics

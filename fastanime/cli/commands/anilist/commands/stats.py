@@ -23,7 +23,7 @@ def stats(config: "AppConfig"):
 
     console = Console()
 
-    feedback = FeedbackService(config.general.icons)
+    feedback = FeedbackService(config)
     auth = AuthService(config.general.media_api)
     registry_service = MediaRegistryService(
         config.general.media_api, config.media_registry

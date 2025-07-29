@@ -3,6 +3,7 @@ from ..utils import detect
 
 # GeneralConfig
 GENERAL_PYGMENT_STYLE = "github-dark"
+GENERAL_PREFERRED_SPINNER = "smiley"
 GENERAL_API_CLIENT = "anilist"
 GENERAL_PREFERRED_TRACKER = "local"
 GENERAL_PROVIDER = "allanime"
