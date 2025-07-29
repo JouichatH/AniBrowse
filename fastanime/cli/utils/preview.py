@@ -417,6 +417,7 @@ def get_character_preview(choice_map: Dict[str, Character], config: AppConfig) -
     replacements = {
         "PREVIEW_MODE": config.general.preview,
         "INFO_CACHE_DIR": str(INFO_CACHE_DIR),
+        "IMAGE_CACHE_DIR": str(IMAGES_CACHE_DIR),
         "PATH_SEP": path_sep,
         "C_TITLE": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),
         "C_KEY": ansi.get_true_fg(config.fzf.header_color.split(","), bold=True),

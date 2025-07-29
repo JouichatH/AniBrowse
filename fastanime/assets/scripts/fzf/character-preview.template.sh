@@ -31,7 +31,50 @@ generate_sha256() {
   fi
 }
 
+fzf_preview() {
+  file=$1
 
+  dim=${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}
+  if [ "$dim" = x ]; then
+    dim=$(stty size </dev/tty | awk "{print \$2 \"x\" \$1}")
+  fi
+  if ! [ "$IMAGE_RENDERER" = "icat" ] && [ -z "$KITTY_WINDOW_ID" ] && [ "$((FZF_PREVIEW_TOP + FZF_PREVIEW_LINES))" -eq "$(stty size </dev/tty | awk "{print \$1}")" ]; then
+    dim=${FZF_PREVIEW_COLUMNS}x$((FZF_PREVIEW_LINES - 1))
+  fi
+
+  if [ "$IMAGE_RENDERER" = "icat" ] && [ -z "$GHOSTTY_BIN_DIR" ]; then
+    if command -v kitten >/dev/null 2>&1; then
+      kitten icat --clear --transfer-mode=memory --unicode-placeholder --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
+    elif command -v icat >/dev/null 2>&1; then
+      icat --clear --transfer-mode=memory --unicode-placeholder --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
+    else
+      kitty icat --clear --transfer-mode=memory --unicode-placeholder --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
+    fi
+
+  elif [ -n "$GHOSTTY_BIN_DIR" ]; then
+    if command -v kitten >/dev/null 2>&1; then
+      kitten icat --clear --transfer-mode=memory --unicode-placeholder --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
+    elif command -v icat >/dev/null 2>&1; then
+      icat --clear --transfer-mode=memory --unicode-placeholder --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
+    else
+      chafa -s "$dim" "$file"
+    fi
+  elif command -v chafa >/dev/null 2>&1; then
+    case "$PLATFORM" in
+    android) chafa -s "$dim" "$file" ;;
+    windows) chafa -f sixel -s "$dim" "$file" ;;
+    *) chafa -s "$dim" "$file" ;;
+    esac
+    echo
+
+  elif command -v imgcat >/dev/null; then
+    imgcat -W "${dim%%x*}" -H "${dim##*x}" "$file"
+
+  else
+    echo please install a terminal image viewer
+    echo either icat for kitty terminal and wezterm or imgcat or chafa
+  fi
+}
 print_kv() {
     local key="$1"
     local value="$2"
@@ -65,6 +108,16 @@ draw_rule(){
 title={}
 hash=$(generate_sha256 "$title")
 
+
+# FIXME: Disabled since they cover the text perhaps its aspect ratio related or image format not sure
+# if [ "{PREVIEW_MODE}" = "full" ] || [ "{PREVIEW_MODE}" = "image" ]; then
+#     image_file="{IMAGE_CACHE_DIR}{PATH_SEP}$hash.png"
+#     if [ -f "$image_file" ]; then
+#         fzf_preview "$image_file"
+#         echo # Add a newline for spacing
+#     fi
+# fi
+
 if [ "{PREVIEW_MODE}" = "full" ] || [ "{PREVIEW_MODE}" = "text" ]; then
     info_file="{INFO_CACHE_DIR}{PATH_SEP}$hash"
     if [ -f "$info_file" ]; then
@@ -73,3 +126,5 @@ if [ "{PREVIEW_MODE}" = "full" ] || [ "{PREVIEW_MODE}" = "text" ]; then
         echo "👤 Loading character details..."
     fi
 fi
+
+

@@ -25,6 +25,7 @@ from ...libs.media_api.types import (
     MediaItem,
     MediaReview,
 )
+from . import image
 
 logger = logging.getLogger(__name__)
 
@@ -489,9 +490,22 @@ class CharacterCacheWorker(ManagedBackgroundWorker):
     Specialized background worker for caching character preview data.
     """
 
-    def __init__(self, characters_cache_dir, max_workers: int = 10):
+    def __init__(self, characters_cache_dir, image_cache_dir, max_workers: int = 10):
         super().__init__(max_workers=max_workers, name="CharacterCacheWorker")
         self.characters_cache_dir = characters_cache_dir
+        self.image_cache_dir = image_cache_dir
+
+        self._http_client: Optional[httpx.Client] = None
+
+    def start(self) -> None:
+        """Start the worker and initialize HTTP client."""
+        super().start()
+        self._http_client = httpx.Client(
+            timeout=20.0,
+            follow_redirects=True,
+            limits=httpx.Limits(max_connections=self.max_workers),
+        )
+        logger.debug("EpisodeCacheWorker HTTP client initialized")
 
     def cache_character_previews(
         self, choice_map: Dict[str, Character], config: AppConfig
@@ -513,6 +527,14 @@ class CharacterCacheWorker(ManagedBackgroundWorker):
             preview_content = self._generate_character_preview_content(
                 character, config
             )
+            #  NOTE: Disabled due to issue of the text overlapping with the image
+            if (
+                character.image
+                and (character.image.medium or character.image.large)
+                and False
+            ):
+                image_url = character.image.medium or character.image.large
+                self.submit_function(self._download_and_save_image, image_url, hash_id)
             self.submit_function(self._save_preview_content, preview_content, hash_id)
 
     def _generate_character_preview_content(
@@ -538,17 +560,7 @@ class CharacterCacheWorker(ManagedBackgroundWorker):
         # Clean and format description
         description = character.description or "No description available"
         if description:
-            import re
-
-            description = re.sub(r"<[^>]+>", "", description)
-            description = (
-                description.replace("&quot;", '"')
-                .replace("&amp;", "&")
-                .replace("&lt;", "<")
-                .replace("&gt;", ">")
-                .replace("&#039;", "'")
-                .replace("&nbsp;", " ")
-            )
+            description = formatter.clean_html(description)
 
         # Inject data into the presentation template
         template = TEMPLATE_CHARACTER_INFO_SCRIPT
@@ -566,6 +578,26 @@ class CharacterCacheWorker(ManagedBackgroundWorker):
             template = template.replace(f"{{{key}}}", value)
 
         return template
+
+    def _download_and_save_image(self, url: str, hash_id: str) -> None:
+        """Download an image and save it to cache."""
+        if not self._http_client:
+            raise RuntimeError("HTTP client not initialized")
+
+        image_path = self.image_cache_dir / f"{hash_id}.png"
+
+        try:
+            if img_bytes := image.resize_image_from_url(
+                self._http_client, url, 300, 300
+            ):
+                with AtomicWriter(image_path, "wb", encoding=None) as f:
+                    f.write(img_bytes)
+
+                logger.debug(f"Successfully cached image: {hash_id}")
+
+        except Exception as e:
+            logger.error(f"Failed to download image {url}: {e}")
+            raise
 
     def _save_preview_content(self, content: str, hash_id: str) -> None:
         """Saves the final preview content to the cache."""
@@ -790,7 +822,9 @@ class PreviewWorkerManager:
                 # Clean up old worker
                 thread_manager.shutdown_worker("character_cache_worker")
 
-            self._character_worker = CharacterCacheWorker(self.info_cache_dir)
+            self._character_worker = CharacterCacheWorker(
+                self.info_cache_dir, self.images_cache_dir
+            )
             self._character_worker.start()
             thread_manager.register_worker(
                 "character_cache_worker", self._character_worker
