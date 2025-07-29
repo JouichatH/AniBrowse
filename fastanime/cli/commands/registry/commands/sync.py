@@ -5,7 +5,6 @@ Registry sync command - synchronize local registry with remote media API
 import click
 from fastanime.cli.service.feedback.service import FeedbackService
 from fastanime.cli.service.registry.service import MediaRegistryService
-from rich.progress import Progress
 
 from .....core.config import AppConfig
 

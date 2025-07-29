@@ -1,6 +1,6 @@
 [project]
 name = "fastanime"
-version = "2.9.9"
+version = "3.0.0"
 description = "A browser anime site experience from the terminal"
 license = "UNLICENSE"
 readme = "README.md"
@@ -18,23 +18,24 @@ fastanime = 'fastanime:Cli'
 
 [project.optional-dependencies]
 standard = [
- "mpv>=1.0.7",
- "plyer>=2.1.0",
- "libtorrent>=2.0.11",
  "lxml>=6.0.0",
- "pypresence>=4.3.0",
  "thefuzz>=0.22.1",
  "yt-dlp>=2025.7.21",
  "pycryptodomex>=3.23.0",
 ]
 notifications = ["plyer>=2.1.0"]
-mpv = ["mpv>=1.0.7"]
+mpv = [
+    "mpv>=1.0.7",
+]
 torrent = ["libtorrent>=2.0.11"]
 lxml = ["lxml>=6.0.0"]
 discord = ["pypresence>=4.3.0"]
 download = [
     "pycryptodomex>=3.23.0",
     "yt-dlp>=2025.7.21",
+]
+torrents = [
+    "libtorrent>=2.0.11",
 ]
 
 [build-system]

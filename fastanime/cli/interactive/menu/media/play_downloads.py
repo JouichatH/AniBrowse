@@ -1,7 +1,6 @@
 from typing import Callable, Dict, Literal, Union
 
 from .....libs.player.params import PlayerParams
-from ....service.registry.models import DownloadStatus
 from ...session import Context, session
 from ...state import InternalDirective, MenuName, State
 
@@ -11,6 +10,8 @@ MenuAction = Callable[[], Union[State, InternalDirective]]
 @session.menu
 def play_downloads(ctx: Context, state: State) -> State | InternalDirective:
     """Menu to select and play locally downloaded episodes."""
+    from ....service.registry.models import DownloadStatus
+
     feedback = ctx.feedback
     media_item = state.media_api.media_item
     current_episode_num = state.provider.episode
@@ -93,6 +94,8 @@ def play_downloads(ctx: Context, state: State) -> State | InternalDirective:
 def downloads_player_controls(
     ctx: Context, state: State
 ) -> Union[State, InternalDirective]:
+    from ....service.registry.models import DownloadStatus
+
     feedback = ctx.feedback
     feedback.clear_console()
 
@@ -190,6 +193,8 @@ def downloads_player_controls(
 
 def _next_episode(ctx: Context, state: State) -> MenuAction:
     def action():
+        from ....service.registry.models import DownloadStatus
+
         feedback = ctx.feedback
 
         config = ctx.config
@@ -239,6 +244,8 @@ def _next_episode(ctx: Context, state: State) -> MenuAction:
 
 def _previous_episode(ctx: Context, state: State) -> MenuAction:
     def action():
+        from ....service.registry.models import DownloadStatus
+
         feedback = ctx.feedback
 
         config = ctx.config

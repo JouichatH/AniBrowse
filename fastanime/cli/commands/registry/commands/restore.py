@@ -2,16 +2,17 @@
 Registry restore command - restore registry from backup files
 """
 
+import json
 import shutil
 import tarfile
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 import click
 
 from .....core.config import AppConfig
+from ....service.feedback import FeedbackService
 from ....service.registry.service import MediaRegistryService
-from ....utils.feedback import create_feedback_manager
 
 
 @click.command(help="Restore registry from a backup file")
@@ -46,7 +47,7 @@ def restore(
     Can restore from tar or zip backups created by the backup command.
     Optionally creates a backup of the current registry before restoring.
     """
-    feedback = create_feedback_manager(config.general.icons)
+    feedback = FeedbackService(config)
 
     try:
         # Detect backup format
@@ -57,17 +58,20 @@ def restore(
         if verify:
             if not _verify_backup(backup_file, backup_format, feedback):
                 feedback.error(
-                    "Verification Failed", "Backup file appears to be corrupted"
+                    "Verification Failed",
+                    "Backup file appears to be corrupted or invalid",
                 )
                 raise click.Abort()
             feedback.success("Verification", "Backup file integrity verified")
 
         # Check if current registry exists
-        registry_service = MediaRegistryService(api, config.registry)
+        registry_service = MediaRegistryService(api, config.media_registry)
         registry_exists = _check_registry_exists(registry_service)
 
         if registry_exists and not force:
-            if not click.confirm("Current registry exists. Continue with restore?"):
+            if not click.confirm(
+                "Current registry exists. This will overwrite it. Continue with restore?"
+            ):
                 feedback.info("Restore Cancelled", "No changes were made")
                 return
 
@@ -87,7 +91,7 @@ def restore(
 
         # Verify restored registry
         try:
-            restored_service = MediaRegistryService(api, config.registry)
+            restored_service = MediaRegistryService(api, config.media_registry)
             stats = restored_service.get_registry_stats()
             feedback.info(
                 "Restored Registry",
@@ -105,65 +109,30 @@ def restore(
 
 def _detect_backup_format(backup_file: Path) -> str:
     """Detect backup file format."""
-    if backup_file.suffix.lower() in [".tar", ".gz"]:
+    suffixes = "".join(backup_file.suffixes).lower()
+    if ".tar" in suffixes or ".gz" in suffixes or ".tgz" in suffixes:
         return "tar"
-    elif backup_file.suffix.lower() == ".zip":
+    elif ".zip" in suffixes:
         return "zip"
-    elif backup_file.name.endswith(".tar.gz"):
-        return "tar"
-    else:
-        # Try to detect by content
-        try:
-            with tarfile.open(backup_file, "r:*"):
-                return "tar"
-        except:
-            pass
-
-        try:
-            import zipfile
-
-            with zipfile.ZipFile(backup_file, "r"):
-                return "zip"
-        except:
-            pass
-
     raise click.ClickException(f"Could not detect backup format for {backup_file}")
 
 
-def _verify_backup(backup_file: Path, format_type: str, feedback) -> bool:
+def _verify_backup(
+    backup_file: Path, format_type: str, feedback: FeedbackService
+) -> bool:
     """Verify backup file integrity."""
     try:
+        has_registry = has_index = has_metadata = False
         if format_type == "tar":
             with tarfile.open(backup_file, "r:*") as tar:
-                # Check if essential files exist
                 names = tar.getnames()
                 has_registry = any("registry/" in name for name in names)
                 has_index = any("index/" in name for name in names)
                 has_metadata = "backup_metadata.json" in names
-
-                if not (has_registry and has_index):
-                    return False
-
-                # Try to read metadata if it exists
                 if has_metadata:
-                    try:
-                        metadata_member = tar.getmember("backup_metadata.json")
-                        metadata_file = tar.extractfile(metadata_member)
-                        if metadata_file:
-                            import json
-
-                            metadata = json.load(metadata_file)
-                            feedback.info(
-                                "Backup Info",
-                                f"Created: {metadata.get('backup_timestamp', 'Unknown')}",
-                            )
-                            feedback.info(
-                                "Backup Info",
-                                f"Total Media: {metadata.get('total_media', 'Unknown')}",
-                            )
-                    except:
-                        pass
-
+                    metadata_member = tar.getmember("backup_metadata.json")
+                    if metadata_file := tar.extractfile(metadata_member):
+                        metadata = json.load(metadata_file)
         else:  # zip
             import zipfile
 
@@ -172,44 +141,38 @@ def _verify_backup(backup_file: Path, format_type: str, feedback) -> bool:
                 has_registry = any("registry/" in name for name in names)
                 has_index = any("index/" in name for name in names)
                 has_metadata = "backup_metadata.json" in names
-
-                if not (has_registry and has_index):
-                    return False
-
-                # Try to read metadata
                 if has_metadata:
-                    try:
-                        with zip_file.open("backup_metadata.json") as metadata_file:
-                            import json
+                    with zip_file.open("backup_metadata.json") as metadata_file:
+                        metadata = json.load(metadata_file)
 
-                            metadata = json.load(metadata_file)
-                            feedback.info(
-                                "Backup Info",
-                                f"Created: {metadata.get('backup_timestamp', 'Unknown')}",
-                            )
-                            feedback.info(
-                                "Backup Info",
-                                f"Total Media: {metadata.get('total_media', 'Unknown')}",
-                            )
-                    except:
-                        pass
+        if has_metadata:
+            feedback.info(
+                "Backup Info", f"Created: {metadata.get('backup_timestamp', 'Unknown')}"
+            )
+            feedback.info(
+                "Backup Info", f"Total Media: {metadata.get('total_media', 'Unknown')}"
+            )
 
-        return True
-
-    except Exception:
+        return has_registry and has_index
+    except (tarfile.ReadError, zipfile.BadZipFile, json.JSONDecodeError):
+        return False
+    except Exception as e:
+        feedback.warning("Verification Warning", f"Could not fully verify backup: {e}")
         return False
 
 
-def _check_registry_exists(registry_service) -> bool:
+def _check_registry_exists(registry_service: MediaRegistryService) -> bool:
     """Check if a registry already exists."""
     try:
         stats = registry_service.get_registry_stats()
         return stats.get("total_media", 0) > 0
-    except:
+    except Exception:
         return False
 
 
-def _backup_current_registry(registry_service, api: str, feedback):
+def _backup_current_registry(
+    registry_service: MediaRegistryService, api: str, feedback: FeedbackService
+):
     """Create backup of current registry before restoring."""
     from .backup import _create_tar_backup
 
@@ -218,20 +181,21 @@ def _backup_current_registry(registry_service, api: str, feedback):
 
     try:
         _create_tar_backup(registry_service, backup_path, True, False, feedback, api)
-        feedback.info("Current Registry Backed Up", f"Saved to {backup_path}")
+        feedback.success("Current Registry Backed Up", f"Saved to {backup_path}")
     except Exception as e:
         feedback.warning("Backup Warning", f"Failed to backup current registry: {e}")
 
 
-def _show_restore_summary(backup_file: Path, format_type: str, feedback):
+def _show_restore_summary(
+    backup_file: Path, format_type: str, feedback: FeedbackService
+):
     """Show summary of what will be restored."""
     try:
+        file_count = media_files = 0
         if format_type == "tar":
             with tarfile.open(backup_file, "r:*") as tar:
                 members = tar.getmembers()
                 file_count = len([m for m in members if m.isfile()])
-
-                # Count media files
                 media_files = len(
                     [
                         m
@@ -239,15 +203,12 @@ def _show_restore_summary(backup_file: Path, format_type: str, feedback):
                         if m.name.startswith("registry/") and m.name.endswith(".json")
                     ]
                 )
-
         else:  # zip
             import zipfile
 
             with zipfile.ZipFile(backup_file, "r") as zip_file:
                 info_list = zip_file.infolist()
                 file_count = len([info for info in info_list if not info.is_dir()])
-
-                # Count media files
                 media_files = len(
                     [
                         info
@@ -257,70 +218,69 @@ def _show_restore_summary(backup_file: Path, format_type: str, feedback):
                     ]
                 )
 
-        feedback.info("Restore Preview", f"Will restore {file_count} files")
-        feedback.info("Media Records", f"Contains {media_files} media entries")
-
+        feedback.info(
+            "Restore Preview",
+            f"Backup contains {file_count} files, including {media_files} media entries.",
+        )
     except Exception as e:
         feedback.warning("Preview Error", f"Could not analyze backup: {e}")
 
 
 def _perform_restore(
-    backup_file: Path, format_type: str, config: AppConfig, api: str, feedback
+    backup_file: Path,
+    format_type: str,
+    config: AppConfig,
+    api: str,
+    feedback: FeedbackService,
 ):
     """Perform the actual restore operation."""
-
-    # Create temporary extraction directory
-    temp_dir = Path(config.registry.media_dir.parent / "restore_temp")
-    temp_dir.mkdir(exist_ok=True)
+    temp_dir = Path(
+        config.media_registry.media_dir.parent
+        / f"restore_temp_{datetime.now().timestamp()}"
+    )
+    temp_dir.mkdir(exist_ok=True, parents=True)
 
     try:
-        # Extract backup
-        if format_type == "tar":
-            with tarfile.open(backup_file, "r:*") as tar:
-                tar.extractall(temp_dir)
-        else:  # zip
-            import zipfile
+        with feedback.progress("Restoring from backup...") as (task_id, progress):
+            # 1. Extract backup
+            progress.update(task_id, description="Extracting backup...")
+            if format_type == "tar":
+                with tarfile.open(backup_file, "r:*") as tar:
+                    tar.extractall(temp_dir)
+            else:
+                import zipfile
 
-            with zipfile.ZipFile(backup_file, "r") as zip_file:
-                zip_file.extractall(temp_dir)
+                with zipfile.ZipFile(backup_file, "r") as zip_file:
+                    zip_file.extractall(temp_dir)
+            feedback.info("Extraction", "Backup extracted to temporary directory")
 
-        feedback.info("Extraction", "Backup extracted to temporary directory")
+            # 2. Prepare paths
+            registry_dir = config.media_registry.media_dir / api
+            index_dir = config.media_registry.index_dir
+            cache_dir = config.media_registry.media_dir.parent / "cache"
 
-        # Remove existing registry if it exists
-        registry_dir = config.registry.media_dir / api
-        index_dir = config.registry.index_dir
-
-        if registry_dir.exists():
-            shutil.rmtree(registry_dir)
-            feedback.info("Cleanup", "Removed existing registry data")
-
-        if index_dir.exists():
-            shutil.rmtree(index_dir)
-            feedback.info("Cleanup", "Removed existing index data")
-
-        # Move extracted files to proper locations
-        extracted_registry = temp_dir / "registry" / api
-        extracted_index = temp_dir / "index"
-
-        if extracted_registry.exists():
-            shutil.move(str(extracted_registry), str(registry_dir))
-            feedback.info("Restore", "Registry data restored")
-
-        if extracted_index.exists():
-            shutil.move(str(extracted_index), str(index_dir))
-            feedback.info("Restore", "Index data restored")
-
-        # Restore cache if it exists
-        extracted_cache = temp_dir / "cache"
-        if extracted_cache.exists():
-            cache_dir = config.registry.media_dir.parent / "cache"
+            # 3. Clean existing data
+            progress.update(task_id, description="Cleaning existing registry...")
+            if registry_dir.exists():
+                shutil.rmtree(registry_dir)
+            if index_dir.exists():
+                shutil.rmtree(index_dir)
             if cache_dir.exists():
                 shutil.rmtree(cache_dir)
-            shutil.move(str(extracted_cache), str(cache_dir))
-            feedback.info("Restore", "Cache data restored")
+            feedback.info("Cleanup", "Removed existing registry, index, and cache data")
+
+            # 4. Move extracted files
+            progress.update(task_id, description="Moving new files into place...")
+            if (extracted_registry := temp_dir / "registry" / api).exists():
+                shutil.move(str(extracted_registry), str(registry_dir))
+            if (extracted_index := temp_dir / "index").exists():
+                shutil.move(str(extracted_index), str(index_dir))
+            if (extracted_cache := temp_dir / "cache").exists():
+                shutil.move(str(extracted_cache), str(cache_dir))
+
+            progress.update(task_id, description="Finalizing...")
 
     finally:
-        # Clean up temporary directory
         if temp_dir.exists():
             shutil.rmtree(temp_dir)
             feedback.info("Cleanup", "Temporary files removed")

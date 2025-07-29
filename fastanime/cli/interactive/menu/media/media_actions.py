@@ -11,7 +11,6 @@ from .....libs.media_api.types import (
     UserMediaListStatus,
 )
 from .....libs.player.params import PlayerParams
-from ....service.registry.service import DownloadStatus
 from ...session import Context, session
 from ...state import InternalDirective, MediaApiState, MenuName, State
 
@@ -20,6 +19,8 @@ MenuAction = Callable[[], State | InternalDirective]
 
 @session.menu
 def media_actions(ctx: Context, state: State) -> State | InternalDirective:
+    from ....service.registry.service import DownloadStatus
+
     feedback = ctx.feedback
 
     icons = ctx.config.general.icons
@@ -254,7 +255,7 @@ def _manage_user_media_list_in_bulk(ctx: Context, state: State) -> MenuAction:
                     ctx.config,
                 )
                 selected_titles = ctx.selector.choose_multiple(
-                    "Select anime to download",
+                    "Select anime to manage",
                     list(choice_map.keys()),
                     preview=preview_command,
                 )

@@ -75,11 +75,7 @@ if command -v jq >/dev/null 2>&1; then
         elif (.data.Page.media // []) | length == 0 then
             "❌ No results found"
         else
-            .data.Page.media[] |
-            "[" + (.id|tostring) + "] " +((.title.english // .title.romaji // .title.native // "Unknown") + 
-             " (" + (.startDate.year // "Unknown" | tostring) + ") " +
-             "[" + (.status // "Unknown") + "] - " +
-             ((.genres[:3] // []) | join(", ") | if . == "" then "Unknown" else . end))
+            .data.Page.media[] | (.title.english // .title.romaji // .title.native // "Unknown")
         end
     ' 2>/dev/null || echo "❌ Parse error"
 else

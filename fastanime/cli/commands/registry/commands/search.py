@@ -2,15 +2,26 @@
 Registry search command - search through the local media registry
 """
 
+import json
+from typing import TYPE_CHECKING
+
 import click
 from rich.console import Console
 from rich.table import Table
 
 from .....core.config import AppConfig
 from .....libs.media_api.params import MediaSearchParams
-from .....libs.media_api.types import MediaSort, UserMediaListStatus
+from .....libs.media_api.types import (
+    MediaFormat,
+    MediaGenre,
+    MediaSort,
+    UserMediaListStatus,
+)
+from ....service.feedback import FeedbackService
 from ....service.registry.service import MediaRegistryService
-from ....utils.feedback import create_feedback_manager
+
+if TYPE_CHECKING:
+    from .....libs.media_api.types import MediaSearchResult
 
 
 @click.command(help="Search through the local media registry")
@@ -18,7 +29,7 @@ from ....utils.feedback import create_feedback_manager
 @click.option(
     "--status",
     type=click.Choice(
-        ["watching", "completed", "planning", "dropped", "paused", "repeating"],
+        [s.value for s in UserMediaListStatus],
         case_sensitive=False,
     ),
     help="Filter by watch status",
@@ -29,7 +40,11 @@ from ....utils.feedback import create_feedback_manager
 @click.option(
     "--format",
     type=click.Choice(
-        ["TV", "TV_SHORT", "MOVIE", "SPECIAL", "OVA", "ONA", "MUSIC"],
+        [
+            f.value
+            for f in MediaFormat
+            if f not in [MediaFormat.MANGA, MediaFormat.NOVEL, MediaFormat.ONE_SHOT]
+        ],
         case_sensitive=False,
     ),
     help="Filter by format",
@@ -77,28 +92,25 @@ def search(
     You can search by title and filter by various criteria like status,
     genre, format, year, and score range.
     """
-    feedback = create_feedback_manager(config.general.icons)
+    feedback = FeedbackService(config)
     console = Console()
 
     try:
-        registry_service = MediaRegistryService(api, config.registry)
+        registry_service = MediaRegistryService(api, config.media_registry)
 
-        # Build search parameters
         search_params = _build_search_params(
             query, status, genre, format, year, min_score, max_score, sort, limit
         )
 
-        # Perform search
-        result = registry_service.search_for_media(search_params)
+        with feedback.progress("Searching local registry..."):
+            result = registry_service.search_for_media(search_params)
 
         if not result or not result.media:
             feedback.info("No Results", "No media found matching your criteria")
             return
 
         if output_json:
-            import json
-
-            print(json.dumps(result.model_dump(), indent=2, default=str))
+            print(json.dumps(result.model_dump(mode="json"), indent=2))
             return
 
         _display_search_results(console, result, config.general.icons)
@@ -109,24 +121,17 @@ def search(
 
 
 def _build_search_params(
-    query, status, genre, format, year, min_score, max_score, sort, limit
+    query: str | None,
+    status: str | None,
+    genre: tuple[str, ...],
+    format_str: str | None,
+    year: int | None,
+    min_score: float | None,
+    max_score: float | None,
+    sort: str,
+    limit: int,
 ) -> MediaSearchParams:
-    """Build MediaSearchParams from command options."""
-
-    # Convert status string to enum
-    status_enum = None
-    if status:
-        status_map = {
-            "watching": UserMediaListStatus.WATCHING,
-            "completed": UserMediaListStatus.COMPLETED,
-            "planning": UserMediaListStatus.PLANNING,
-            "dropped": UserMediaListStatus.DROPPED,
-            "paused": UserMediaListStatus.PAUSED,
-            "repeating": UserMediaListStatus.REPEATING,
-        }
-        status_enum = status_map.get(status.lower())
-
-    # Convert sort string to enum
+    """Build MediaSearchParams from command options for local filtering."""
     sort_map = {
         "title": MediaSort.TITLE_ROMAJI,
         "score": MediaSort.SCORE_DESC,
@@ -135,74 +140,52 @@ def _build_search_params(
         "episodes": MediaSort.EPISODES_DESC,
         "updated": MediaSort.UPDATED_AT_DESC,
     }
-    sort_enum = sort_map.get(sort.lower(), MediaSort.TITLE_ROMAJI)
 
-    # Convert format string to enum if provided
-    format_enum = None
-    if format:
-        from .....libs.media_api.types import MediaFormat
+    # Safely convert strings to enums
+    format_enum = next(
+        (f for f in MediaFormat if f.value.lower() == (format_str or "").lower()), None
+    )
+    genre_enums = [
+        g for g_str in genre for g in MediaGenre if g.value.lower() == g_str.lower()
+    ]
 
-        format_enum = getattr(MediaFormat, format.upper(), None)
-
-    # Convert genre strings to enums
-    genre_enums = []
-    if genre:
-        from .....libs.media_api.types import MediaGenre
-
-        for g in genre:
-            # Try to find matching genre enum
-            for genre_enum in MediaGenre:
-                if genre_enum.value.lower() == g.lower():
-                    genre_enums.append(genre_enum)
-                    break
+    # Note: Local search handles status separately as it's part of the index, not MediaItem
 
     return MediaSearchParams(
         query=query,
         per_page=limit,
-        sort=[sort_enum],
-        averageScore_greater=min_score * 10
-        if min_score
-        else None,  # Convert to AniList scale
-        averageScore_lesser=max_score * 10 if max_score else None,
-        genre_in=genre_enums if genre_enums else None,
+        sort=[sort_map.get(sort.lower(), MediaSort.TITLE_ROMAJI)],
+        averageScore_greater=int(min_score * 10) if min_score is not None else None,
+        averageScore_lesser=int(max_score * 10) if max_score is not None else None,
+        genre_in=genre_enums or None,
         format_in=[format_enum] if format_enum else None,
         seasonYear=year,
-        # We'll handle status filtering differently since it's user-specific
     )
 
 
-def _display_search_results(console: Console, result, icons: bool):
+def _display_search_results(console: Console, result: "MediaSearchResult", icons: bool):
     """Display search results in a formatted table."""
-
     table = Table(
         title=f"{'🔍 ' if icons else ''}Search Results ({len(result.media)} found)"
     )
-    table.add_column("Title", style="cyan", min_width=30)
-    table.add_column("Year", style="dim", justify="center", min_width=6)
-    table.add_column("Format", style="magenta", justify="center", min_width=8)
-    table.add_column("Episodes", style="green", justify="center", min_width=8)
-    table.add_column("Score", style="yellow", justify="center", min_width=6)
-    table.add_column("Status", style="blue", justify="center", min_width=10)
-    table.add_column("Progress", style="white", justify="center", min_width=8)
+    table.add_column("Title", style="cyan", min_width=30, overflow="ellipsis")
+    table.add_column("Year", style="dim", justify="center")
+    table.add_column("Format", style="magenta", justify="center")
+    table.add_column("Episodes", style="green", justify="center")
+    table.add_column("Score", style="yellow", justify="center")
+    table.add_column("Status", style="blue", justify="center")
+    table.add_column("Progress", style="white", justify="center")
 
     for media in result.media:
-        # Get title (prefer English, fallback to Romaji)
         title = media.title.english or media.title.romaji or "Unknown"
-        if len(title) > 40:
-            title = title[:37] + "..."
+        year = str(media.start_date.year) if media.start_date else "N/A"
+        episodes_total = str(media.episodes) if media.episodes else "?"
+        score = (
+            f"{media.average_score / 10:.1f}"
+            if media.average_score is not None
+            else "N/A"
+        )
 
-        # Get year from start date
-        year = ""
-        if media.start_date:
-            year = str(media.start_date.year)
-
-        # Format episodes
-        episodes = str(media.episodes) if media.episodes else "?"
-
-        # Format score
-        score = f"{media.average_score / 10:.1f}" if media.average_score else "N/A"
-
-        # Get user status
         status = "Not Listed"
         progress = "0"
         if media.user_status:
@@ -211,13 +194,13 @@ def _display_search_results(console: Console, result, icons: bool):
                 if media.user_status.status
                 else "Unknown"
             )
-            progress = f"{media.user_status.progress or 0}/{episodes}"
+            progress = f"{media.user_status.progress or 0}/{episodes_total}"
 
         table.add_row(
             title,
             year,
-            media.format.value if media.format else "Unknown",
-            episodes,
+            media.format.value if media.format else "N/A",
+            episodes_total,
             score,
             status,
             progress,
@@ -225,8 +208,7 @@ def _display_search_results(console: Console, result, icons: bool):
 
     console.print(table)
 
-    # Show pagination info if applicable
-    if result.page_info.total > len(result.media):
+    if result.page_info and result.page_info.total > len(result.media):
         console.print(
             f"\n[dim]Showing {len(result.media)} of {result.page_info.total} total results[/dim]"
         )

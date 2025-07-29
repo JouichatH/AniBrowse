@@ -2,17 +2,18 @@
 Registry import command - import registry data from various formats
 """
 
-import json
 import csv
-from pathlib import Path
+import json
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 import click
 
 from .....core.config import AppConfig
-from .....libs.media_api.types import UserMediaListStatus, MediaItem, MediaTitle
+from .....libs.media_api.types import MediaItem, MediaTitle, UserMediaListStatus
+from ....service.feedback import FeedbackService
 from ....service.registry.service import MediaRegistryService
-from ....utils.feedback import create_feedback_manager
 
 
 @click.command(name="import", help="Import registry data from various formats")
@@ -60,14 +61,14 @@ def import_(
     Supports JSON, CSV, and XML formats exported by the export command
     or compatible third-party tools.
     """
-    feedback = create_feedback_manager(config.general.icons)
+    feedback = FeedbackService(config)
 
     try:
-        registry_service = MediaRegistryService(api, config.registry)
+        registry_service = MediaRegistryService(api, config.media_registry)
 
         # Create backup if requested
         if backup and not dry_run:
-            _create_backup(registry_service, feedback)
+            _create_backup(registry_service, feedback, api)
 
         # Auto-detect format if needed
         if input_format == "auto":
@@ -77,7 +78,7 @@ def import_(
             )
 
         # Parse input file
-        import_data = _parse_input_file(input_file, input_format, feedback)
+        import_data = _parse_input_file(input_file, input_format)
 
         # Validate import data
         _validate_import_data(import_data, force, feedback)
@@ -101,15 +102,17 @@ def import_(
         raise click.Abort()
 
 
-def _create_backup(registry_service, feedback):
+def _create_backup(
+    registry_service: MediaRegistryService, feedback: FeedbackService, api: str
+):
     """Create a backup before importing."""
-    from .export import _prepare_export_data, _export_json
+    from .export import _export_json, _prepare_export_data
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = Path(f"fastanime_registry_backup_{timestamp}.json")
+    backup_path = Path(f"fastanime_registry_pre_import_{api}_{timestamp}.json")
 
     export_data = _prepare_export_data(registry_service, True, ())
-    _export_json(export_data, backup_path, False, feedback)
+    _export_json(export_data, backup_path)
 
     feedback.info("Backup Created", f"Registry backed up to {backup_path}")
 
@@ -117,52 +120,70 @@ def _create_backup(registry_service, feedback):
 def _detect_format(file_path: Path) -> str:
     """Auto-detect file format based on extension and content."""
     extension = file_path.suffix.lower()
-
-    if extension in [".json", ".gz"]:
+    if ".gz" in file_path.suffixes:
+        return "json"  # Assume gzipped jsons for now
+    if extension == ".json":
         return "json"
     elif extension == ".csv":
         return "csv"
     elif extension == ".xml":
         return "xml"
 
-    # Try to detect by content
+    # Fallback to content detection
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read(100).strip()
-            if content.startswith("{") or content.startswith("["):
+            if content.startswith(("{", "[")):
                 return "json"
             elif content.startswith("<?xml") or content.startswith("<"):
                 return "xml"
-            elif "," in content:  # Very basic CSV detection
+            elif "," in content:
                 return "csv"
-    except:
+    except Exception:
         pass
 
-    raise click.ClickException(f"Could not detect format for {file_path}")
+    raise click.ClickException(f"Could not auto-detect format for {file_path}")
 
 
-def _parse_input_file(file_path: Path, format_type: str, feedback) -> dict:
+def _parse_input_file(file_path: Path, format_type: str) -> dict:
     """Parse input file based on format."""
     if format_type == "json":
         return _parse_json(file_path)
-    elif format_type == "csv":
+    if format_type == "csv":
         return _parse_csv(file_path)
-    elif format_type == "xml":
+    if format_type == "xml":
         return _parse_xml(file_path)
-    else:
-        raise click.ClickException(f"Unsupported format: {format_type}")
+    raise click.ClickException(f"Unsupported format: {format_type}")
+
+
+def _safe_int(value: Optional[str]) -> Optional[int]:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def _safe_float(value: Optional[str]) -> Optional[float]:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return None
 
 
 def _parse_json(file_path: Path) -> dict:
     """Parse JSON input file."""
     try:
-        if file_path.suffix.lower() == ".gz":
+        if ".gz" in file_path.suffixes:
             import gzip
 
             with gzip.open(file_path, "rt", encoding="utf-8") as f:
                 return json.load(f)
         else:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with file_path.open("r", encoding="utf-8") as f:
                 return json.load(f)
     except json.JSONDecodeError as e:
         raise click.ClickException(f"Invalid JSON format: {e}")
@@ -170,20 +191,13 @@ def _parse_json(file_path: Path) -> dict:
 
 def _parse_csv(file_path: Path) -> dict:
     """Parse CSV input file."""
-    import_data = {
-        "metadata": {
-            "import_timestamp": datetime.now().isoformat(),
-            "source_format": "csv",
-        },
-        "media": [],
-    }
-
+    import_data = {"metadata": {"source_format": "csv"}, "media": []}
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with file_path.open("r", encoding="utf-8", newline="") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                media_data = {
-                    "id": int(row["id"]) if row.get("id") else None,
+                media_data: Dict[str, Any] = {
+                    "id": _safe_int(row.get("id")),
                     "title": {
                         "english": row.get("title_english"),
                         "romaji": row.get("title_romaji"),
@@ -191,235 +205,136 @@ def _parse_csv(file_path: Path) -> dict:
                     },
                     "user_status": {
                         "status": row.get("status"),
-                        "progress": int(row["progress"])
-                        if row.get("progress")
-                        else None,
-                        "score": float(row["score"]) if row.get("score") else None,
+                        "progress": _safe_int(row.get("progress")),
+                        "score": _safe_float(row.get("score")),
                         "last_watched": row.get("last_watched"),
                         "notes": row.get("notes"),
                     },
                 }
-
-                # Add metadata fields if present
-                if "format" in row:
+                if "format" in row:  # Check if detailed metadata is present
                     media_data.update(
                         {
                             "format": row.get("format"),
-                            "episodes": int(row["episodes"])
-                            if row.get("episodes")
-                            else None,
-                            "duration": int(row["duration"])
-                            if row.get("duration")
-                            else None,
+                            "episodes": _safe_int(row.get("episodes")),
+                            "duration": _safe_int(row.get("duration")),
                             "media_status": row.get("media_status"),
                             "start_date": row.get("start_date"),
                             "end_date": row.get("end_date"),
-                            "average_score": float(row["average_score"])
-                            if row.get("average_score")
-                            else None,
-                            "popularity": int(row["popularity"])
-                            if row.get("popularity")
-                            else None,
+                            "average_score": _safe_float(row.get("average_score")),
+                            "popularity": _safe_int(row.get("popularity")),
                             "genres": row.get("genres", "").split(",")
                             if row.get("genres")
                             else [],
                             "description": row.get("description"),
                         }
                     )
-
                 import_data["media"].append(media_data)
-
-    except (ValueError, KeyError) as e:
+    except (ValueError, KeyError, csv.Error) as e:
         raise click.ClickException(f"Invalid CSV format: {e}")
-
     return import_data
 
 
 def _parse_xml(file_path: Path) -> dict:
     """Parse XML input file."""
-    try:
-        import xml.etree.ElementTree as ET
-    except ImportError:
-        raise click.ClickException("XML import requires Python's xml module")
+    import xml.etree.ElementTree as ET
 
     try:
         tree = ET.parse(file_path)
         root = tree.getroot()
+        import_data: Dict[str, Any] = {"metadata": {}, "media": []}
 
-        import_data = {"metadata": {}, "media": []}
+        for child in root.find("metadata") or []:
+            import_data["metadata"][child.tag] = child.text
 
-        # Parse metadata
-        metadata_elem = root.find("metadata")
-        if metadata_elem is not None:
-            for child in metadata_elem:
-                import_data["metadata"][child.tag] = child.text
-
-        # Parse media
-        media_list_elem = root.find("media_list")
-        if media_list_elem is not None:
-            for media_elem in media_list_elem.findall("media"):
-                media_data = {
-                    "id": int(media_elem.get("id")),
-                    "title": {},
-                    "user_status": {},
-                }
-
-                # Parse titles
-                titles_elem = media_elem.find("titles")
-                if titles_elem is not None:
-                    for title_elem in titles_elem:
-                        media_data["title"][title_elem.tag] = title_elem.text
-
-                # Parse user status
-                status_elem = media_elem.find("user_status")
-                if status_elem is not None:
-                    for child in status_elem:
-                        value = child.text
-                        if child.tag in ["progress", "score"] and value:
-                            try:
-                                value = (
-                                    float(value) if child.tag == "score" else int(value)
-                                )
-                            except ValueError:
-                                pass
-                        media_data["user_status"][child.tag] = value
-
-                # Parse other metadata
-                for child in media_elem:
-                    if child.tag not in ["titles", "user_status"]:
-                        if child.tag in ["episodes", "duration", "popularity"]:
-                            try:
-                                media_data[child.tag] = (
-                                    int(child.text) if child.text else None
-                                )
-                            except ValueError:
-                                media_data[child.tag] = child.text
-                        elif child.tag == "average_score":
-                            try:
-                                media_data[child.tag] = (
-                                    float(child.text) if child.text else None
-                                )
-                            except ValueError:
-                                media_data[child.tag] = child.text
-                        else:
-                            media_data[child.tag] = child.text
-
-                import_data["media"].append(media_data)
-
+        for media_elem in root.find("media_list") or []:
+            media_data = {child.tag: child.text for child in media_elem}
+            # Reconstruct nested structures for consistency with other parsers
+            media_data["id"] = _safe_int(media_data.get("id"))
+            media_data["title"] = {
+                "english": media_data.pop("title_english", None),
+                "romaji": media_data.pop("title_romaji", None),
+                "native": media_data.pop("title_native", None),
+            }
+            media_data["user_status"] = {
+                "status": media_data.pop("user_status", None),
+                "progress": _safe_int(media_data.pop("user_progress", None)),
+                "score": _safe_float(media_data.pop("user_score", None)),
+                "last_watched": media_data.pop("user_last_watched", None),
+                "notes": media_data.pop("user_notes", None),
+            }
+            import_data["media"].append(media_data)
     except ET.ParseError as e:
         raise click.ClickException(f"Invalid XML format: {e}")
-
     return import_data
 
 
-def _validate_import_data(data: dict, force: bool, feedback):
+def _validate_import_data(data: dict, force: bool, feedback: FeedbackService):
     """Validate import data structure and compatibility."""
-    if "media" not in data:
-        raise click.ClickException("Import data missing 'media' section")
-
-    if not isinstance(data["media"], list):
-        raise click.ClickException("'media' section must be a list")
-
-    # Check if any media entries exist
+    if "media" not in data or not isinstance(data["media"], list):
+        raise click.ClickException(
+            "Import data missing or has invalid 'media' section."
+        )
     if not data["media"]:
-        feedback.warning("No Media", "Import file contains no media entries")
+        feedback.warning("No Media", "Import file contains no media entries.")
         return
 
-    # Validate media entries
-    required_fields = ["id", "title"]
     for i, media in enumerate(data["media"]):
-        for field in required_fields:
-            if field not in media:
-                raise click.ClickException(
-                    f"Media entry {i} missing required field: {field}"
-                )
-
+        if "id" not in media or "title" not in media:
+            raise click.ClickException(
+                f"Media entry {i + 1} missing required 'id' or 'title' field."
+            )
         if not isinstance(media.get("title"), dict):
-            raise click.ClickException(f"Media entry {i} has invalid title format")
+            raise click.ClickException(f"Media entry {i + 1} has invalid title format.")
 
     feedback.info(
-        "Validation", f"Import data validated - {len(data['media'])} media entries"
+        "Validation",
+        f"Import data validated - {len(data['media'])} media entries found.",
     )
 
 
-def _import_data(registry_service, data: dict, merge: bool, dry_run: bool, feedback):
+def _import_data(
+    registry_service: MediaRegistryService,
+    data: dict,
+    merge: bool,
+    dry_run: bool,
+    feedback: FeedbackService,
+):
     """Import data into the registry."""
-    from .....libs.media_api.types import (
-        MediaFormat,
-        MediaType,
-    )
+    from .....libs.media_api.types import MediaType
 
-    imported_count = 0
-    updated_count = 0
-    error_count = 0
-
-    status_map = {
-        "watching": UserMediaListStatus.WATCHING,
-        "completed": UserMediaListStatus.COMPLETED,
-        "planning": UserMediaListStatus.PLANNING,
-        "dropped": UserMediaListStatus.DROPPED,
-        "paused": UserMediaListStatus.PAUSED,
-        "repeating": UserMediaListStatus.REPEATING,
-    }
+    imported_count, updated_count, error_count = 0, 0, 0
+    status_map = {status.value: status for status in UserMediaListStatus}
 
     for media_data in data["media"]:
         try:
-            media_id = media_data["id"]
+            media_id = media_data.get("id")
             if not media_id:
                 error_count += 1
                 continue
 
-            title_data = media_data.get("title", {})
-            title = MediaTitle(
-                english=title_data.get("english") or "",
-                romaji=title_data.get("romaji"),
-                native=title_data.get("native"),
-            )
-
-            # Create minimal MediaItem for registry
-            media_item = MediaItem(
-                id=media_id,
-                title=title,
-                type=MediaType.ANIME,  # Default to anime
-            )
-
-            # Add additional metadata if available
-            if "format" in media_data and media_data["format"]:
-                try:
-                    media_item.format = getattr(MediaFormat, media_data["format"])
-                except (AttributeError, TypeError):
-                    pass
-
-            if "episodes" in media_data:
-                media_item.episodes = media_data["episodes"]
-
-            if "average_score" in media_data:
-                media_item.average_score = media_data["average_score"]
+            title = MediaTitle(**media_data.get("title", {}))
+            media_item = MediaItem(id=media_id, title=title, type=MediaType.ANIME)
 
             if dry_run:
-                title_str = title.english or title.romaji or f"ID:{media_id}"
-                feedback.info("Would import", title_str)
+                feedback.info(
+                    "Would import", title.english or title.romaji or f"ID:{media_id}"
+                )
                 imported_count += 1
                 continue
 
-            # Check if record exists
             existing_record = registry_service.get_media_record(media_id)
             if existing_record and not merge:
-                # Skip if not merging
                 continue
-            elif existing_record:
-                updated_count += 1
-            else:
-                imported_count += 1
 
-            # Create or update record
+            updated_count += 1 if existing_record else 0
+            imported_count += 1 if not existing_record else 0
+
             record = registry_service.get_or_create_record(media_item)
             registry_service.save_media_record(record)
 
-            # Update user status if provided
             user_status = media_data.get("user_status", {})
             if user_status.get("status"):
-                status_enum = status_map.get(user_status["status"].lower())
+                status_enum = status_map.get(str(user_status["status"]).lower())
                 if status_enum:
                     registry_service.update_media_index_entry(
                         media_id,
@@ -429,14 +344,12 @@ def _import_data(registry_service, data: dict, merge: bool, dry_run: bool, feedb
                         score=user_status.get("score"),
                         notes=user_status.get("notes"),
                     )
-
         except Exception as e:
             error_count += 1
             feedback.warning(
                 "Import Error",
                 f"Failed to import media {media_data.get('id', 'unknown')}: {e}",
             )
-            continue
 
     if not dry_run:
         feedback.info(

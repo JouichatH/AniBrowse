@@ -2,14 +2,25 @@
 Registry stats command - show detailed statistics about the local registry
 """
 
+import json
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Dict
+
 import click
+from rich.columns import Columns
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
+from rich.table import Table
 
 from .....core.config import AppConfig
+from ....service.feedback import FeedbackService
 from ....service.registry.service import MediaRegistryService
-from ....utils.feedback import create_feedback_manager
+
+if TYPE_CHECKING:
+    from ....service.registry.service import StatBreakdown
+
+# --- Constants for better maintainability ---
+TOP_N_STATS = 10
 
 
 @click.command(help="Show detailed statistics about the local media registry")
@@ -36,16 +47,14 @@ def stats(config: AppConfig, detailed: bool, output_json: bool, api: str):
     Shows total counts, status breakdown, and optionally detailed
     analysis by genre, format, and release year.
     """
-    feedback = create_feedback_manager(config.general.icons)
+    feedback = FeedbackService(config)
     console = Console()
 
     try:
-        registry_service = MediaRegistryService(api, config.registry)
+        registry_service = MediaRegistryService(api, config.media_registry)
         stats_data = registry_service.get_registry_stats()
 
         if output_json:
-            import json
-
             print(json.dumps(stats_data, indent=2, default=str))
             return
 
@@ -59,124 +68,185 @@ def stats(config: AppConfig, detailed: bool, output_json: bool, api: str):
         raise click.Abort()
 
 
-def _display_stats_overview(console: Console, stats: dict, api: str, icons: bool):
-    """Display basic registry statistics overview."""
+def _display_stats_overview(
+    console: Console, stats: "StatBreakdown", api: str, icons: bool
+):
+    """
+    Display the main overview and status breakdown tables.
+    """
+    # --- Main Overview Table ---
+    overview_table = Table.grid(expand=True, padding=(0, 1))
+    overview_table.add_column("Metric", style="bold cyan", no_wrap=True)
+    overview_table.add_column("Value", style="white")
 
-    # Main overview panel
-    overview_text = f"[bold cyan]Media API:[/bold cyan] {api.title()}\n"
-    overview_text += (
-        f"[bold cyan]Total Media:[/bold cyan] {stats.get('total_media', 0)}\n"
-    )
-    overview_text += (
-        f"[bold cyan]Registry Version:[/bold cyan] {stats.get('version', 'Unknown')}\n"
-    )
-    overview_text += (
-        f"[bold cyan]Last Updated:[/bold cyan] {stats.get('last_updated', 'Never')}\n"
-    )
-    overview_text += (
-        f"[bold cyan]Storage Size:[/bold cyan] {stats.get('storage_size', 'Unknown')}"
-    )
+    overview_table.add_row("Media API:", api.title())
+    overview_table.add_row("Total Media:", str(stats.get("total_media", 0)))
+    overview_table.add_row("Registry Version:", str(stats.get("version", "Unknown")))
 
-    panel = Panel(
-        overview_text,
-        title=f"{'📊 ' if icons else ''}Registry Overview",
-        border_style="cyan",
+    # Format "Last Updated" timestamp to be more human-readable
+    last_updated_str = stats.get("last_updated", "Never")
+    if last_updated_str != "Never":
+        try:
+            last_updated_dt = datetime.fromisoformat(last_updated_str)
+            last_updated_str = _format_timedelta(datetime.now() - last_updated_dt)
+        except (ValueError, TypeError):
+            pass  # Keep original string if parsing fails
+    overview_table.add_row("Last Updated:", last_updated_str)
+
+    # Format storage size
+    storage_size_str = _format_storage_size(float(stats.get("storage_size_bytes", 0)))
+    overview_table.add_row("Storage Size:", storage_size_str)
+
+    console.print(
+        Panel(
+            overview_table,
+            title=f"{'📊 ' if icons else ''}Registry Overview",
+            border_style="cyan",
+        )
     )
-    console.print(panel)
     console.print()
 
-    # Status breakdown table
+    # --- Status Breakdown Table ---
     status_breakdown = stats.get("status_breakdown", {})
     if status_breakdown:
-        table = Table(title=f"{'📋 ' if icons else ''}Status Breakdown")
-        table.add_column("Status", style="cyan", no_wrap=True)
-        table.add_column("Count", style="magenta", justify="right")
-        table.add_column("Percentage", style="green", justify="right")
-
-        total = sum(status_breakdown.values())
-        for status, count in sorted(status_breakdown.items()):
-            percentage = (count / total * 100) if total > 0 else 0
-            table.add_row(status.title(), str(count), f"{percentage:.1f}%")
-
-        console.print(table)
+        status_table = _create_breakdown_table(
+            title=f"{'📋 ' if icons else ''}Status Breakdown",
+            data=status_breakdown,
+            key_header="Status",
+            value_header="Count",
+            show_percentage=True,
+        )
+        console.print(status_table)
         console.print()
 
-    # Download status breakdown
+    # --- Download Status Table ---
     download_stats = stats.get("download_stats", {})
     if download_stats:
-        table = Table(title=f"{'💾 ' if icons else ''}Download Status")
-        table.add_column("Status", style="cyan", no_wrap=True)
-        table.add_column("Count", style="magenta", justify="right")
-
-        for status, count in download_stats.items():
-            table.add_row(status.title(), str(count))
-
-        console.print(table)
+        download_table = _create_breakdown_table(
+            title=f"{'💾 ' if icons else ''}Download Status",
+            data=download_stats,
+            key_header="Status",
+            value_header="Count",
+            show_percentage=False,
+        )
+        console.print(download_table)
         console.print()
 
 
-def _display_detailed_stats(console: Console, stats: dict, icons: bool):
-    """Display detailed breakdown by various categories."""
+def _display_detailed_stats(console: Console, stats: "StatBreakdown", icons: bool):
+    """
+    Display detailed breakdowns by various categories using a column layout.
+    """
+    genre_table = _create_breakdown_table(
+        title=f"{'🎭 ' if icons else ''}Top {TOP_N_STATS} Genres",
+        data=stats.get("genre_breakdown", {}),
+        key_header="Genre",
+        value_header="Count",
+        limit=TOP_N_STATS,
+    )
 
-    # Genre breakdown
-    genre_breakdown = stats.get("genre_breakdown", {})
-    if genre_breakdown:
-        table = Table(title=f"{'🎭 ' if icons else ''}Top Genres")
-        table.add_column("Genre", style="cyan")
-        table.add_column("Count", style="magenta", justify="right")
+    format_table = _create_breakdown_table(
+        title=f"{'📺 ' if icons else ''}Format Breakdown",
+        data=stats.get("format_breakdown", {}),
+        key_header="Format",
+        value_header="Count",
+        show_percentage=True,
+    )
 
-        # Sort by count and show top 10
-        top_genres = sorted(genre_breakdown.items(), key=lambda x: x[1], reverse=True)[
-            :10
-        ]
-        for genre, count in top_genres:
-            table.add_row(genre, str(count))
+    year_table = _create_breakdown_table(
+        title=f"{'📅 ' if icons else ''}Top {TOP_N_STATS} Release Years",
+        data=stats.get("year_breakdown", {}),
+        key_header="Year",
+        value_header="Count",
+        sort_by_key=True,
+        limit=TOP_N_STATS,
+    )
 
-        console.print(table)
-        console.print()
+    rating_table = _create_breakdown_table(
+        title=f"{'⭐ ' if icons else ''}Score Distribution",
+        data=stats.get("rating_breakdown", {}),
+        key_header="Score Range",
+        value_header="Count",
+        sort_by_key=True,
+        reverse_sort=False,
+    )
 
-    # Format breakdown
-    format_breakdown = stats.get("format_breakdown", {})
-    if format_breakdown:
-        table = Table(title=f"{'📺 ' if icons else ''}Format Breakdown")
-        table.add_column("Format", style="cyan")
-        table.add_column("Count", style="magenta", justify="right")
+    # Render tables in columns for a compact view
+    console.print(Columns([genre_table, format_table], equal=True, expand=True))
+    console.print()
+    console.print(Columns([year_table, rating_table], equal=True, expand=True))
+
+
+def _create_breakdown_table(
+    title: str,
+    data: Dict,
+    key_header: str,
+    value_header: str,
+    show_percentage: bool = False,
+    sort_by_key: bool = False,
+    reverse_sort: bool = True,
+    limit: int = 0,
+) -> Table:
+    """
+    Generic helper to create a rich Table for breakdown statistics.
+    """
+    table = Table(title=title)
+    table.add_column(key_header, style="cyan")
+    table.add_column(value_header, style="magenta", justify="right")
+    if show_percentage:
         table.add_column("Percentage", style="green", justify="right")
 
-        total = sum(format_breakdown.values())
-        for format_type, count in sorted(format_breakdown.items()):
+    if not data:
+        row = (
+            ["No data available", "-", "-"]
+            if show_percentage
+            else ["No data available", "-"]
+        )
+        table.add_row(*row)
+        return table
+
+    total = sum(data.values())
+
+    # Determine sorting method
+    sort_key = lambda item: item[0] if sort_by_key else item[1]
+    sorted_data = sorted(data.items(), key=sort_key, reverse=reverse_sort)
+
+    # Apply limit if specified
+    if limit > 0:
+        sorted_data = sorted_data[:limit]
+
+    for key, count in sorted_data:
+        row = [str(key).title(), str(count)]
+        if show_percentage:
             percentage = (count / total * 100) if total > 0 else 0
-            table.add_row(format_type, str(count), f"{percentage:.1f}%")
+            row.append(f"{percentage:.1f}%")
+        table.add_row(*row)
 
-        console.print(table)
-        console.print()
+    return table
 
-    # Year breakdown
-    year_breakdown = stats.get("year_breakdown", {})
-    if year_breakdown:
-        table = Table(title=f"{'📅 ' if icons else ''}Release Years (Top 10)")
-        table.add_column("Year", style="cyan", justify="center")
-        table.add_column("Count", style="magenta", justify="right")
 
-        # Sort by year descending and show top 10
-        top_years = sorted(year_breakdown.items(), key=lambda x: x[0], reverse=True)[
-            :10
-        ]
-        for year, count in top_years:
-            table.add_row(str(year), str(count))
+def _format_storage_size(size_bytes: float) -> str:
+    """Formats bytes into a human-readable string (KB, MB, GB)."""
+    if size_bytes == 0:
+        return "0 B"
+    size_name = ("B", "KB", "MB", "GB", "TB")
+    i = 0
+    while size_bytes >= 1024.0 and i < len(size_name) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    return f"{size_bytes:.2f} {size_name[i]}"
 
-        console.print(table)
-        console.print()
 
-    # Rating breakdown
-    rating_breakdown = stats.get("rating_breakdown", {})
-    if rating_breakdown:
-        table = Table(title=f"{'⭐ ' if icons else ''}Score Distribution")
-        table.add_column("Score Range", style="cyan")
-        table.add_column("Count", style="magenta", justify="right")
-
-        for score_range, count in sorted(rating_breakdown.items()):
-            table.add_row(score_range, str(count))
-
-        console.print(table)
-        console.print()
+def _format_timedelta(delta: timedelta) -> str:
+    """Formats a timedelta into a human-readable relative time string."""
+    seconds = int(delta.total_seconds())
+    if seconds < 60:
+        return "Just now"
+    minutes = seconds // 60
+    if minutes < 60:
+        return f"{minutes} minute{'s' if minutes > 1 else ''} ago"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours} hour{'s' if hours > 1 else ''} ago"
+    days = hours // 24
+    return f"{days} day{'s' if days > 1 else ''} ago"

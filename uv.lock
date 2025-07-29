@@ -125,16 +125,15 @@ notifications = [
     { name = "plyer" },
 ]
 standard = [
-    { name = "libtorrent" },
     { name = "lxml" },
-    { name = "mpv" },
-    { name = "plyer" },
     { name = "pycryptodomex" },
-    { name = "pypresence" },
     { name = "thefuzz" },
     { name = "yt-dlp" },
 ]
 torrent = [
+    { name = "libtorrent" },
+]
+torrents = [
     { name = "libtorrent" },
 ]
 
@@ -153,25 +152,22 @@ requires-dist = [
     { name = "click", specifier = ">=8.1.7" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "inquirerpy", specifier = ">=0.3.4" },
-    { name = "libtorrent", marker = "extra == 'standard'", specifier = ">=2.0.11" },
     { name = "libtorrent", marker = "extra == 'torrent'", specifier = ">=2.0.11" },
+    { name = "libtorrent", marker = "extra == 'torrents'", specifier = ">=2.0.11" },
     { name = "lxml", marker = "extra == 'lxml'", specifier = ">=6.0.0" },
     { name = "lxml", marker = "extra == 'standard'", specifier = ">=6.0.0" },
     { name = "mpv", marker = "extra == 'mpv'", specifier = ">=1.0.7" },
-    { name = "mpv", marker = "extra == 'standard'", specifier = ">=1.0.7" },
     { name = "plyer", marker = "extra == 'notifications'", specifier = ">=2.1.0" },
-    { name = "plyer", marker = "extra == 'standard'", specifier = ">=2.1.0" },
     { name = "pycryptodomex", marker = "extra == 'download'", specifier = ">=3.23.0" },
     { name = "pycryptodomex", marker = "extra == 'standard'", specifier = ">=3.23.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pypresence", marker = "extra == 'discord'", specifier = ">=4.3.0" },
-    { name = "pypresence", marker = "extra == 'standard'", specifier = ">=4.3.0" },
     { name = "rich", specifier = ">=13.9.2" },
     { name = "thefuzz", marker = "extra == 'standard'", specifier = ">=0.22.1" },
     { name = "yt-dlp", marker = "extra == 'download'", specifier = ">=2025.7.21" },
     { name = "yt-dlp", marker = "extra == 'standard'", specifier = ">=2025.7.21" },
 ]
-provides-extras = ["standard", "notifications", "mpv", "torrent", "lxml", "discord", "download"]
+provides-extras = ["standard", "notifications", "mpv", "torrent", "lxml", "discord", "download", "torrents"]
 
 [package.metadata.requires-dev]
 dev = [

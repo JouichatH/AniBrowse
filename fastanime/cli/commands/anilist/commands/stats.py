@@ -54,7 +54,7 @@ def stats(config: "AppConfig"):
                 )
             else:
                 # Display profile image using kitten icat
-                if profile.avatar_url:
+                if profile.user_profile.avatar_url:
                     console.clear()
                     image_x = int(console.size.width * 0.1)
                     image_y = int(console.size.height * 0.1)
@@ -68,7 +68,7 @@ def stats(config: "AppConfig"):
                             "--clear",
                             "--place",
                             f"{img_w}x{img_h}@{image_x}x{image_y}",
-                            profile.avatar_url,
+                            profile.user_profile.avatar_url,
                         ],
                         check=False,
                     )
@@ -82,16 +82,13 @@ def stats(config: "AppConfig"):
             console.print(
                 Panel(
                     Markdown(about_text),
-                    title=f"📊 {profile.name}'s Profile",
+                    title=f"📊 {profile.user_profile.name}'s Profile",
                 )
             )
 
             # You can add more stats here if the API provides them
             feedback.success("User profile displayed successfully")
 
-    except FastAnimeError as e:
-        feedback.error("Failed to fetch user stats", str(e))
-        raise click.Abort()
     except Exception as e:
         feedback.error("Unexpected error occurred", str(e))
         raise click.Abort()

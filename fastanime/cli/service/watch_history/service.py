@@ -27,6 +27,7 @@ class WatchHistoryService:
             f"Updating watch history for {media_item.title.english} ({media_item.id}) with Episode={player_result.episode}; Stop Time={player_result.stop_time}; Total Duration={player_result.total_time}"
         )
         status = None
+
         self.media_registry.update_media_index_entry(
             media_id=media_item.id,
             watched=True,
@@ -37,6 +38,17 @@ class WatchHistoryService:
             status=status,
         )
 
+        if player_result.stop_time and player_result.total_time:
+            from ....core.utils.converter import calculate_completion_percentage
+
+            completion_percentage = calculate_completion_percentage(
+                player_result.stop_time, player_result.total_time
+            )
+            if completion_percentage < self.config.stream.episode_complete_at:
+                logger.info(
+                    f"Not updating remote watch history since completion percentage ({completion_percentage} is not greater than episode complete at ({self.config.stream.episode_complete_at}))"
+                )
+                return
         if self.media_api and self.media_api.is_authenticated():
             if not self.media_api.update_list_entry(
                 UpdateUserMediaListEntryParams(

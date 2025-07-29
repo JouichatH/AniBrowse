@@ -21,7 +21,7 @@ C_RULE="{C_RULE}"
 RESET="{RESET}"
 
 # Selected item from fzf
-SELECTED_ITEM="{}"
+SELECTED_ITEM={}
 
 generate_sha256() {
     local input="$1"
@@ -156,14 +156,11 @@ if [ -z "$SELECTED_ITEM" ] || [ ! -f "$SEARCH_RESULTS_FILE" ]; then
     fi
     exit 0
 fi
-# HACK: the extra dot is cause theres weird character at start
-ANIME_ID=$(echo "$SELECTED_ITEM"|sed -E 's/^[[:space:]]+|[[:space:]]+$//g'|sed -E 's/^.\[([0-9]+)\] .*/\1/g')
 # Parse the search results JSON and find the matching item
 if command -v jq >/dev/null 2>&1; then
-    # Use jq for faster and more reliable JSON parsing
-    MEDIA_DATA=$(cat "$SEARCH_RESULTS_FILE" | jq --arg anime_id "$ANIME_ID" '
+    MEDIA_DATA=$(cat "$SEARCH_RESULTS_FILE" | jq --arg anime_title "$SELECTED_ITEM" '
         .data.Page.media[]? | 
-        select(.id == ($anime_id | tonumber) )
+        select((.title.english // .title.romaji // .title.native // "Unknown") == $anime_title )
     ' )
 else
     # Fallback to Python for JSON parsing

@@ -2,15 +2,21 @@
 Registry backup command - create full backups of the registry
 """
 
+import json
 import tarfile
-from pathlib import Path
 from datetime import datetime
+from io import BytesIO
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 
 from .....core.config import AppConfig
+from ....service.feedback import FeedbackService
 from ....service.registry.service import MediaRegistryService
-from ....utils.feedback import create_feedback_manager
+
+if TYPE_CHECKING:
+    pass
 
 
 @click.command(help="Create a full backup of the registry")
@@ -50,10 +56,10 @@ def backup(
     Includes all media records, index files, and optionally cache data.
     Backups can be compressed and are suitable for restoration.
     """
-    feedback = create_feedback_manager(config.general.icons)
+    feedback = FeedbackService(config)
 
     try:
-        registry_service = MediaRegistryService(api, config.registry)
+        registry_service = MediaRegistryService(api, config.media_registry)
 
         # Generate output filename if not specified
         if not output:
@@ -99,15 +105,14 @@ def backup(
 
 
 def _create_tar_backup(
-    registry_service,
+    registry_service: MediaRegistryService,
     output_path: Path,
     compress: bool,
     include_cache: bool,
-    feedback,
+    feedback: FeedbackService,
     api: str,
 ):
     """Create a tar-based backup."""
-
     mode = "w:gz" if compress else "w"
 
     with tarfile.open(output_path, mode) as tar:
@@ -130,25 +135,27 @@ def _create_tar_backup(
                 tar.add(cache_dir, arcname="cache")
                 feedback.info("Added to backup", "Cache data")
 
-        # Add metadata file
-        metadata = _create_backup_metadata(registry_service, api, include_cache)
-        metadata_path = output_path.parent / "backup_metadata.json"
-
+        # Add metadata file directly into the archive without creating a temp file
         try:
-            import json
+            metadata = _create_backup_metadata(registry_service, api, include_cache)
+            metadata_bytes = json.dumps(metadata, indent=2, default=str).encode("utf-8")
 
-            with open(metadata_path, "w", encoding="utf-8") as f:
-                json.dump(metadata, f, indent=2, default=str)
+            tarinfo = tarfile.TarInfo(name="backup_metadata.json")
+            tarinfo.size = len(metadata_bytes)
+            tarinfo.mtime = int(datetime.now().timestamp())
 
-            tar.add(metadata_path, arcname="backup_metadata.json")
-            metadata_path.unlink()  # Clean up temp file
-
+            with BytesIO(metadata_bytes) as bio:
+                tar.addfile(tarinfo, bio)
         except Exception as e:
             feedback.warning("Metadata Error", f"Failed to add metadata: {e}")
 
 
 def _create_zip_backup(
-    registry_service, output_path: Path, include_cache: bool, feedback, api: str
+    registry_service: MediaRegistryService,
+    output_path: Path,
+    include_cache: bool,
+    feedback: FeedbackService,
+    api: str,
 ):
     """Create a zip-based backup."""
     import zipfile
@@ -183,23 +190,25 @@ def _create_zip_backup(
                 feedback.info("Added to backup", "Cache data")
 
         # Add metadata
-        metadata = _create_backup_metadata(registry_service, api, include_cache)
         try:
-            import json
-
+            metadata = _create_backup_metadata(registry_service, api, include_cache)
             metadata_json = json.dumps(metadata, indent=2, default=str)
             zip_file.writestr("backup_metadata.json", metadata_json)
         except Exception as e:
             feedback.warning("Metadata Error", f"Failed to add metadata: {e}")
 
 
-def _create_backup_metadata(registry_service, api: str, include_cache: bool) -> dict:
+def _create_backup_metadata(
+    registry_service: MediaRegistryService, api: str, include_cache: bool
+) -> dict:
     """Create backup metadata."""
+    from .....core.constants import __version__
+
     stats = registry_service.get_registry_stats()
 
     return {
         "backup_timestamp": datetime.now().isoformat(),
-        "fastanime_version": "unknown",  # You might want to get this from somewhere
+        "fastanime_version": __version__,
         "registry_version": stats.get("version"),
         "api": api,
         "total_media": stats.get("total_media", 0),
@@ -209,9 +218,10 @@ def _create_backup_metadata(registry_service, api: str, include_cache: bool) -> 
     }
 
 
-def _show_backup_summary(backup_path: Path, format_type: str, feedback):
+def _show_backup_summary(
+    backup_path: Path, format_type: str, feedback: FeedbackService
+):
     """Show summary of backup contents."""
-
     try:
         if format_type.lower() == "tar":
             with tarfile.open(backup_path, "r:*") as tar:
@@ -235,11 +245,14 @@ def _show_backup_summary(backup_path: Path, format_type: str, feedback):
 def _format_file_size(file_path: Path) -> str:
     """Format file size in human-readable format."""
     try:
-        size = file_path.stat().st_size
-        for unit in ["B", "KB", "MB", "GB"]:
-            if size < 1024.0:
-                return f"{size:.1f} {unit}"
-            size /= 1024.0
-        return f"{size:.1f} TB"
-    except:
+        size_bytes: float = float(file_path.stat().st_size)
+        if size_bytes == 0:
+            return "0 B"
+        size_name = ("B", "KB", "MB", "GB", "TB")
+        i = 0
+        while size_bytes >= 1024.0 and i < len(size_name) - 1:
+            size_bytes /= 1024.0
+            i += 1
+        return f"{size_bytes:.1f} {size_name[i]}"
+    except FileNotFoundError:
         return "Unknown size"
