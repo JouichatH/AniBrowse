@@ -1,7 +1,3 @@
-Of course! Based on a thorough analysis of your entire codebase, here is a new, updated `README.md` that reflects the current features, commands, and architecture of FastAnime. It maintains the style of your previous README while ensuring all information is accurate and relevant.
-
----
-
 <p align="center">
   <h1 align="center">FastAnime</h1>
 </p>
