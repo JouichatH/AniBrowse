@@ -106,7 +106,7 @@ if TYPE_CHECKING:
 )
 @click.option(
     "--yes",
-    "-y",
+    "-Y",
     is_flag=True,
     help="Automatically download from all found anime without prompting for selection.",
 )
@@ -191,10 +191,26 @@ def download(config: AppConfig, **options: "Unpack[DownloadOptions]"):
                 (item.title.english or item.title.romaji or f"ID: {item.id}"): item
                 for item in search_result.media
             }
-            selected_titles = selector.choose_multiple(
-                "Select anime to download (use TAB to select, ENTER to confirm)",
-                list(choice_map.keys()),
-            )
+            preview_command = None
+            if config.general.preview != "none":
+                from ....utils.preview import create_preview_context
+
+                with create_preview_context() as preview_ctx:
+                    preview_command = preview_ctx.get_anime_preview(
+                        list(choice_map.values()),
+                        list(choice_map.keys()),
+                        config,
+                    )
+                    selected_titles = selector.choose_multiple(
+                        "Select anime to download",
+                        list(choice_map.keys()),
+                        preview=preview_command,
+                    )
+            else:
+                selected_titles = selector.choose_multiple(
+                    "Select anime to download",
+                    list(choice_map.keys()),
+                )
             if not selected_titles:
                 feedback.warning("No anime selected. Aborting download.")
                 return

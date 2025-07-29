@@ -53,7 +53,7 @@ class FzfSelector(BaseSelector):
             return None
         return result.stdout.strip()
 
-    def choose_multiple(self, prompt, choices, *, preview=None, header=None):
+    def choose_multiple(self, prompt, choices, preview=None):
         """Enhanced multi-selection using fzf's --multi flag."""
         fzf_input = "\n".join(choices)
 

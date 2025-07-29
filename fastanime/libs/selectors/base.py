@@ -35,9 +35,7 @@ class BaseSelector(ABC):
         self,
         prompt: str,
         choices: List[str],
-        *,
         preview: Optional[str] = None,
-        header: Optional[str] = None,
     ) -> List[str]:
         """
         Prompts the user to choose multiple items from a list.
@@ -61,7 +59,6 @@ class BaseSelector(ABC):
                 f"{prompt} (Select multiple, empty to finish)",
                 remaining_choices + ["[DONE] Finish selection"],
                 preview=preview,
-                header=header,
             )
 
             if not choice or choice == "[DONE] Finish selection":
