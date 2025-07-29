@@ -300,7 +300,7 @@ def _import_data(
     feedback: FeedbackService,
 ):
     """Import data into the registry."""
-    from .....libs.media_api.types import MediaFormat, MediaType
+    from .....libs.media_api.types import MediaType
 
     imported_count, updated_count, error_count = 0, 0, 0
     status_map = {status.value: status for status in UserMediaListStatus}

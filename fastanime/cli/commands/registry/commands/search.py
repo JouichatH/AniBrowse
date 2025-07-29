@@ -3,7 +3,7 @@ Registry search command - search through the local media registry
 """
 
 import json
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 import click
 from rich.console import Console
@@ -21,7 +21,7 @@ from ....service.feedback import FeedbackService
 from ....service.registry.service import MediaRegistryService
 
 if TYPE_CHECKING:
-    from .....libs.media_api.types import MediaItem, MediaSearchResult
+    from .....libs.media_api.types import MediaSearchResult
 
 
 @click.command(help="Search through the local media registry")

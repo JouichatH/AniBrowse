@@ -16,7 +16,7 @@ from ....service.feedback import FeedbackService
 from ....service.registry.service import MediaRegistryService
 
 if TYPE_CHECKING:
-    from ....service.registry.service import StatBreakdown
+    pass
 
 
 @click.command(help="Create a full backup of the registry")
