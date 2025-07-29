@@ -255,7 +255,7 @@ def _manage_user_media_list_in_bulk(ctx: Context, state: State) -> MenuAction:
                     ctx.config,
                 )
                 selected_titles = ctx.selector.choose_multiple(
-                    "Select anime to download",
+                    "Select anime to manage",
                     list(choice_map.keys()),
                     preview=preview_command,
                 )
