@@ -83,10 +83,7 @@ class FeedbackService:
             transient=transient,
             console=console,
         ) as progress:
-            task_id = None
-            if auto_add_task:
-                # FIXME: for some reason task id is still none
-                task_id = progress.add_task("", total=total)
+            task_id = progress.add_task("", total=total)
             try:
                 yield task_id, progress
                 if success_msg:
