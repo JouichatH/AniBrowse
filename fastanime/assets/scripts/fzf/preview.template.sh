@@ -44,18 +44,19 @@ fzf_preview() {
 
   if [ "$IMAGE_RENDERER" = "icat" ] && [ -z "$GHOSTTY_BIN_DIR" ]; then
     if command -v kitten >/dev/null 2>&1; then
-      kitten icat --clear --transfer-mode=memory --unicode-placeholder --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
+      kitten icat --clear --transfer-mode=memory --unicode-placeholder --scale-up --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
     elif command -v icat >/dev/null 2>&1; then
-      icat --clear --transfer-mode=memory --unicode-placeholder --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
+      icat --clear --transfer-mode=memory --unicode-placeholder --scale-up --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
     else
-      kitty icat --clear --transfer-mode=memory --unicode-placeholder --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
+      kitty icat --clear --transfer-mode=memory --unicode-placeholder --scale-up --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
     fi
 
   elif [ -n "$GHOSTTY_BIN_DIR" ]; then
+    dim=$((FZF_PREVIEW_COLUMNS - 1))x${FZF_PREVIEW_LINES}
     if command -v kitten >/dev/null 2>&1; then
-      kitten icat --clear --transfer-mode=memory --unicode-placeholder --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
+      kitten icat --clear --transfer-mode=memory --unicode-placeholder --scale-up --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
     elif command -v icat >/dev/null 2>&1; then
-      icat --clear --transfer-mode=memory --unicode-placeholder --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
+      icat --clear --transfer-mode=memory --unicode-placeholder --scale-up --stdin=no --place="$dim@0x0" "$file" | sed "\$d" | sed "$(printf "\$s/\$/\033[m/")"
     else
       chafa -s "$dim" "$file"
     fi
