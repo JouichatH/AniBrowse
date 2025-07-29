@@ -8,6 +8,7 @@ from .....libs.player.params import PlayerParams
 from .....libs.player.types import PlayerResult
 from .....libs.provider.anime.base import BaseAnimeProvider
 from .....libs.provider.anime.types import Anime
+from ....service.registry import MediaRegistryService
 
 
 class BaseIPCPlayer(ABC):
@@ -23,8 +24,9 @@ class BaseIPCPlayer(ABC):
         self,
         player: BasePlayer,
         player_params: PlayerParams,
-        provider: BaseAnimeProvider,
-        anime: Anime,
+        provider: Optional[BaseAnimeProvider] = None,
+        anime: Optional[Anime] = None,
+        registry: Optional[MediaRegistryService] = None,
         media_item: Optional[MediaItem] = None,
     ) -> PlayerResult:
         """

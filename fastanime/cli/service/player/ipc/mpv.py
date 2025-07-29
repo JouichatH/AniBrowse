@@ -25,6 +25,8 @@ from .....libs.player.types import PlayerResult
 from .....libs.provider.anime.base import BaseAnimeProvider
 from .....libs.provider.anime.params import EpisodeStreamsParams
 from .....libs.provider.anime.types import Anime, ProviderServer, Server
+from ....service.registry.models import DownloadStatus
+from ...registry import MediaRegistryService
 from .base import BaseIPCPlayer
 
 logger = logging.getLogger(__name__)
@@ -260,9 +262,11 @@ class MpvIPCPlayer(BaseIPCPlayer):
     property_observers: Dict[str, List[Callable]] = {}
     key_bindings: Dict[str, Callable] = {}
     message_handlers: Dict[str, Callable] = {}
-    provider: BaseAnimeProvider
-    anime: Anime
-    media_item: Optional[MediaItem]
+    provider: Optional[BaseAnimeProvider] = None
+    anime: Optional[Anime] = None
+    media_item: Optional[MediaItem] = None
+
+    registry: Optional[MediaRegistryService] = None
 
     def __init__(self, stream_config: StreamConfig):
         super().__init__(stream_config)
@@ -271,11 +275,18 @@ class MpvIPCPlayer(BaseIPCPlayer):
         self._fetch_result_queue: Queue = Queue()
 
     def play(
-        self, player, player_params, provider, anime, media_item=None
+        self,
+        player: BasePlayer,
+        player_params: PlayerParams,
+        provider: Optional[BaseAnimeProvider] = None,
+        anime: Optional[Anime] = None,
+        registry: Optional[MediaRegistryService] = None,
+        media_item: Optional[MediaItem] = None,
     ) -> PlayerResult:
         self.provider = provider
         self.anime = anime
         self.media_item = media_item
+        self.registry = registry
         self.player_state = PlayerState(
             self.stream_config,
             player_params.query,
@@ -430,6 +441,7 @@ class MpvIPCPlayer(BaseIPCPlayer):
         elif event == "client-message":
             self._handle_client_message(message)
         elif event == "file-loaded":
+            time.sleep(0.1)
             self._configure_player()
         elif event:
             logger.debug(f"MPV event: {event}")
@@ -497,52 +509,101 @@ class MpvIPCPlayer(BaseIPCPlayer):
     ):
         """This function runs in a background thread to fetch episode streams."""
         try:
-            available_episodes = getattr(
-                self.anime.episodes, self.stream_config.translation_type
-            )
-            if not available_episodes:
-                raise ValueError(
-                    f"No {self.stream_config.translation_type} episodes available."
+            if self.anime and self.provider:
+                available_episodes = getattr(
+                    self.anime.episodes, self.stream_config.translation_type
                 )
-
-            current_index = available_episodes.index(self.player_state.episode)
-
-            if episode_type == "next":
-                if current_index >= len(available_episodes) - 1:
-                    raise ValueError("Already at the last episode.")
-                target_episode = available_episodes[current_index + 1]
-            elif episode_type == "previous":
-                if current_index <= 0:
-                    raise ValueError("Already at first episode")
-                target_episode = available_episodes[current_index - 1]
-            elif episode_type == "reload":
-                target_episode = self.player_state.episode
-            elif episode_type == "custom":
-                if not ep_no or ep_no not in available_episodes:
+                if not available_episodes:
                     raise ValueError(
-                        f"Invalid episode. Available: {', '.join(available_episodes)}"
+                        f"No {self.stream_config.translation_type} episodes available."
                     )
-                target_episode = ep_no
-            else:
-                return
 
-            stream_params = EpisodeStreamsParams(
-                anime_id=self.anime.id,
-                query=self.player_state.query,
-                episode=target_episode,
-                translation_type=self.stream_config.translation_type,
-            )
-            # This is the blocking network call, now safely in a thread
-            episode_streams = list(self.provider.episode_streams(stream_params) or [])
-            if not episode_streams:
-                raise ValueError(f"No streams found for episode {target_episode}")
+                current_index = available_episodes.index(self.player_state.episode)
 
-            result = {
-                "type": "success",
-                "target_episode": target_episode,
-                "servers": {ProviderServer(s.name): s for s in episode_streams},
-            }
-            self._fetch_result_queue.put(result)
+                if episode_type == "next":
+                    if current_index >= len(available_episodes) - 1:
+                        raise ValueError("Already at the last episode.")
+                    target_episode = available_episodes[current_index + 1]
+                elif episode_type == "previous":
+                    if current_index <= 0:
+                        raise ValueError("Already at first episode")
+                    target_episode = available_episodes[current_index - 1]
+                elif episode_type == "reload":
+                    target_episode = self.player_state.episode
+                elif episode_type == "custom":
+                    if not ep_no or ep_no not in available_episodes:
+                        raise ValueError(
+                            f"Invalid episode. Available: {', '.join(available_episodes)}"
+                        )
+                    target_episode = ep_no
+                else:
+                    return
+
+                stream_params = EpisodeStreamsParams(
+                    anime_id=self.anime.id,
+                    query=self.player_state.query,
+                    episode=target_episode,
+                    translation_type=self.stream_config.translation_type,
+                )
+                # This is the blocking network call, now safely in a thread
+                episode_streams = list(
+                    self.provider.episode_streams(stream_params) or []
+                )
+                if not episode_streams:
+                    raise ValueError(f"No streams found for episode {target_episode}")
+
+                result = {
+                    "type": "success",
+                    "target_episode": target_episode,
+                    "servers": {ProviderServer(s.name): s for s in episode_streams},
+                }
+                self._fetch_result_queue.put(result)
+            elif self.registry and self.media_item:
+                record = self.registry.get_media_record(self.media_item.id)
+                if not record or not record.media_episodes:
+                    logger.warning("No downloaded episodes found for this anime.")
+                    return
+
+                downloaded_episodes = {
+                    ep.episode_number: ep.file_path
+                    for ep in record.media_episodes
+                    if ep.download_status == DownloadStatus.COMPLETED
+                    and ep.file_path
+                    and ep.file_path.exists()
+                }
+                available_episodes = list(sorted(downloaded_episodes.keys(), key=float))
+                current_index = available_episodes.index(self.player_state.episode)
+
+                if episode_type == "next":
+                    if current_index >= len(available_episodes) - 1:
+                        raise ValueError("Already at the last episode.")
+                    target_episode = available_episodes[current_index + 1]
+                elif episode_type == "previous":
+                    if current_index <= 0:
+                        raise ValueError("Already at first episode")
+                    target_episode = available_episodes[current_index - 1]
+                elif episode_type == "reload":
+                    target_episode = self.player_state.episode
+                elif episode_type == "custom":
+                    if not ep_no or ep_no not in available_episodes:
+                        raise ValueError(
+                            f"Invalid episode. Available: {', '.join(available_episodes)}"
+                        )
+                    target_episode = ep_no
+                else:
+                    return
+                file_path = downloaded_episodes[target_episode]
+
+                self.player_state.reset()
+                self.player_state.episode = target_episode
+                self.ipc_client.send_command(["loadfile", str(file_path)])
+                # time.sleep(1)
+                # self.ipc_client.send_command(["seek", 0, "absolute"])
+                # self.ipc_client.send_command(
+                #     ["set_property", "title", self.player_state.episode_title]
+                # )
+                self._show_text(f"Fetched {file_path}")
+                self.player_fetching = False
 
         except Exception as e:
             logger.error(f"Episode fetch task failed: {e}")

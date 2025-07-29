@@ -65,6 +65,13 @@ class MediaFormat(Enum):
     ONE_SHOT = "ONE_SHOT"
 
 
+class NotificationType(Enum):
+    AIRING = "AIRING"
+    RELATED_MEDIA_ADDITION = "RELATED_MEDIA_ADDITION"
+    MEDIA_DATA_CHANGE = "MEDIA_DATA_CHANGE"
+    # ... add other types as needed
+
+
 # MODELS
 class BaseMediaApiModel(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -225,6 +232,17 @@ class MediaItem(BaseMediaApiModel):
 
     # user related
     user_status: Optional[UserListItem] = None
+
+
+class Notification(BaseMediaApiModel):
+    """A generic representation of a user notification."""
+
+    id: int
+    type: NotificationType
+    episode: Optional[int] = None
+    contexts: List[str] = Field(default_factory=list)
+    created_at: datetime
+    media: MediaItem
 
 
 class PageInfo(BaseMediaApiModel):

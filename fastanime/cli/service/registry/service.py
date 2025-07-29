@@ -531,6 +531,7 @@ class MediaRegistryService:
         server_name: Optional[str] = None,
         subtitle_paths: Optional[list[Path]] = None,
         error_message: Optional[str] = None,
+        download_date: Optional[datetime] = None,
     ) -> bool:
         """Update the download status and metadata for a specific episode."""
         try:

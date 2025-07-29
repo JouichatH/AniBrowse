@@ -11,6 +11,7 @@ from .....libs.media_api.types import (
     UserMediaListStatus,
 )
 from .....libs.player.params import PlayerParams
+from ....service.registry.service import DownloadStatus
 from ...session import Context, session
 from ...state import InternalDirective, MediaApiState, MenuName, State
 
@@ -30,40 +31,69 @@ def media_actions(ctx: Context, state: State) -> State | InternalDirective:
         return InternalDirective.BACK
     progress = _get_progress_string(ctx, state.media_api.media_item)
 
-    # TODO: Add media list management
-    # TODO: cross reference for none implemented features
+    # Check for downloaded episodes to conditionally show options
+    record = ctx.media_registry.get_media_record(media_item.id)
+    has_downloads = False
+    if record:
+        has_downloads = any(
+            ep.download_status == DownloadStatus.COMPLETED
+            and ep.file_path
+            and ep.file_path.exists()
+            for ep in record.media_episodes
+        )
+
     options: Dict[str, MenuAction] = {
         f"{'▶️ ' if icons else ''}Stream {progress}": _stream(ctx, state),
         f"{'📽️ ' if icons else ''}Episodes": _stream(
             ctx, state, force_episodes_menu=True
         ),
-        f"{'📼 ' if icons else ''}Watch Trailer": _watch_trailer(ctx, state),
-        f"{'🔗 ' if icons else ''}Recommendations": _view_recommendations(ctx, state),
-        f"{'🔄 ' if icons else ''}Related Anime": _view_relations(ctx, state),
-        f"{'👥 ' if icons else ''}Characters": _view_characters(ctx, state),
-        f"{'📅 ' if icons else ''}Airing Schedule": _view_airing_schedule(ctx, state),
-        f"{'📝 ' if icons else ''}View Reviews": _view_reviews(ctx, state),
-        f"{'➕ ' if icons else ''}Add/Update List": _manage_user_media_list(ctx, state),
-        f"{'⭐ ' if icons else ''}Score Anime": _score_anime(ctx, state),
-        f"{'ℹ️ ' if icons else ''}View Info": _view_info(ctx, state),
-        f"{'📀 ' if icons else ''}Change Provider (Current: {ctx.config.general.provider.value.upper()})": _change_provider(
-            ctx, state
-        ),
-        f"{'🔘 ' if icons else ''}Toggle Auto Select Anime (Current: {ctx.config.general.auto_select_anime_result})": _toggle_config_state(
-            ctx, state, "AUTO_ANIME"
-        ),
-        f"{'🔘 ' if icons else ''}Toggle Auto Next Episode (Current: {ctx.config.stream.auto_next})": _toggle_config_state(
-            ctx, state, "AUTO_EPISODE"
-        ),
-        f"{'🔘 ' if icons else ''}Toggle Continue From History (Current: {ctx.config.stream.continue_from_watch_history})": _toggle_config_state(
-            ctx, state, "CONTINUE_FROM_HISTORY"
-        ),
-        f"{'🔘 ' if icons else ''}Toggle Translation Type  (Current: {ctx.config.stream.translation_type.upper()})": _toggle_config_state(
-            ctx, state, "TRANSLATION_TYPE"
-        ),
-        f"{'🔙 ' if icons else ''}Back to Results": lambda: InternalDirective.BACK,
-        f"{'❌ ' if icons else ''}Exit": lambda: InternalDirective.EXIT,
     }
+
+    if has_downloads:
+        options[f"{'💾 ' if icons else ''}Stream (Downloads)"] = _stream_downloads(
+            ctx, state
+        )
+        options[f"{'💿 ' if icons else ''}Episodes (Downloads)"] = _stream_downloads(
+            ctx, state, force_episodes_menu=True
+        )
+
+    options.update(
+        {
+            f"{'📥 ' if icons else ''}Download": _download_episodes(ctx, state),
+            f"{'📼 ' if icons else ''}Watch Trailer": _watch_trailer(ctx, state),
+            f"{'🔗 ' if icons else ''}Recommendations": _view_recommendations(
+                ctx, state
+            ),
+            f"{'🔄 ' if icons else ''}Related Anime": _view_relations(ctx, state),
+            f"{'👥 ' if icons else ''}Characters": _view_characters(ctx, state),
+            f"{'📅 ' if icons else ''}Airing Schedule": _view_airing_schedule(
+                ctx, state
+            ),
+            f"{'📝 ' if icons else ''}View Reviews": _view_reviews(ctx, state),
+            f"{'➕ ' if icons else ''}Add/Update List": _manage_user_media_list(
+                ctx, state
+            ),
+            f"{'⭐ ' if icons else ''}Score Anime": _score_anime(ctx, state),
+            f"{'ℹ️ ' if icons else ''}View Info": _view_info(ctx, state),
+            f"{'📀 ' if icons else ''}Change Provider (Current: {ctx.config.general.provider.value.upper()})": _change_provider(
+                ctx, state
+            ),
+            f"{'🔘 ' if icons else ''}Toggle Auto Select Anime (Current: {ctx.config.general.auto_select_anime_result})": _toggle_config_state(
+                ctx, state, "AUTO_ANIME"
+            ),
+            f"{'🔘 ' if icons else ''}Toggle Auto Next Episode (Current: {ctx.config.stream.auto_next})": _toggle_config_state(
+                ctx, state, "AUTO_EPISODE"
+            ),
+            f"{'🔘 ' if icons else ''}Toggle Continue From History (Current: {ctx.config.stream.continue_from_watch_history})": _toggle_config_state(
+                ctx, state, "CONTINUE_FROM_HISTORY"
+            ),
+            f"{'🔘 ' if icons else ''}Toggle Translation Type  (Current: {ctx.config.stream.translation_type.upper()})": _toggle_config_state(
+                ctx, state, "TRANSLATION_TYPE"
+            ),
+            f"{'🔙 ' if icons else ''}Back to Results": lambda: InternalDirective.BACK,
+            f"{'❌ ' if icons else ''}Exit": lambda: InternalDirective.EXIT,
+        }
+    )
 
     choice = ctx.selector.choose(
         prompt="Select Action",
@@ -110,6 +140,24 @@ def _stream(ctx: Context, state: State, force_episodes_menu=False) -> MenuAction
         if force_episodes_menu:
             ctx.switch.force_episodes_menu()
         return State(menu_name=MenuName.PROVIDER_SEARCH, media_api=state.media_api)
+
+    return action
+
+
+def _stream_downloads(
+    ctx: Context, state: State, force_episodes_menu=False
+) -> MenuAction:
+    def action():
+        if force_episodes_menu:
+            ctx.switch.force_episodes_menu()
+        return State(menu_name=MenuName.PLAY_DOWNLOADS, media_api=state.media_api)
+
+    return action
+
+
+def _download_episodes(ctx: Context, state: State) -> MenuAction:
+    def action():
+        return State(menu_name=MenuName.DOWNLOAD_EPISODES, media_api=state.media_api)
 
     return action
 

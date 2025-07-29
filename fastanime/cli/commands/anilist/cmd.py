@@ -7,9 +7,10 @@ commands = {
     # "trending": "trending.trending",
     # "recent": "recent.recent",
     "search": "search.search",
-    # "downloads": "downloads.downloads",
+    "download": "download.download",
     "auth": "auth.auth",
     "stats": "stats.stats",
+    "notifications": "notifications.notifications",
 }
 
 

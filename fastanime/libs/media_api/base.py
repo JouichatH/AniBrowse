@@ -18,6 +18,7 @@ from .types import (
     MediaItem,
     MediaReview,
     MediaSearchResult,
+    Notification,
     UserProfile,
 )
 
@@ -93,6 +94,11 @@ class BaseApiClient(abc.ABC):
     def get_reviews_for(
         self, params: MediaReviewsParams
     ) -> Optional[List[MediaReview]]:
+        pass
+
+    @abc.abstractmethod
+    def get_notifications(self) -> Optional[List[Notification]]:
+        """Fetches the user's unread notifications."""
         pass
 
     @abc.abstractmethod

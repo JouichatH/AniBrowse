@@ -25,6 +25,7 @@ from ..types import (
     MediaItem,
     MediaReview,
     MediaSearchResult,
+    Notification,
     UserMediaListStatus,
     UserProfile,
 )
@@ -274,6 +275,20 @@ class AniListApi(BaseApiClient):
         )
         if response and "errors" not in response.json():
             return mapper.to_generic_reviews_list(response.json())
+        return None
+
+    def get_notifications(self) -> Optional[List[Notification]]:
+        """Fetches the user's unread notifications from AniList."""
+        if not self.is_authenticated():
+            logger.warning("Cannot fetch notifications: user is not authenticated.")
+            return None
+
+        response = execute_graphql(
+            ANILIST_ENDPOINT, self.http_client, gql.GET_NOTIFICATIONS, {}
+        )
+        if response and "errors" not in response.json():
+            return mapper.to_generic_notifications(response.json())
+        logger.error(f"Failed to fetch notifications: {response.text}")
         return None
 
     def transform_raw_search_data(self, raw_data: Any) -> Optional[MediaSearchResult]:

@@ -25,6 +25,8 @@ from ..types import (
     MediaTagItem,
     MediaTitle,
     MediaTrailer,
+    Notification,
+    NotificationType,
     PageInfo,
     Reviewer,
     StreamingEpisode,
@@ -45,6 +47,8 @@ from .types import (
     AnilistMediaTag,
     AnilistMediaTitle,
     AnilistMediaTrailer,
+    AnilistNotification,
+    AnilistNotifications,
     AnilistPageInfo,
     AnilistReview,
     AnilistReviews,
@@ -520,3 +524,70 @@ def to_generic_airing_schedule_result(data: Dict) -> Optional[AiringScheduleResu
     except (KeyError, IndexError, TypeError) as e:
         logger.error(f"Error parsing airing schedule data: {e}")
         return None
+
+
+def _to_generic_media_item_from_notification_partial(
+    data: AnilistBaseMediaDataSchema,
+) -> MediaItem:
+    """
+    A specialized mapper for the partial MediaItem object received in notifications.
+    It provides default values for fields not present in the notification's media payload.
+    """
+    return MediaItem(
+        id=data["id"],
+        id_mal=data.get("idMal"),
+        title=_to_generic_media_title(data["title"]),
+        cover_image=_to_generic_media_image(data["coverImage"]),
+        # Provide default/empty values for fields not in notification payload
+        type="ANIME",
+        status=MediaStatus.RELEASING,  # Assume releasing for airing notifications
+        format=None,
+        description=None,
+        episodes=None,
+        duration=None,
+        genres=[],
+        tags=[],
+        studios=[],
+        synonymns=[],
+        average_score=None,
+        popularity=None,
+        favourites=None,
+        streaming_episodes={},
+        user_status=None,
+    )
+
+
+def _to_generic_notification(anilist_notification: AnilistNotification) -> Notification:
+    """Maps a single AniList notification to a generic Notification object."""
+    return Notification(
+        id=anilist_notification["id"],
+        type=NotificationType(anilist_notification["type"]),
+        episode=anilist_notification.get("episode"),
+        contexts=anilist_notification.get("contexts", []),
+        created_at=datetime.fromtimestamp(anilist_notification["createdAt"]),
+        media=_to_generic_media_item_from_notification_partial(
+            anilist_notification["media"]
+        ),
+    )
+
+
+def to_generic_notifications(
+    data: AnilistNotifications,
+) -> Optional[List[Notification]]:
+    """Top-level mapper for a list of notifications."""
+    if not data or "data" not in data:
+        return None
+
+    page_data = data["data"].get("Page", {})
+    if not page_data:
+        return None
+
+    raw_notifications = page_data.get("notifications", [])
+    if not raw_notifications:
+        return []
+
+    return [
+        _to_generic_notification(notification)
+        for notification in raw_notifications
+        if notification
+    ]

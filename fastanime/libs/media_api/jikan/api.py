@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 from typing import TYPE_CHECKING, List, Optional
 
@@ -20,6 +18,7 @@ from ..types import (
     MediaItem,
     MediaSearchResult,
     MediaTitle,
+    Notification,
     UserProfile,
 )
 from . import mapper
@@ -182,6 +181,11 @@ class JikanApi(BaseApiClient):
         except Exception as e:
             logger.error(f"Failed to fetch related anime for media {params.id}: {e}")
             return None
+
+    def get_notifications(self) -> Optional[List[Notification]]:
+        """Jikan is a public API and does not support user notifications."""
+        logger.warning("Jikan API does not support fetching user notifications.")
+        return None
 
     def get_airing_schedule_for(
         self, params: MediaAiringScheduleParams

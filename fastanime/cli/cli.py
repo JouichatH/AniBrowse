@@ -36,6 +36,8 @@ commands = {
     "download": "download.download",
     "update": "update.update",
     "registry": "registry.registry",
+    "worker": "worker.worker",
+    "queue": "queue.queue",
 }
 
 

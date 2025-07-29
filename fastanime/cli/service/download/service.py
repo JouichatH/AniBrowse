@@ -1,530 +1,248 @@
-"""Download service that integrates with the media registry."""
-
 import logging
-from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, List
 
 from ....core.config.model import AppConfig
-from ....core.downloader.base import BaseDownloader
-from ....core.downloader.downloader import create_downloader
-from ....core.downloader.params import DownloadParams
-from ....core.exceptions import FastAnimeError
+from ....core.downloader import DownloadParams, create_downloader
+from ....core.utils.concurrency import ManagedBackgroundWorker, thread_manager
+from ....core.utils.fuzzy import fuzz
+from ....core.utils.normalizer import normalize_title
 from ....libs.media_api.types import MediaItem
-from ....libs.provider.anime.base import BaseAnimeProvider
-from ....libs.provider.anime.params import EpisodeStreamsParams
-from ....libs.provider.anime.types import Server
-from ..registry import MediaRegistryService
-from ..registry.models import DownloadStatus, MediaEpisode
+from ....libs.provider.anime.params import (
+    AnimeParams,
+    EpisodeStreamsParams,
+    SearchParams,
+)
+from ..registry.models import DownloadStatus
+
+if TYPE_CHECKING:
+    from ....libs.media_api.api import BaseApiClient
+    from ....libs.provider.anime.provider import BaseAnimeProvider
+    from ..registry.service import MediaRegistryService
+
 
 logger = logging.getLogger(__name__)
 
 
 class DownloadService:
-    """Service for downloading episodes and tracking them in the registry."""
-
     def __init__(
         self,
         config: AppConfig,
-        media_registry: MediaRegistryService,
-        provider: BaseAnimeProvider,
+        registry_service: "MediaRegistryService",
+        media_api_service: "BaseApiClient",
+        provider_service: "BaseAnimeProvider",
     ):
         self.config = config
-        self.downloads_config = config.downloads
-        self.media_registry = media_registry
-        self.provider = provider
-        self._downloader: Optional[BaseDownloader] = None
+        self.registry = registry_service
+        self.media_api = media_api_service
+        self.provider = provider_service
+        self.downloader = create_downloader(config.downloads)
 
-    @property
-    def downloader(self) -> BaseDownloader:
-        """Lazy initialization of downloader."""
-        if self._downloader is None:
-            self._downloader = create_downloader(self.downloads_config)
-        return self._downloader
+        # Worker is kept for potential future background commands
+        self._worker = ManagedBackgroundWorker(
+            max_workers=config.downloads.max_concurrent_downloads,
+            name="DownloadWorker",
+        )
+        thread_manager.register_worker("download_worker", self._worker)
 
-    def download_episode(
-        self,
-        media_item: MediaItem,
-        episode_number: str,
-        server: Optional[Server] = None,
-        quality: Optional[str] = None,
-        force_redownload: bool = False,
-    ) -> bool:
+    def start(self):
+        """Starts the download worker for background tasks."""
+        if not self._worker.is_running():
+            self._worker.start()
+        # We can still resume background tasks on startup if any exist
+        self.resume_unfinished_downloads()
+
+    def stop(self):
+        """Stops the download worker."""
+        self._worker.shutdown(wait=False)
+
+    def add_to_queue(self, media_item: MediaItem, episode_number: str) -> bool:
+        """Adds a download job to the ASYNCHRONOUS queue."""
+        logger.info(
+            f"Queueing background download for '{media_item.title.english}' Episode {episode_number}"
+        )
+        self.registry.get_or_create_record(media_item)
+        updated = self.registry.update_episode_download_status(
+            media_id=media_item.id,
+            episode_number=episode_number,
+            status=DownloadStatus.QUEUED,
+        )
+        if not updated:
+            return False
+        self._worker.submit_function(
+            self._execute_download_job, media_item, episode_number
+        )
+        return True
+
+    def download_episodes_sync(self, media_item: MediaItem, episodes: List[str]):
         """
-        Download a specific episode and record it in the registry.
-
-        Args:
-            media_item: The media item to download
-            episode_number: The episode number to download
-            server: Optional specific server to use for download
-            quality: Optional quality preference
-            force_redownload: Whether to redownload if already exists
-
-        Returns:
-            bool: True if download was successful, False otherwise
+        Performs downloads SYNCHRONOUSLY and blocks until complete.
+        This is for the direct `download` command.
         """
-        try:
-            # Get or create media record
-            media_record = self.media_registry.get_or_create_record(media_item)
-
-            # Check if episode already exists and is completed
-            existing_episode = self._find_episode_in_record(
-                media_record, episode_number
+        for episode_number in episodes:
+            title = (
+                media_item.title.english
+                or media_item.title.romaji
+                or f"ID: {media_item.id}"
             )
-            if (
-                existing_episode
-                and existing_episode.download_status == DownloadStatus.COMPLETED
-                and not force_redownload
-                and existing_episode.file_path.exists()
-            ):
-                logger.info(
-                    f"Episode {episode_number} already downloaded at {existing_episode.file_path}"
+            logger.info(
+                f"Starting synchronous download for '{title}' Episode {episode_number}"
+            )
+            self._execute_download_job(media_item, episode_number)
+
+    def resume_unfinished_downloads(self):
+        """Finds and re-queues any downloads that were left in an unfinished state."""
+        logger.info("Checking for unfinished downloads to resume...")
+        queued_jobs = self.registry.get_episodes_by_download_status(
+            DownloadStatus.QUEUED
+        )
+        downloading_jobs = self.registry.get_episodes_by_download_status(
+            DownloadStatus.DOWNLOADING
+        )
+
+        unfinished_jobs = queued_jobs + downloading_jobs
+        if not unfinished_jobs:
+            logger.info("No unfinished downloads found.")
+            return
+
+        logger.info(
+            f"Found {len(unfinished_jobs)} unfinished downloads. Re-queueing..."
+        )
+        for media_id, episode_number in unfinished_jobs:
+            record = self.registry.get_media_record(media_id)
+            if record and record.media_item:
+                self.add_to_queue(record.media_item, episode_number)
+            else:
+                logger.error(
+                    f"Could not find metadata for media ID {media_id}. Cannot resume. Please run 'fastanime registry sync'."
                 )
-                return True
 
-            # Generate file path
-            file_path = self._generate_episode_file_path(media_item, episode_number)
-
-            # Update status to QUEUED
-            self.media_registry.update_episode_download_status(
-                media_id=media_item.id,
-                episode_number=episode_number,
-                status=DownloadStatus.QUEUED,
-                file_path=file_path,
-            )
-
-            # Get episode stream server if not provided
-            if server is None:
-                server = self._get_episode_server(media_item, episode_number, quality)
-                if not server:
-                    self.media_registry.update_episode_download_status(
-                        media_id=media_item.id,
-                        episode_number=episode_number,
-                        status=DownloadStatus.FAILED,
-                        error_message="Failed to get server for episode",
-                    )
-                    return False
-
-            # Update status to DOWNLOADING
-            self.media_registry.update_episode_download_status(
+    def _execute_download_job(self, media_item: MediaItem, episode_number: str):
+        """The core download logic, can be called by worker or synchronously."""
+        self.registry.get_or_create_record(media_item)
+        try:
+            self.registry.update_episode_download_status(
                 media_id=media_item.id,
                 episode_number=episode_number,
                 status=DownloadStatus.DOWNLOADING,
-                provider_name=self.provider.__class__.__name__,
-                server_name=server.name,
-                quality=quality or self.downloads_config.preferred_quality,
             )
 
-            # Perform the download
-            download_result = self._download_from_server(
-                media_item, episode_number, server, file_path
+            media_title = (
+                media_item.title.english or media_item.title.romaji or "Unknown"
             )
 
-            if download_result.success and download_result.video_path:
-                # Get file size if available
-                file_size = None
-                if download_result.video_path.exists():
-                    file_size = download_result.video_path.stat().st_size
-
-                # Update episode record with success
-                self.media_registry.update_episode_download_status(
-                    media_id=media_item.id,
-                    episode_number=episode_number,
-                    status=DownloadStatus.COMPLETED,
-                    file_path=download_result.video_path,
-                    file_size=file_size,
-                    subtitle_paths=download_result.subtitle_paths,
-                )
-
-                logger.info(
-                    f"Successfully downloaded episode {episode_number} to {download_result.video_path}"
-                )
-            else:
-                # Update episode record with failure
-                self.media_registry.update_episode_download_status(
-                    media_id=media_item.id,
-                    episode_number=episode_number,
-                    status=DownloadStatus.FAILED,
-                    error_message=download_result.error_message,
-                )
-
-                logger.error(
-                    f"Failed to download episode {episode_number}: {download_result.error_message}"
-                )
-
-            return download_result.success
-
-        except Exception as e:
-            logger.error(f"Error downloading episode {episode_number}: {e}")
-            # Update status to FAILED
-            try:
-                self.media_registry.update_episode_download_status(
-                    media_id=media_item.id,
-                    episode_number=episode_number,
-                    status=DownloadStatus.FAILED,
-                    error_message=str(e),
-                )
-            except Exception as cleanup_error:
-                logger.error(f"Failed to update failed status: {cleanup_error}")
-
-            return False
-
-    def download_multiple_episodes(
-        self,
-        media_item: MediaItem,
-        episode_numbers: list[str],
-        quality: Optional[str] = None,
-        force_redownload: bool = False,
-    ) -> dict[str, bool]:
-        """
-        Download multiple episodes and return success status for each.
-
-        Args:
-            media_item: The media item to download
-            episode_numbers: List of episode numbers to download
-            quality: Optional quality preference
-            force_redownload: Whether to redownload if already exists
-
-        Returns:
-            dict: Mapping of episode_number -> success status
-        """
-        results = {}
-
-        for episode_number in episode_numbers:
-            success = self.download_episode(
-                media_item=media_item,
-                episode_number=episode_number,
-                quality=quality,
-                force_redownload=force_redownload,
+            # 1. Search the provider to get the provider-specific ID
+            provider_search_title = normalize_title(
+                media_title,
+                self.config.general.provider.value,
+                use_provider_mapping=True,
             )
-            results[episode_number] = success
-
-            # Log progress
-            logger.info(
-                f"Download progress: {episode_number} - {'✓' if success else '✗'}"
+            provider_search_results = self.provider.search(
+                SearchParams(query=provider_search_title)
             )
 
-        return results
+            if not provider_search_results or not provider_search_results.results:
+                raise ValueError(
+                    f"Could not find '{media_title}' on provider '{self.config.general.provider.value}'"
+                )
 
-    def get_download_status(
-        self, media_item: MediaItem, episode_number: str
-    ) -> Optional[DownloadStatus]:
-        """Get the download status for a specific episode."""
-        media_record = self.media_registry.get_media_record(media_item.id)
-        if not media_record:
-            return None
+            # 2. Find the best match using fuzzy logic (like auto-select)
+            provider_results_map = {
+                result.title: result for result in provider_search_results.results
+            }
+            best_match_title = max(
+                provider_results_map.keys(),
+                key=lambda p_title: fuzz.ratio(
+                    normalize_title(
+                        p_title, self.config.general.provider.value
+                    ).lower(),
+                    media_title.lower(),
+                ),
+            )
+            provider_anime_ref = provider_results_map[best_match_title]
 
-        episode_record = self._find_episode_in_record(media_record, episode_number)
-        return episode_record.download_status if episode_record else None
+            # 3. Get full provider anime details (contains the correct episode list)
+            provider_anime = self.provider.get(
+                AnimeParams(id=provider_anime_ref.id, query=media_title)
+            )
+            if not provider_anime:
+                raise ValueError(
+                    f"Failed to get full details for '{best_match_title}' from provider."
+                )
 
-    def get_downloaded_episodes(self, media_item: MediaItem) -> list[str]:
-        """Get list of successfully downloaded episode numbers for a media item."""
-        media_record = self.media_registry.get_media_record(media_item.id)
-        if not media_record:
-            return []
-
-        return [
-            episode.episode_number
-            for episode in media_record.media_episodes
-            if episode.download_status == DownloadStatus.COMPLETED
-            and episode.file_path.exists()
-        ]
-
-    def remove_downloaded_episode(
-        self, media_item: MediaItem, episode_number: str
-    ) -> bool:
-        """Remove a downloaded episode file and update registry."""
-        try:
-            media_record = self.media_registry.get_media_record(media_item.id)
-            if not media_record:
-                return False
-
-            episode_record = self._find_episode_in_record(media_record, episode_number)
-            if not episode_record:
-                return False
-
-            # Remove file if it exists
-            if episode_record.file_path.exists():
-                episode_record.file_path.unlink()
-
-            # Remove episode from record
-            media_record.media_episodes = [
-                ep
-                for ep in media_record.media_episodes
-                if ep.episode_number != episode_number
-            ]
-
-            # Save updated record
-            self.media_registry.save_media_record(media_record)
-
-            logger.info(f"Removed downloaded episode {episode_number}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Error removing episode {episode_number}: {e}")
-            return False
-
-    def _find_episode_in_record(
-        self, media_record, episode_number: str
-    ) -> Optional[MediaEpisode]:
-        """Find an episode record by episode number."""
-        for episode in media_record.media_episodes:
-            if episode.episode_number == episode_number:
-                return episode
-        return None
-
-    def _get_episode_server(
-        self, media_item: MediaItem, episode_number: str, quality: Optional[str] = None
-    ) -> Optional[Server]:
-        """Get a server for downloading the episode."""
-        try:
-            # Use media title for provider search
-            media_title = media_item.title.english or media_item.title.romaji
-            if not media_title:
-                logger.error("Media item has no searchable title")
-                return None
-
-            # Get episode streams from provider
-            streams = self.provider.episode_streams(
+            # 4. Get stream links using the now-validated provider_anime ID
+            streams_iterator = self.provider.episode_streams(
                 EpisodeStreamsParams(
-                    anime_id=str(media_item.id),
+                    anime_id=provider_anime.id,  # Use the ID from the provider, not AniList
                     query=media_title,
                     episode=episode_number,
                     translation_type=self.config.stream.translation_type,
                 )
             )
+            if not streams_iterator:
+                raise ValueError("Provider returned no stream iterator.")
 
-            if not streams:
-                logger.error(f"No streams found for episode {episode_number}")
-                return None
+            server = next(streams_iterator, None)
+            if not server or not server.links:
+                raise ValueError(f"No stream links found for Episode {episode_number}")
 
-            # Convert iterator to list and get first available server
-            stream_list = list(streams)
-            if not stream_list:
-                logger.error(f"No servers available for episode {episode_number}")
-                return None
+            if server.name != self.config.downloads.server.value:
+                while True:
+                    try:
+                        _server = next(streams_iterator)
+                        if _server.name == self.config.downloads.server.value:
+                            server = _server
+                            break
+                    except StopIteration:
+                        break
 
-            # Return the first server (could be enhanced with quality/preference logic)
-            return stream_list[0]
-
-        except Exception as e:
-            logger.error(f"Error getting episode server: {e}")
-            return None
-
-    def _download_from_server(
-        self,
-        media_item: MediaItem,
-        episode_number: str,
-        server: Server,
-        output_path: Path,
-    ):
-        """Download episode from a specific server."""
-        anime_title = media_item.title.english or media_item.title.romaji or "Unknown"
-        episode_title = server.episode_title or f"Episode {episode_number}"
-
-        try:
-            # Get the best quality link from server
-            if not server.links:
-                raise FastAnimeError("Server has no available links")
-
-            # Use the first link (could be enhanced with quality filtering)
             stream_link = server.links[0]
-
-            # Prepare download parameters
+            # 5. Perform the download
             download_params = DownloadParams(
                 url=stream_link.link,
-                anime_title=anime_title,
-                episode_title=episode_title,
-                silent=True,  # Use True by default since there's no verbose in config
+                anime_title=media_title,
+                episode_title=f"{media_title} - Episode {episode_number}",
+                silent=False,
                 headers=server.headers,
-                subtitles=[sub.url for sub in server.subtitles]
-                if server.subtitles
-                else [],
-                vid_format=self.downloads_config.preferred_quality,
-                force_unknown_ext=True,
+                subtitles=[sub.url for sub in server.subtitles],
+                merge=self.config.downloads.merge_subtitles,
+                clean=self.config.downloads.cleanup_after_merge,
+                no_check_certificate=self.config.downloads.no_check_certificate,
             )
 
-            # Ensure output directory exists
-            output_path.parent.mkdir(parents=True, exist_ok=True)
+            result = self.downloader.download(download_params)
 
-            # Perform download
-            return self.downloader.download(download_params)
-
-        except Exception as e:
-            logger.error(f"Error during download: {e}")
-            from ....core.downloader.model import DownloadResult
-
-            return DownloadResult(
-                success=False,
-                error_message=str(e),
-                anime_title=anime_title,
-                episode_title=episode_title,
-            )
-
-    def get_download_statistics(self) -> dict:
-        """Get comprehensive download statistics from the registry."""
-        return self.media_registry.get_download_statistics()
-
-    def get_failed_downloads(self) -> list[tuple[int, str]]:
-        """Get all episodes that failed to download."""
-        return self.media_registry.get_episodes_by_download_status(
-            DownloadStatus.FAILED
-        )
-
-    def get_queued_downloads(self) -> list[tuple[int, str]]:
-        """Get all episodes queued for download."""
-        return self.media_registry.get_episodes_by_download_status(
-            DownloadStatus.QUEUED
-        )
-
-    def retry_failed_downloads(self, max_retries: int = 3) -> dict[str, bool]:
-        """Retry all failed downloads up to max_retries."""
-        failed_episodes = self.get_failed_downloads()
-        results = {}
-
-        for media_id, episode_number in failed_episodes:
-            # Get the media record to check retry attempts
-            media_record = self.media_registry.get_media_record(media_id)
-            if not media_record:
-                continue
-
-            episode_record = self._find_episode_in_record(media_record, episode_number)
-            if not episode_record or episode_record.download_attempts >= max_retries:
-                logger.info(
-                    f"Skipping {media_id}:{episode_number} - max retries exceeded"
+            # 6. Update registry based on result
+            if result.success and result.video_path:
+                file_size = (
+                    result.video_path.stat().st_size
+                    if result.video_path.exists()
+                    else None
                 )
-                continue
-
-            logger.info(f"Retrying download for {media_id}:{episode_number}")
-            success = self.download_episode(
-                media_item=media_record.media_item,
-                episode_number=episode_number,
-                force_redownload=True,
-            )
-            results[f"{media_id}:{episode_number}"] = success
-
-        return results
-
-    def cleanup_failed_downloads(self, older_than_days: int = 7) -> int:
-        """Clean up failed download records older than specified days."""
-        from datetime import datetime, timedelta
-
-        cleanup_count = 0
-        cutoff_date = datetime.now() - timedelta(days=older_than_days)
-
-        try:
-            for record in self.media_registry.get_all_media_records():
-                episodes_to_remove = []
-
-                for episode in record.media_episodes:
-                    if (
-                        episode.download_status == DownloadStatus.FAILED
-                        and episode.download_date < cutoff_date
-                    ):
-                        episodes_to_remove.append(episode.episode_number)
-
-                for episode_number in episodes_to_remove:
-                    record.media_episodes = [
-                        ep
-                        for ep in record.media_episodes
-                        if ep.episode_number != episode_number
-                    ]
-                    cleanup_count += 1
-
-                if episodes_to_remove:
-                    self.media_registry.save_media_record(record)
-
-            logger.info(f"Cleaned up {cleanup_count} failed download records")
-            return cleanup_count
+                self.registry.update_episode_download_status(
+                    media_id=media_item.id,
+                    episode_number=episode_number,
+                    status=DownloadStatus.COMPLETED,
+                    file_path=result.merged_path or result.video_path,
+                    file_size=file_size,
+                    quality=stream_link.quality,
+                    provider_name=self.config.general.provider.value,
+                    server_name=server.name,
+                    subtitle_paths=result.subtitle_paths,
+                )
+                logger.info(
+                    f"Successfully downloaded Episode {episode_number} of '{media_title}'"
+                )
+            else:
+                raise ValueError(result.error_message or "Unknown download error")
 
         except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
-            return 0
-
-    def pause_download(self, media_item: MediaItem, episode_number: str) -> bool:
-        """Pause a download (change status from DOWNLOADING to PAUSED)."""
-        try:
-            return self.media_registry.update_episode_download_status(
+            logger.error(
+                f"Download failed for '{media_item.title.english}' Ep {episode_number}: {e}",
+                exc_info=True,
+            )
+            self.registry.update_episode_download_status(
                 media_id=media_item.id,
                 episode_number=episode_number,
-                status=DownloadStatus.PAUSED,
+                status=DownloadStatus.FAILED,
+                error_message=str(e),
             )
-        except Exception as e:
-            logger.error(f"Error pausing download: {e}")
-            return False
-
-    def resume_download(self, media_item: MediaItem, episode_number: str) -> bool:
-        """Resume a paused download."""
-        return self.download_episode(
-            media_item=media_item,
-            episode_number=episode_number,
-            force_redownload=True,
-        )
-
-    def get_media_download_progress(self, media_item: MediaItem) -> dict:
-        """Get download progress for a specific media item."""
-        try:
-            media_record = self.media_registry.get_media_record(media_item.id)
-            if not media_record:
-                return {
-                    "total": 0,
-                    "downloaded": 0,
-                    "failed": 0,
-                    "queued": 0,
-                    "downloading": 0,
-                }
-
-            stats = {
-                "total": 0,
-                "downloaded": 0,
-                "failed": 0,
-                "queued": 0,
-                "downloading": 0,
-                "paused": 0,
-            }
-
-            for episode in media_record.media_episodes:
-                stats["total"] += 1
-                status = episode.download_status.value.lower()
-                if status == "completed":
-                    stats["downloaded"] += 1
-                elif status == "failed":
-                    stats["failed"] += 1
-                elif status == "queued":
-                    stats["queued"] += 1
-                elif status == "downloading":
-                    stats["downloading"] += 1
-                elif status == "paused":
-                    stats["paused"] += 1
-
-            return stats
-
-        except Exception as e:
-            logger.error(f"Error getting download progress: {e}")
-            return {
-                "total": 0,
-                "downloaded": 0,
-                "failed": 0,
-                "queued": 0,
-                "downloading": 0,
-            }
-
-    def _generate_episode_file_path(
-        self, media_item: MediaItem, episode_number: str
-    ) -> Path:
-        """Generate the file path for a downloaded episode."""
-        # Use the download directory from config
-        base_dir = self.downloads_config.downloads_dir
-
-        # Create anime-specific directory
-        anime_title = media_item.title.english or media_item.title.romaji or "Unknown"
-        # Sanitize title for filesystem
-        safe_title = "".join(
-            c for c in anime_title if c.isalnum() or c in (" ", "-", "_")
-        ).rstrip()
-
-        anime_dir = base_dir / safe_title
-
-        # Generate filename (could use template from config in the future)
-        filename = f"Episode_{episode_number:0>2}.mp4"
-
-        return anime_dir / filename

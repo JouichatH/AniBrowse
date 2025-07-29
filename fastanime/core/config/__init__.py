@@ -7,7 +7,6 @@ from .model import (
     MediaRegistryConfig,
     MpvConfig,
     RofiConfig,
-    ServiceConfig,
     StreamConfig,
     VlcConfig,
 )
@@ -22,6 +21,5 @@ __all__ = [
     "StreamConfig",
     "GeneralConfig",
     "DownloadsConfig",
-    "ServiceConfig",
     "MediaRegistryConfig",
 ]

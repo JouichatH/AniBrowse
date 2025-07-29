@@ -6,17 +6,18 @@ import tempfile
 from pathlib import Path
 
 import httpx
-import yt_dlp
 from rich import print
 from rich.prompt import Confirm
+
+import yt_dlp
 from yt_dlp.utils import sanitize_filename
 
 from ..exceptions import FastAnimeError
 from ..patterns import TORRENT_REGEX
 from ..utils.networking import get_remote_filename
 from .base import BaseDownloader
-from .params import DownloadParams
 from .model import DownloadResult
+from .params import DownloadParams
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,7 @@ class YtDLPDownloader(BaseDownloader):
             if params.force_unknown_ext
             else tuple(),
             "progress_hooks": params.progress_hooks,
+            "nocheckcertificate": params.no_check_certificate,
         }
         opts = opts
         if params.force_ffmpeg:

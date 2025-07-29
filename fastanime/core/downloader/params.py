@@ -20,3 +20,4 @@ class DownloadParams:
     force_ffmpeg: bool = False
     hls_use_mpegts: bool = False
     hls_use_h264: bool = False
+    no_check_certificate: bool = True

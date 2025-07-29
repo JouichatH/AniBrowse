@@ -34,6 +34,7 @@ class Switch:
     _provider_results: bool = False
     _episodes: bool = False
     _servers: bool = False
+    _dont_play: bool = False
 
     @property
     def show_provider_results_menu(self):
@@ -44,6 +45,16 @@ class Switch:
 
     def force_provider_results_menu(self):
         self._provider_results = True
+
+    @property
+    def dont_play(self):
+        if self._dont_play:
+            self._dont_play = False
+            return True
+        return False
+
+    def force_dont_play(self):
+        self._dont_play = True
 
     @property
     def show_episodes_menu(self):
@@ -102,18 +113,18 @@ class Context:
         if not self._media_api:
             from ...libs.media_api.api import create_api_client
 
-            self._media_api = create_api_client(
-                self.config.general.media_api, self.config
-            )
+            media_api = create_api_client(self.config.general.media_api, self.config)
 
-            if auth_profile := self.auth.get_auth():
-                p = self._media_api.authenticate(auth_profile.token)
+            auth = self.auth
+            if auth_profile := auth.get_auth():
+                p = media_api.authenticate(auth_profile.token)
                 if p:
                     logger.debug(f"Authenticated as {p.name}")
                 else:
                     logger.warning(f"Failed to authenticate with {auth_profile.token}")
             else:
                 logger.debug("Not authenticated")
+            self._media_api = media_api
 
         return self._media_api
 
@@ -122,7 +133,9 @@ class Context:
         if not self._player:
             from ..service.player import PlayerService
 
-            self._player = PlayerService(self.config, self.provider)
+            self._player = PlayerService(
+                self.config, self.provider, self.media_registry
+            )
         return self._player
 
     @property
@@ -149,7 +162,7 @@ class Context:
             from ..service.watch_history.service import WatchHistoryService
 
             self._watch_history = WatchHistoryService(
-                self.config, self.media_registry, self._media_api
+                self.config, self.media_registry, self.media_api
             )
         return self._watch_history
 
