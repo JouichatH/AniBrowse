@@ -94,6 +94,8 @@ def play_downloads(ctx: Context, state: State) -> State | InternalDirective:
 def downloads_player_controls(
     ctx: Context, state: State
 ) -> Union[State, InternalDirective]:
+    from ....service.registry.models import DownloadStatus
+
     feedback = ctx.feedback
     feedback.clear_console()
 
@@ -191,6 +193,8 @@ def downloads_player_controls(
 
 def _next_episode(ctx: Context, state: State) -> MenuAction:
     def action():
+        from ....service.registry.models import DownloadStatus
+
         feedback = ctx.feedback
 
         config = ctx.config
@@ -240,6 +244,8 @@ def _next_episode(ctx: Context, state: State) -> MenuAction:
 
 def _previous_episode(ctx: Context, state: State) -> MenuAction:
     def action():
+        from ....service.registry.models import DownloadStatus
+
         feedback = ctx.feedback
 
         config = ctx.config
