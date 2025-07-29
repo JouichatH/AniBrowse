@@ -133,7 +133,7 @@ class Character(BaseMediaApiModel):
     image: Optional[CharacterImage] = None
     description: Optional[str] = None
     gender: Optional[str] = None
-    age: Optional[int] = None
+    age: Optional[str] = None
     blood_type: Optional[str] = None
     favourites: Optional[int] = None
     date_of_birth: Optional[datetime] = None
