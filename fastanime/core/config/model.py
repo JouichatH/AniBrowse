@@ -119,6 +119,11 @@ class GeneralConfig(BaseModel):
         default_factory=defaults.GENERAL_PREVIEW,
         description=desc.GENERAL_PREVIEW,
     )
+    preview_scale_up: bool = Field(
+        default=defaults.GENERAL_SCALE_PREVIEW,
+        description=desc.GENERAL_SCALE_PREVIEW,
+    )
+
     image_renderer: Literal["icat", "chafa", "imgcat"] = Field(
         default_factory=defaults.GENERAL_IMAGE_RENDERER,
         description=desc.GENERAL_IMAGE_RENDERER,

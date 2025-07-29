@@ -213,6 +213,7 @@ def get_anime_preview(
         "C_RULE": ansi.get_true_fg(SEPARATOR_COLOR, bold=True),
         "RESET": ansi.RESET,
         "PREFIX": "",
+        "SCALE_UP": " --scale-up" if config.general.preview_scale_up else "",
     }
 
     for key, value in replacements.items():
@@ -270,6 +271,7 @@ def get_episode_preview(
         "C_RULE": ansi.get_true_fg(SEPARATOR_COLOR, bold=True),
         "RESET": ansi.RESET,
         "PREFIX": f"{media_item.title.english}_Episode_",
+        "SCALE_UP": " --scale-up" if config.general.preview_scale_up else "",
     }
 
     for key, value in replacements.items():
@@ -323,6 +325,7 @@ def get_dynamic_anime_preview(config: AppConfig) -> str:
         "C_VALUE": ansi.get_true_fg(HEADER_COLOR, bold=True),
         "C_RULE": ansi.get_true_fg(SEPARATOR_COLOR, bold=True),
         "RESET": ansi.RESET,
+        "SCALE_UP": " --scale-up" if config.general.preview_scale_up else "",
     }
 
     for key, value in replacements.items():

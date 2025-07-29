@@ -11,6 +11,8 @@ GENERAL_SELECTOR = lambda: "fzf" if detect.has_fzf() else "default"
 GENERAL_AUTO_SELECT_ANIME_RESULT = True
 GENERAL_ICONS = True
 GENERAL_PREVIEW = lambda: "full" if detect.is_running_kitty_terminal() else "none"
+GENERAL_SCALE_PREVIEW = True
+GENERAL_SCALE_PREVIEW = False
 GENERAL_IMAGE_RENDERER = (
     lambda: "icat" if detect.is_running_kitty_terminal() else "chafa"
 )

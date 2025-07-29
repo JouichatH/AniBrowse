@@ -14,6 +14,11 @@ GENERAL_AUTO_SELECT_ANIME_RESULT = (
 )
 GENERAL_ICONS = "Display emoji icons in the user interface."
 GENERAL_PREVIEW = "Type of preview to display in selectors."
+GENERAL_SCALE_PREVIEW = (
+    "Whether to scale up images rendered with icat to fill the preview area. "
+    "When using the 'full' preview type in a landscape window, enabling this may reduce "
+    "the amount of text information displayed."
+)
 GENERAL_IMAGE_RENDERER = (
     "The command-line tool to use for rendering images in the terminal."
 )
