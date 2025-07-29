@@ -126,18 +126,11 @@ class DownloadService:
                 status=DownloadStatus.DOWNLOADING,
             )
 
-            media_title = (
-                media_item.title.english or media_item.title.romaji or "Unknown"
-            )
+            media_title = media_item.title.romaji or media_item.title.english
 
             # 1. Search the provider to get the provider-specific ID
-            provider_search_title = normalize_title(
-                media_title,
-                self.config.general.provider.value,
-                use_provider_mapping=True,
-            )
             provider_search_results = self.provider.search(
-                SearchParams(query=provider_search_title)
+                SearchParams(query=media_title)
             )
 
             if not provider_search_results or not provider_search_results.results:
@@ -172,7 +165,7 @@ class DownloadService:
             # 4. Get stream links using the now-validated provider_anime ID
             streams_iterator = self.provider.episode_streams(
                 EpisodeStreamsParams(
-                    anime_id=provider_anime.id,  # Use the ID from the provider, not AniList
+                    anime_id=provider_anime.id,
                     query=media_title,
                     episode=episode_number,
                     translation_type=self.config.stream.translation_type,
@@ -196,11 +189,16 @@ class DownloadService:
                         break
 
             stream_link = server.links[0]
+            episode_title = f"{media_item.title.english}; Episode {episode_number}"
+            if media_item.streaming_episodes and media_item.streaming_episodes.get(
+                episode_number
+            ):
+                episode_title = media_item.streaming_episodes[episode_number].title
             # 5. Perform the download
             download_params = DownloadParams(
                 url=stream_link.link,
-                anime_title=media_title,
-                episode_title=f"{media_title} - Episode {episode_number}",
+                anime_title=media_item.title.english,
+                episode_title=episode_title,
                 silent=False,
                 headers=server.headers,
                 subtitles=[sub.url for sub in server.subtitles],
