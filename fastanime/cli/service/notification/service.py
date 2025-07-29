@@ -1,11 +1,9 @@
 import json
 import logging
-from pathlib import Path
 from typing import Set
 
 from fastanime.core.constants import APP_CACHE_DIR
 from fastanime.libs.media_api.base import BaseApiClient
-from fastanime.libs.media_api.types import Notification
 
 try:
     import plyer
