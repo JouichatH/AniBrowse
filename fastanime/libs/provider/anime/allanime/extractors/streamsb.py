@@ -20,7 +20,6 @@ class SsHlsExtractor(BaseExtractor):
             timeout=10,
         )
         response.raise_for_status()
-        embed_html = response.text.replace(" ", "").replace("\n", "")
         streams = response.json()["links"]
 
         return Server(

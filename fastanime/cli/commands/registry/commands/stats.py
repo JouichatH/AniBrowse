@@ -208,7 +208,9 @@ def _create_breakdown_table(
     total = sum(data.values())
 
     # Determine sorting method
-    sort_key = lambda item: item[0] if sort_by_key else item[1]
+    def sort_key(item):
+        return item[0] if sort_by_key else item[1]
+
     sorted_data = sorted(data.items(), key=sort_key, reverse=reverse_sort)
 
     # Apply limit if specified

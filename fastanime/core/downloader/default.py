@@ -367,7 +367,7 @@ class DefaultDownloader(BaseDownloader):
 
             try:
                 # Run ffmpeg - use silent flag to control ffmpeg output, not progress
-                process = subprocess.run(
+                subprocess.run(
                     args,
                     capture_output=params.silent,  # Only suppress ffmpeg output if silent
                     text=True,

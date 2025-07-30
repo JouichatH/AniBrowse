@@ -20,7 +20,6 @@ class FmHlsExtractor(BaseExtractor):
             timeout=10,
         )
         response.raise_for_status()
-        streams = response.json()
 
         embed_html = response.text.replace(" ", "").replace("\n", "")
         vid = MP4_SERVER_JUICY_STREAM_REGEX.search(embed_html)
@@ -50,7 +49,6 @@ class OkExtractor(BaseExtractor):
             timeout=10,
         )
         response.raise_for_status()
-        streams = response.json()
 
         embed_html = response.text.replace(" ", "").replace("\n", "")
         vid = MP4_SERVER_JUICY_STREAM_REGEX.search(embed_html)
