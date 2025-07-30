@@ -197,8 +197,6 @@ def _next_episode(ctx: Context, state: State) -> MenuAction:
 
         feedback = ctx.feedback
 
-        config = ctx.config
-
         media_item = state.media_api.media_item
         current_episode_num = state.provider.episode
 
@@ -247,8 +245,6 @@ def _previous_episode(ctx: Context, state: State) -> MenuAction:
         from ....service.registry.models import DownloadStatus
 
         feedback = ctx.feedback
-
-        config = ctx.config
 
         media_item = state.media_api.media_item
         current_episode_num = state.provider.episode

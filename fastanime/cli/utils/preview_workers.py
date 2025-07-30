@@ -117,7 +117,6 @@ class PreviewCacheWorker(ManagedBackgroundWorker):
 
             # Submit info generation task if needed
             if config.general.preview in ("full", "text"):
-                info_path = self.info_cache_dir / hash_id
                 info_text = self._generate_info_text(media_item, config)
                 self.submit_function(self._save_info_text, info_text, hash_id)
 
@@ -434,7 +433,6 @@ class ReviewCacheWorker(ManagedBackgroundWorker):
 
         for choice_str, review in choice_map.items():
             hash_id = self._get_cache_hash(choice_str)
-            info_path = self.reviews_cache_dir / hash_id
 
             preview_content = self._generate_review_preview_content(review, config)
             self.submit_function(self._save_preview_content, preview_content, hash_id)
@@ -522,7 +520,6 @@ class CharacterCacheWorker(ManagedBackgroundWorker):
 
         for choice_str, character in choice_map.items():
             hash_id = self._get_cache_hash(choice_str)
-            info_path = self.characters_cache_dir / hash_id
 
             preview_content = self._generate_character_preview_content(
                 character, config
@@ -645,7 +642,6 @@ class AiringScheduleCacheWorker(ManagedBackgroundWorker):
             raise RuntimeError("AiringScheduleCacheWorker is not running")
 
         hash_id = self._get_cache_hash(anime_title)
-        info_path = self.airing_schedule_cache_dir / hash_id
 
         preview_content = self._generate_airing_schedule_preview_content(
             anime_title, schedule_result, config

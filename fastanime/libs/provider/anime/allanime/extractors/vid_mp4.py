@@ -19,7 +19,6 @@ class VidMp4Extractor(BaseExtractor):
             f"https://{API_BASE_URL}{url.replace('clock', 'clock.json')}",
             timeout=10,
         )
-        embed_html = response.text.replace(" ", "").replace("\n", "")
         response.raise_for_status()
         streams = response.json()
 

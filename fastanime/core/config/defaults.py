@@ -7,15 +7,28 @@ GENERAL_PREFERRED_SPINNER = "smiley"
 GENERAL_API_CLIENT = "anilist"
 GENERAL_PREFERRED_TRACKER = "local"
 GENERAL_PROVIDER = "allanime"
-GENERAL_SELECTOR = lambda: "fzf" if detect.has_fzf() else "default"
+
+
+def GENERAL_SELECTOR():
+    return "fzf" if detect.has_fzf() else "default"
+
+
 GENERAL_AUTO_SELECT_ANIME_RESULT = True
 GENERAL_ICONS = True
-GENERAL_PREVIEW = lambda: "full" if detect.is_running_kitty_terminal() else "none"
+
+
+def GENERAL_PREVIEW():
+    return "full" if detect.is_running_kitty_terminal() else "none"
+
+
 GENERAL_SCALE_PREVIEW = True
 GENERAL_SCALE_PREVIEW = False
-GENERAL_IMAGE_RENDERER = (
-    lambda: "icat" if detect.is_running_kitty_terminal() else "chafa"
-)
+
+
+def GENERAL_IMAGE_RENDERER():
+    return "icat" if detect.is_running_kitty_terminal() else "chafa"
+
+
 GENERAL_MANGA_VIEWER = "feh"
 GENERAL_CHECK_FOR_UPDATES = True
 GENERAL_CACHE_REQUESTS = True
@@ -38,9 +51,11 @@ STREAM_YTDLP_FORMAT = "best[height<=1080]/bestvideo[height<=1080]+bestaudio/best
 STREAM_FORCE_FORWARD_TRACKING = True
 STREAM_DEFAULT_MEDIA_LIST_TRACKING = "prompt"
 STREAM_SUB_LANG = "eng"
-STREAM_USE_IPC = (
-    lambda: True if PLATFORM != "win32" and not detect.is_running_in_termux() else False
-)
+
+
+def STREAM_USE_IPC():
+    return True if PLATFORM != "win32" and not detect.is_running_in_termux() else False
+
 
 # WorkerConfig
 WORKER_ENABLED = True

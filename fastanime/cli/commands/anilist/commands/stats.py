@@ -19,15 +19,11 @@ def stats(config: "AppConfig"):
     from .....libs.media_api.api import create_api_client
     from ....service.auth import AuthService
     from ....service.feedback import FeedbackService
-    from ....service.registry import MediaRegistryService
 
     console = Console()
 
     feedback = FeedbackService(config)
     auth = AuthService(config.general.media_api)
-    registry_service = MediaRegistryService(
-        config.general.media_api, config.media_registry
-    )
 
     media_api_client = create_api_client(config.general.media_api, config)
 

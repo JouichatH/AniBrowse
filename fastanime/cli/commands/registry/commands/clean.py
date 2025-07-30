@@ -197,7 +197,6 @@ def _find_old_format_entries(registry_service: MediaRegistryService) -> list:
 
     old_format = []
     index = registry_service._load_index()
-    current_version = index.version
     if index.version != REGISTRY_VERSION:
         old_format.append(
             {

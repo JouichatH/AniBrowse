@@ -1,5 +1,4 @@
 # GeneralConfig
-from .defaults import SESSIONS_DIR
 
 GENERAL_PYGMENT_STYLE = "The pygment style to use"
 GENERAL_PREFERRED_SPINNER = "The spinner to use"

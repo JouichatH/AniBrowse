@@ -28,7 +28,6 @@ class DownloadFactory:
         elif downloader_name == "auto":
             # Auto mode: prefer yt-dlp if available, fallback to default
             try:
-                import yt_dlp
                 from .yt_dlp import YtDLPDownloader
 
                 return YtDLPDownloader(config)

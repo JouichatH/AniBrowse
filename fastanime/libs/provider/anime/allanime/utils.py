@@ -51,7 +51,7 @@ def debug_extractor(extractor_function):
                     f"[AllAnime@Server={args[3].get('sourceName', 'UNKNOWN')}]: {e}"
                 )
         else:
-            return extractor_function(*args, **kwargs)
+            return extractor_function(*args)
 
     return _provider_function_wrapper
 

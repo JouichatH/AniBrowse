@@ -204,7 +204,6 @@ def download_anime(
     anime_title: str,
     episode: str,
 ):
-
     from ...core.downloader import DownloadParams, create_downloader
     from ...libs.provider.anime.params import EpisodeStreamsParams
 

@@ -92,7 +92,7 @@ class WatchHistoryService:
                     start_time = None
                     try:
                         current_local_episode = str(int(current_local_episode) + 1)
-                    except:
+                    except Exception:
                         # incase its a float
                         pass
         else:

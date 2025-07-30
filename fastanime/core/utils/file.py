@@ -308,7 +308,6 @@ class FileLock:
             with self.lock_file_path.open("r") as f:
                 lines = f.readlines()
                 if len(lines) >= 2:
-                    locked_pid = int(lines[0].strip())
                     locked_timestamp = float(lines[1].strip())
                     current_time = time.time()
                     if current_time - locked_timestamp > self.stale_timeout:

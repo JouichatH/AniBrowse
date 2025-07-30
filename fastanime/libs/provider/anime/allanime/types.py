@@ -91,9 +91,6 @@ class AllAnimeEpisodeStreams(TypedDict):
     links: [AllAnimeEpisodeStream]
 
 
-Server = Literal["gogoanime", "dropbox", "wetransfer", "sharepoint"]
-
-
 class AllAnimeEpisode(TypedDict):
     episodeString: str
     sourceUrls: list[AllAnimeSource]

@@ -219,7 +219,7 @@ class YtDLPDownloader(BaseDownloader):
 
             # Run the ffmpeg command
             try:
-                process = subprocess.run(args)
+                subprocess.run(args)
                 final_output_path = video_path.parent / merged_filename
 
                 if final_output_path.exists():
