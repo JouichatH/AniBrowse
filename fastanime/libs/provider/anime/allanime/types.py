@@ -88,7 +88,7 @@ class AllAnimeEpisodeStream(TypedDict):
 
 
 class AllAnimeEpisodeStreams(TypedDict):
-    links: [AllAnimeEpisodeStream]
+    links: list[AllAnimeEpisodeStream]
 
 
 class AllAnimeEpisode(TypedDict):
