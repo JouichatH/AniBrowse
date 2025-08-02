@@ -92,7 +92,7 @@ print_kv() {
     # If the text is too long to fit, just add a single space for separation.
     if [ "$padding_len" -lt 1 ]; then
         padding_len=1
-        value=$(echo $value| fold -s -w "$((WIDTH - key_len - 3))")
+        value=$(echo "$value"| fold -s -w "$((WIDTH - key_len - 3))")
         printf "{C_KEY}%s:{RESET}%*s%s\\n" "$key" "$padding_len" "" " $value"
     else
         printf "{C_KEY}%s:{RESET}%*s%s\\n" "$key" "$padding_len" "" " $value"
