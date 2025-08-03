@@ -243,9 +243,7 @@ def renumber_titles(titles: List[str]) -> Dict[str, Union[int, float, None]]:
             offset = round(orig_ep - int_part, 3)
             renumbered_val = round(base_val + offset, 3)
 
-        renumbered[title] = (
-            int(renumbered_val) if renumbered_val.is_integer() else renumbered_val
-        )
+        renumbered[title] = renumbered_val
 
     # Add back the unnumbered titles with `None`
     for t in without_numbers:
