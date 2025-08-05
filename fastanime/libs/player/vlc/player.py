@@ -1,3 +1,9 @@
+"""
+VLC player integration for FastAnime.
+
+This module provides the VlcPlayer class, which implements the BasePlayer interface for the VLC media player.
+"""
+
 import logging
 import shutil
 import subprocess
@@ -14,11 +20,32 @@ logger = logging.getLogger(__name__)
 
 
 class VlcPlayer(BasePlayer):
+    """
+    VLC player implementation for FastAnime.
+
+    Provides playback functionality using the VLC media player, supporting desktop, mobile, and torrent scenarios.
+    """
+
     def __init__(self, config: VlcConfig):
+        """
+        Initialize the VlcPlayer with the given VLC configuration.
+
+        Args:
+            config: VlcConfig object containing VLC-specific settings.
+        """
         self.config = config
         self.executable = shutil.which("vlc")
 
     def play(self, params: PlayerParams) -> PlayerResult:
+        """
+        Play the given media using VLC, handling desktop, mobile, and torrent scenarios.
+
+        Args:
+            params: PlayerParams object containing playback parameters.
+
+        Returns:
+            PlayerResult: Information about the playback session.
+        """
         if not self.executable:
             raise FastAnimeError("VLC executable not found in PATH.")
 
@@ -27,7 +54,22 @@ class VlcPlayer(BasePlayer):
         else:
             return self._play_on_desktop(params)
 
+    def play_with_ipc(self, params: PlayerParams, socket_path: str) -> subprocess.Popen:
+        """
+        Not implemented for VLC player.
+        """
+        raise NotImplementedError("play_with_ipc is not implemented for VLC player.")
+
     def _play_on_mobile(self, params: PlayerParams) -> PlayerResult:
+        """
+        Play media on a mobile device using Android intents.
+
+        Args:
+            params: PlayerParams object containing playback parameters.
+
+        Returns:
+            PlayerResult: Information about the playback session.
+        """
         if YOUTUBE_REGEX.match(params.url):
             args = [
                 "nohup",
@@ -62,9 +104,18 @@ class VlcPlayer(BasePlayer):
 
         subprocess.run(args)
 
-        return PlayerResult()
+        return PlayerResult(episode=params.episode)
 
     def _play_on_desktop(self, params: PlayerParams) -> PlayerResult:
+        """
+        Play media on a desktop environment using VLC.
+
+        Args:
+            params: PlayerParams object containing playback parameters.
+
+        Returns:
+            PlayerResult: Information about the playback session.
+        """
         if TORRENT_REGEX.search(params.url):
             return self._stream_on_desktop_with_webtorrent_cli(params)
 
@@ -80,11 +131,20 @@ class VlcPlayer(BasePlayer):
             args.extend(self.config.args.split(","))
 
         subprocess.run(args, encoding="utf-8")
-        return PlayerResult()
+        return PlayerResult(episode=params.episode)
 
     def _stream_on_desktop_with_webtorrent_cli(
         self, params: PlayerParams
     ) -> PlayerResult:
+        """
+        Stream torrent media using the webtorrent CLI and VLC.
+
+        Args:
+            params: PlayerParams object containing playback parameters.
+
+        Returns:
+            PlayerResult: Information about the playback session.
+        """
         WEBTORRENT_CLI = shutil.which("webtorrent")
         if not WEBTORRENT_CLI:
             raise FastAnimeError(
@@ -98,7 +158,7 @@ class VlcPlayer(BasePlayer):
             args.extend(self.config.args.split(","))
 
         subprocess.run(args)
-        return PlayerResult()
+        return PlayerResult(episode=params.episode)
 
 
 if __name__ == "__main__":
@@ -107,5 +167,5 @@ if __name__ == "__main__":
     print(APP_ASCII_ART)
     url = input("Enter the url you would like to stream: ")
     vlc = VlcPlayer(VlcConfig())
-    player_result = vlc.play(PlayerParams(url=url, title=""))
+    player_result = vlc.play(PlayerParams(url=url, title="", query="", episode=""))
     print(player_result)

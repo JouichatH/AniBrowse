@@ -1,3 +1,9 @@
+"""
+Player factory and registration logic for FastAnime media players.
+
+This module provides a factory for instantiating the correct player implementation based on configuration.
+"""
+
 from ...core.config import AppConfig
 from .base import BasePlayer
 
@@ -5,19 +11,24 @@ PLAYERS = ["mpv", "vlc", "syncplay"]
 
 
 class PlayerFactory:
+    """
+    Factory for creating player instances based on configuration.
+    """
+
     @staticmethod
     def create(config: AppConfig) -> BasePlayer:
         """
-        Factory method to create a player instance based on its name.
+        Create a player instance based on the configured player name.
 
         Args:
             config: The full application configuration object.
 
         Returns:
-            An instance of a class that inherits from BasePlayer.
+            BasePlayer: An instance of a class that inherits from BasePlayer.
 
         Raises:
             ValueError: If the player_name is not supported.
+            NotImplementedError: If the player is recognized but not yet implemented.
         """
         player_name = config.stream.player
 
@@ -35,4 +46,5 @@ class PlayerFactory:
         )
 
 
+# Alias for convenient player creation
 create_player = PlayerFactory.create

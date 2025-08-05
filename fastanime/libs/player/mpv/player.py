@@ -1,3 +1,9 @@
+"""
+MPV player integration for FastAnime.
+
+This module provides the MpvPlayer class, which implements the BasePlayer interface for the MPV media player.
+"""
+
 import logging
 import re
 import shutil
@@ -17,11 +23,32 @@ MPV_AV_TIME_PATTERN = re.compile(r"AV: ([0-9:]*) / ([0-9:]*) \(([0-9]*)%\)")
 
 
 class MpvPlayer(BasePlayer):
+    """
+    MPV player implementation for FastAnime.
+
+    Provides playback functionality using the MPV media player, supporting desktop, mobile, torrents, and syncplay.
+    """
+
     def __init__(self, config: MpvConfig):
+        """
+        Initialize the MpvPlayer with the given MPV configuration.
+
+        Args:
+            config: MpvConfig object containing MPV-specific settings.
+        """
         self.config = config
         self.executable = shutil.which("mpv")
 
     def play(self, params):
+        """
+        Play the given media using MPV, handling desktop, mobile, torrent, and syncplay scenarios.
+
+        Args:
+            params: PlayerParams object containing playback parameters.
+
+        Returns:
+            PlayerResult: Information about the playback session.
+        """
         if TORRENT_REGEX.match(params.url) and detect.is_running_in_termux():
             raise FastAnimeError("Unable to play torrents on termux")
         elif params.syncplay and detect.is_running_in_termux():
@@ -32,6 +59,15 @@ class MpvPlayer(BasePlayer):
             return self._play_on_desktop(params)
 
     def _play_on_mobile(self, params) -> PlayerResult:
+        """
+        Play media on a mobile device using Android intents.
+
+        Args:
+            params: PlayerParams object containing playback parameters.
+
+        Returns:
+            PlayerResult: Information about the playback session.
+        """
         if YOUTUBE_REGEX.match(params.url):
             args = [
                 "nohup",
@@ -66,6 +102,15 @@ class MpvPlayer(BasePlayer):
         return PlayerResult(params.episode)
 
     def _play_on_desktop(self, params) -> PlayerResult:
+        """
+        Play media on a desktop environment using MPV.
+
+        Args:
+            params: PlayerParams object containing playback parameters.
+
+        Returns:
+            PlayerResult: Information about the playback session.
+        """
         if not self.executable:
             raise FastAnimeError("MPV executable not found in PATH.")
 
@@ -77,6 +122,15 @@ class MpvPlayer(BasePlayer):
             return self._stream_on_desktop_with_subprocess(params)
 
     def _stream_on_desktop_with_subprocess(self, params: PlayerParams) -> PlayerResult:
+        """
+        Stream media using MPV via subprocess, capturing playback times.
+
+        Args:
+            params: PlayerParams object containing playback parameters.
+
+        Returns:
+            PlayerResult: Information about the playback session, including stop and total time.
+        """
         mpv_args = [self.executable, params.url]
 
         mpv_args.extend(self._create_mpv_cli_options(params))
@@ -105,7 +159,16 @@ class MpvPlayer(BasePlayer):
         )
 
     def play_with_ipc(self, params: PlayerParams, socket_path: str) -> subprocess.Popen:
-        """Stream using IPC player for enhanced features."""
+        """
+        Stream using MPV with IPC (Inter-Process Communication) for enhanced features.
+
+        Args:
+            params: PlayerParams object containing playback parameters.
+            socket_path: Path to the IPC socket for player control.
+
+        Returns:
+            subprocess.Popen: The running MPV process.
+        """
         mpv_args = [
             self.executable,
             f"--input-ipc-server={socket_path}",
@@ -129,6 +192,15 @@ class MpvPlayer(BasePlayer):
     def _stream_on_desktop_with_webtorrent_cli(
         self, params: PlayerParams
     ) -> PlayerResult:
+        """
+        Stream torrent media using the webtorrent CLI and MPV.
+
+        Args:
+            params: PlayerParams object containing playback parameters.
+
+        Returns:
+            PlayerResult: Information about the playback session.
+        """
         WEBTORRENT_CLI = shutil.which("webtorrent")
         if not WEBTORRENT_CLI:
             raise FastAnimeError(
@@ -143,8 +215,16 @@ class MpvPlayer(BasePlayer):
         subprocess.run(args)
         return PlayerResult(params.episode)
 
-    # TODO: Get people with real friends to do this lol
     def _stream_on_desktop_with_syncplay(self, params: PlayerParams) -> PlayerResult:
+        """
+        Stream media using Syncplay for synchronized playback with friends.
+
+        Args:
+            params: PlayerParams object containing playback parameters.
+
+        Returns:
+            PlayerResult: Information about the playback session.
+        """
         SYNCPLAY_EXECUTABLE = shutil.which("syncplay")
         if not SYNCPLAY_EXECUTABLE:
             raise FastAnimeError(
@@ -159,6 +239,15 @@ class MpvPlayer(BasePlayer):
         return PlayerResult(params.episode)
 
     def _create_mpv_cli_options(self, params: PlayerParams) -> list[str]:
+        """
+        Create a list of MPV CLI options based on playback parameters.
+
+        Args:
+            params: PlayerParams object containing playback parameters.
+
+        Returns:
+            list[str]: List of MPV CLI arguments.
+        """
         mpv_args = []
         if params.headers:
             header_str = ",".join([f"{k}:{v}" for k, v in params.headers.items()])

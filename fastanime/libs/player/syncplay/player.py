@@ -1,3 +1,9 @@
+"""
+Syncplay integration for FastAnime.
+
+This module provides a procedural function to launch Syncplay with the given media and options.
+"""
+
 import shutil
 import subprocess
 
@@ -5,6 +11,19 @@ from .tools import exit_app
 
 
 def SyncPlayer(url: str, anime_title=None, headers={}, subtitles=[], *args):
+    """
+    Launch Syncplay for synchronized playback with friends.
+
+    Args:
+        url: The media URL to play.
+        anime_title: Optional title to display in the player.
+        headers: Optional HTTP headers to pass to the player.
+        subtitles: Optional list of subtitle dicts with 'url' keys.
+        *args: Additional arguments (unused).
+
+    Returns:
+        Tuple of ("0", "0") for compatibility.
+    """
     # TODO: handle m3u8 multi quality streams
     #
     # check for SyncPlay
