@@ -95,7 +95,7 @@ search = """
 main = """
 \b
 \b\bExamples:
-  # ---- search ----  
+  # ---- search ----
 \b
   # Basic search by title
   fastanime anilist search -t "Attack on Titan"
@@ -147,16 +147,16 @@ main = """
 \b
   # ---- login ----
 \b
-  # To sign in just run 
-  fastanime anilist login
+  # To sign in just run
+  fastanime anilist auth
 \b
-  # To view your login status 
-  fastanime anilist login --status
+  # To check your login status
+  fastanime anilist auth --status
 \b
-  # To erase login data
-  fastanime anilist login --erase
+  # To log out and erase credentials
+  fastanime anilist auth --logout
 \b
-  # ---- notifier ----  
+  # ---- notifier ----
 \b
   # basic form
   fastanime anilist notifier
