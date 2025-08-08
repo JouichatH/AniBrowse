@@ -1,4 +1,5 @@
 import click
+import webbrowser
 
 from .....core.config.model import AppConfig
 
@@ -41,9 +42,14 @@ def auth(config: AppConfig, status: bool, logout: bool):
             return
     api_client = create_api_client("anilist", config)
 
-    # TODO: stop the printing of opening browser session to stderr
-    click.launch(ANILIST_AUTH)
-    feedback.info("Your browser has been opened to obtain an AniList token.")
+    open_success = webbrowser.open(ANILIST_AUTH, new=2)
+    if open_success:
+        feedback.info("Your browser has been opened to obtain an AniList token.")
+        feedback.info(f"or you can visit the site manually [magenta][link={ANILIST_AUTH}]here[/link][/magenta].")
+    else:
+        feedback.warning(
+            f"Failed to open the browser. Please visit the site manually [magenta][link={ANILIST_AUTH}]here[/link][/magenta]."
+        )
     feedback.info(
         "After authorizing, copy the token from the address bar and paste it below."
     )
