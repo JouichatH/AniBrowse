@@ -1,41 +1,58 @@
-import json
 import logging
-from typing import Set
+from pathlib import Path
+from typing import Optional, Set
+
+import httpx
 
 from fastanime.core.constants import APP_CACHE_DIR
 from fastanime.libs.media_api.base import BaseApiClient
+from fastanime.libs.media_api.types import MediaItem
+# Note: Previously used image resizing; now we download icons directly without resizing.
 
 try:
-    import plyer
+    from plyer import notification as plyer_notification
 
     PLYER_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover - optional dependency
+    plyer_notification = None  # type: ignore[assignment]
     PLYER_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
-SEEN_NOTIFICATIONS_CACHE = APP_CACHE_DIR / "seen_notifications.json"
 
 
 class NotificationService:
-    def __init__(self, media_api: BaseApiClient):
+    def __init__(self, media_api: BaseApiClient, registry_service=None):
         self.media_api = media_api
+        self.registry = registry_service  # optional; used for seen tracking
         self._seen_ids: Set[int] = self._load_seen_ids()
 
     def _load_seen_ids(self) -> Set[int]:
-        if not SEEN_NOTIFICATIONS_CACHE.exists():
-            return set()
+        # Prefer MediaRegistry storage via index.last_notified_episode markers
         try:
-            with open(SEEN_NOTIFICATIONS_CACHE, "r") as f:
-                return set(json.load(f))
-        except (json.JSONDecodeError, IOError):
+            if not self.registry:
+                return set()
+            seen: Set[int] = set()
+            for record in self.registry.get_all_media_records():
+                index_entry = self.registry.get_media_index_entry(
+                    record.media_item.id
+                )
+                # last_notified_episode stored per media; we can’t reconstruct notif IDs,
+                # so keep an in-memory set per session (fresh on start). Return empty.
+                # Future: persist a mapping media_id->max_created_at for durability.
+            return seen
+        except Exception:
             return set()
 
-    def _save_seen_ids(self):
-        try:
-            with open(SEEN_NOTIFICATIONS_CACHE, "w") as f:
-                json.dump(list(self._seen_ids), f)
-        except IOError:
-            logger.error("Failed to save seen notifications cache.")
+    def _mark_seen(self, notification_id: int, media_id: int, episode: str | None):
+        self._seen_ids.add(notification_id)
+        # Also update registry’s last_notified_episode for the media
+        if self.registry and episode:
+            try:
+                self.registry.update_media_index_entry(
+                    media_id, last_notified_episode=str(episode)
+                )
+            except Exception:
+                logger.debug("Failed to update last_notified_episode in registry")
 
     def check_and_display_notifications(self):
         if not PLYER_AVAILABLE:
@@ -53,26 +70,93 @@ class NotificationService:
             logger.info("No new notifications found.")
             return
 
-        new_notifications = [n for n in notifications if n.id not in self._seen_ids]
+        # Filter out notifications already seen in this session or older than registry marker
+        filtered = []
+        for n in notifications:
+            if n.id in self._seen_ids:
+                continue
+            if self._is_seen_in_registry(n.media.id, n.episode):
+                continue
+            filtered.append(n)
 
-        if not new_notifications:
+        if not filtered:
             logger.info("No unseen notifications found.")
             return
 
-        for notif in new_notifications:
+        for notif in filtered:
             title = notif.media.title.english or notif.media.title.romaji
             message = f"Episode {notif.episode} of {title} has aired!"
 
+            # Try to include an image (cover large/extra_large) if available
+            app_icon: Optional[str] = None
             try:
-                plyer.notification.notify(
+                icon_path = self._get_or_fetch_icon(notif.media)
+                app_icon = str(icon_path) if icon_path else None
+            except Exception:
+                app_icon = None
+
+            try:
+                # Guard: only call if available
+                if not PLYER_AVAILABLE or plyer_notification is None:
+                    raise RuntimeError("Notification backend unavailable")
+                # Assert for type checkers and runtime safety
+                assert plyer_notification is not None
+                plyer_notification.notify(
                     title="FastAnime: New Episode",
                     message=message,
                     app_name="FastAnime",
+                    app_icon=app_icon,  # plyer supports file paths or URLs depending on platform
                     timeout=20,
                 )
                 logger.info(f"Displayed notification: {message}")
-                self._seen_ids.add(notif.id)
+                self._mark_seen(
+                    notif.id,
+                    notif.media.id,
+                    str(notif.episode) if notif.episode is not None else None,
+                )
             except Exception as e:
                 logger.error(f"Failed to display notification: {e}")
 
-        self._save_seen_ids()
+    def _is_seen_in_registry(self, media_id: int, episode: Optional[int]) -> bool:
+        if not self.registry or episode is None:
+            return False
+        try:
+            entry = self.registry.get_media_index_entry(media_id)
+            if not entry or not entry.last_notified_episode:
+                return False
+            # Compare numerically
+            try:
+                last_ep = float(entry.last_notified_episode)
+                return float(episode) <= last_ep
+            except Exception:
+                return str(episode) <= entry.last_notified_episode
+        except Exception:
+            return False
+
+    def _get_or_fetch_icon(self, media_item: MediaItem) -> Optional[Path]:
+        """Fetch and cache a small cover image for system notifications."""
+        try:
+            cover = media_item.cover_image
+            url = None
+            if cover:
+                url = cover.extra_large or cover.large or cover.medium
+            if not url:
+                return None
+
+            cache_dir = APP_CACHE_DIR / "notification_icons"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            icon_path = cache_dir / f"{media_item.id}.png"
+            if icon_path.exists() and icon_path.stat().st_size > 0:
+                return icon_path
+
+            # Directly download the image bytes without resizing
+            with httpx.Client(follow_redirects=True, timeout=20) as client:
+                resp = client.get(url)
+                resp.raise_for_status()
+                data = resp.content
+                if data:
+                    icon_path.write_bytes(data)
+                    return icon_path
+        except Exception as e:
+            logger.debug(f"Could not fetch icon for media {media_item.id}: {e}")
+        return None

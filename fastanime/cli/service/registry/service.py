@@ -550,13 +550,12 @@ class MediaRegistryService:
                     break
 
             if not episode_record:
-                if not file_path:
-                    logger.error(f"File path required for new episode {episode_number}")
-                    return False
+                # Allow creation without file_path for queued/in-progress states.
+                # Only require file_path once the episode is marked COMPLETED.
                 episode_record = MediaEpisode(
                     episode_number=episode_number,
-                    file_path=file_path,
                     download_status=status,
+                    file_path=file_path,
                 )
                 record.media_episodes.append(episode_record)
 
@@ -564,6 +563,12 @@ class MediaRegistryService:
             episode_record.download_status = status
             if file_path:
                 episode_record.file_path = file_path
+            elif status.name == "COMPLETED" and not episode_record.file_path:
+                logger.warning(
+                    "Completed status set without file_path for media %s episode %s",
+                    media_id,
+                    episode_number,
+                )
             if file_size is not None:
                 episode_record.file_size = file_size
             if quality:

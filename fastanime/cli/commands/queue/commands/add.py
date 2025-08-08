@@ -14,7 +14,7 @@ from fastanime.libs.media_api.types import (
 )
 
 
-@click.command(help="Queue episodes for the background worker to download.")
+@click.command(name="add", help="Add episodes to the background download queue.")
 # Search/Filter options (mirrors 'fastanime anilist download')
 @click.option("--title", "-t")
 @click.option("--page", "-p", type=click.IntRange(min=1), default=1)
@@ -63,15 +63,10 @@ from fastanime.libs.media_api.types import (
     "--yes",
     "-Y",
     is_flag=True,
-    help="Automatically queue from all found anime without prompting for selection.",
+    help="Queue for all found anime without prompting for selection.",
 )
 @click.pass_obj
-def queue(config: AppConfig, **options):
-    """
-    Search AniList with filters, select one or more anime (or use --yes),
-    and queue the specified episode range for background download.
-    The background worker should be running to process the queue.
-    """
+def add(config: AppConfig, **options):
     from fastanime.cli.service.download.service import DownloadService
     from fastanime.cli.service.feedback import FeedbackService
     from fastanime.cli.service.registry import MediaRegistryService
@@ -151,7 +146,7 @@ def queue(config: AppConfig, **options):
             }
             preview_command = None
             if config.general.preview != "none":
-                from ..utils.preview import create_preview_context  # type: ignore
+                from ...utils.preview import create_preview_context  # type: ignore
 
                 with create_preview_context() as preview_ctx:
                     preview_command = preview_ctx.get_anime_preview(
@@ -213,6 +208,6 @@ def queue(config: AppConfig, **options):
         )
 
     except FastAnimeError as e:
-        feedback.error("Queue command failed", str(e))
+        feedback.error("Queue add failed", str(e))
     except Exception as e:
         feedback.error("An unexpected error occurred", str(e))

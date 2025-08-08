@@ -36,6 +36,8 @@ class DownloadService:
         self.media_api = media_api_service
         self.provider = provider_service
         self.downloader = create_downloader(config.downloads)
+        # Track in-flight downloads to avoid duplicate queueing
+        self._inflight: set[tuple[int, str]] = set()
 
         # Worker is kept for potential future background commands
         self._worker = ManagedBackgroundWorker(
@@ -56,18 +58,25 @@ class DownloadService:
         self._worker.shutdown(wait=False)
 
     def add_to_queue(self, media_item: MediaItem, episode_number: str) -> bool:
-        """Adds a download job to the ASYNCHRONOUS queue."""
+        """Mark an episode as queued in the registry (no immediate download)."""
         logger.info(
-            f"Queueing background download for '{media_item.title.english}' Episode {episode_number}"
+            f"Queueing episode '{episode_number}' for '{media_item.title.english}' (registry only)"
         )
         self.registry.get_or_create_record(media_item)
-        updated = self.registry.update_episode_download_status(
+        return self.registry.update_episode_download_status(
             media_id=media_item.id,
             episode_number=episode_number,
             status=DownloadStatus.QUEUED,
         )
-        if not updated:
+
+    def _submit_download(self, media_item: MediaItem, episode_number: str) -> bool:
+        """Submit a download task to the worker if not already in-flight."""
+        key = (media_item.id, str(episode_number))
+        if key in self._inflight:
             return False
+        if not self._worker.is_running():
+            self._worker.start()
+        self._inflight.add(key)
         self._worker.submit_function(
             self._execute_download_job, media_item, episode_number
         )
@@ -108,9 +117,11 @@ class DownloadService:
             f"Found {len(unfinished_jobs)} unfinished downloads. Re-queueing..."
         )
         for media_id, episode_number in unfinished_jobs:
+            if (media_id, str(episode_number)) in self._inflight:
+                continue
             record = self.registry.get_media_record(media_id)
             if record and record.media_item:
-                self.add_to_queue(record.media_item, episode_number)
+                self._submit_download(record.media_item, episode_number)
             else:
                 logger.error(
                     f"Could not find metadata for media ID {media_id}. Cannot resume. Please run 'fastanime registry sync'."
@@ -244,3 +255,9 @@ class DownloadService:
                 status=DownloadStatus.FAILED,
                 error_message=str(e),
             )
+        finally:
+            # Remove from in-flight tracking regardless of outcome
+            try:
+                self._inflight.discard((media_item.id, str(episode_number)))
+            except Exception:
+                pass

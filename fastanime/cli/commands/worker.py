@@ -16,6 +16,7 @@ def worker(config: AppConfig):
     from fastanime.cli.service.notification.service import NotificationService
     from fastanime.cli.service.registry.service import MediaRegistryService
     from fastanime.cli.service.worker.service import BackgroundWorkerService
+    from fastanime.cli.service.auth import AuthService
     from fastanime.libs.media_api.api import create_api_client
     from fastanime.libs.provider.anime.provider import create_provider
 
@@ -26,6 +27,13 @@ def worker(config: AppConfig):
 
     # Instantiate services
     media_api = create_api_client(config.general.media_api, config)
+    # Authenticate if credentials exist (enables notifications)
+    auth = AuthService(config.general.media_api)
+    if profile := auth.get_auth():
+        try:
+            media_api.authenticate(profile.token)
+        except Exception:
+            pass
     provider = create_provider(config.general.provider)
     registry = MediaRegistryService(config.general.media_api, config.media_registry)
 
