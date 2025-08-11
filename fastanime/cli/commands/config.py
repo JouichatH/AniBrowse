@@ -23,7 +23,10 @@ from ...core.config import AppConfig
   fastanime config --generate-desktop-entry
 \b
   # update your config without opening an editor
-  fastanime --icons --fzf --preview config --update
+  fastanime --icons --selector fzf --preview full config --update
+\b 
+  # interactively define your config
+  fastanime config --interactive
 \b 
   # view the current contents of your config
   fastanime config --view
@@ -146,7 +149,7 @@ def _generate_desktop_entry():
         desktop_entry = dedent(
             f"""
             [Desktop Entry]
-            Name={PROJECT_NAME}
+            Name={PROJECT_NAME.title()}
             Type=Application
             version={__version__}
             Path={Path().home()}
