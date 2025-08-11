@@ -1,13 +1,14 @@
 import logging
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional
 
 import httpx
-
+from fastanime.cli.service.registry import MediaRegistryService
+from fastanime.cli.service.registry.models import DownloadStatus
+from fastanime.core.config.model import AppConfig
 from fastanime.core.constants import APP_CACHE_DIR
 from fastanime.libs.media_api.base import BaseApiClient
-from fastanime.libs.media_api.types import MediaItem
-# Note: Previously used image resizing; now we download icons directly without resizing.
+from fastanime.libs.media_api.types import MediaItem, Notification
 
 try:
     from plyer import notification as plyer_notification
@@ -19,33 +20,21 @@ except ImportError:  # pragma: no cover - optional dependency
 
 logger = logging.getLogger(__name__)
 
+NOTIFICATION_ICONS_CACHE_DIR = APP_CACHE_DIR / "notification_icons"
+
 
 class NotificationService:
-    def __init__(self, media_api: BaseApiClient, registry_service=None):
+    def __init__(
+        self,
+        app_config: AppConfig,
+        media_api: BaseApiClient,
+        registry_service: MediaRegistryService,
+    ):
         self.media_api = media_api
-        self.registry = registry_service  # optional; used for seen tracking
-        self._seen_ids: Set[int] = self._load_seen_ids()
-
-    def _load_seen_ids(self) -> Set[int]:
-        # Prefer MediaRegistry storage via index.last_notified_episode markers
-        try:
-            if not self.registry:
-                return set()
-            seen: Set[int] = set()
-            for record in self.registry.get_all_media_records():
-                index_entry = self.registry.get_media_index_entry(
-                    record.media_item.id
-                )
-                # last_notified_episode stored per media; we can’t reconstruct notif IDs,
-                # so keep an in-memory set per session (fresh on start). Return empty.
-                # Future: persist a mapping media_id->max_created_at for durability.
-            return seen
-        except Exception:
-            return set()
+        self.app_config = app_config
+        self.registry = registry_service
 
     def _mark_seen(self, notification_id: int, media_id: int, episode: str | None):
-        self._seen_ids.add(notification_id)
-        # Also update registry’s last_notified_episode for the media
         if self.registry and episode:
             try:
                 self.registry.update_media_index_entry(
@@ -71,10 +60,8 @@ class NotificationService:
             return
 
         # Filter out notifications already seen in this session or older than registry marker
-        filtered = []
+        filtered: list[Notification] = []
         for n in notifications:
-            if n.id in self._seen_ids:
-                continue
             if self._is_seen_in_registry(n.media.id, n.episode):
                 continue
             filtered.append(n)
@@ -84,6 +71,14 @@ class NotificationService:
             return
 
         for notif in filtered:
+            if self.app_config.worker.auto_download_new_episode:
+                if not self.registry.get_media_record(notif.media.id):
+                    self.registry.get_or_create_record(notif.media)
+                self.registry.update_episode_download_status(
+                    media_id=notif.media.id,
+                    episode_number=str(notif.episode),
+                    status=DownloadStatus.QUEUED,
+                )
             title = notif.media.title.english or notif.media.title.romaji
             message = f"Episode {notif.episode} of {title} has aired!"
 
@@ -101,7 +96,7 @@ class NotificationService:
                     raise RuntimeError("Notification backend unavailable")
                 # Assert for type checkers and runtime safety
                 assert plyer_notification is not None
-                plyer_notification.notify(
+                plyer_notification.notify(  # type: ignore
                     title="FastAnime: New Episode",
                     message=message,
                     app_name="FastAnime",
@@ -118,7 +113,7 @@ class NotificationService:
                 logger.error(f"Failed to display notification: {e}")
 
     def _is_seen_in_registry(self, media_id: int, episode: Optional[int]) -> bool:
-        if not self.registry or episode is None:
+        if episode is None:
             return False
         try:
             entry = self.registry.get_media_index_entry(media_id)
@@ -129,7 +124,7 @@ class NotificationService:
                 last_ep = float(entry.last_notified_episode)
                 return float(episode) <= last_ep
             except Exception:
-                return str(episode) <= entry.last_notified_episode
+                return False
         except Exception:
             return False
 
@@ -143,7 +138,7 @@ class NotificationService:
             if not url:
                 return None
 
-            cache_dir = APP_CACHE_DIR / "notification_icons"
+            cache_dir = NOTIFICATION_ICONS_CACHE_DIR
             cache_dir.mkdir(parents=True, exist_ok=True)
             icon_path = cache_dir / f"{media_item.id}.png"
             if icon_path.exists() and icon_path.stat().st_size > 0:

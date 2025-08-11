@@ -39,7 +39,6 @@ class DownloadService:
         # Track in-flight downloads to avoid duplicate queueing
         self._inflight: set[tuple[int, str]] = set()
 
-        # Worker is kept for potential future background commands
         self._worker = ManagedBackgroundWorker(
             max_workers=config.downloads.max_concurrent_downloads,
             name="DownloadWorker",
@@ -101,6 +100,7 @@ class DownloadService:
     def resume_unfinished_downloads(self):
         """Finds and re-queues any downloads that were left in an unfinished state."""
         logger.info("Checking for unfinished downloads to resume...")
+        # TODO: make the checking of unfinished downloads more efficient probably by modifying the registry to be aware of what actually changed and load that instead
         queued_jobs = self.registry.get_episodes_by_download_status(
             DownloadStatus.QUEUED
         )
@@ -122,6 +122,49 @@ class DownloadService:
             record = self.registry.get_media_record(media_id)
             if record and record.media_item:
                 self._submit_download(record.media_item, episode_number)
+            else:
+                logger.error(
+                    f"Could not find metadata for media ID {media_id}. Cannot resume. Please run 'fastanime registry sync'."
+                )
+
+    def retry_failed_downloads(self):
+        """Finds and re-queues any downloads that were left in an unfinished state."""
+        logger.info("Checking for unfinished downloads to resume...")
+        # TODO: may need to improve this
+        queued_jobs = self.registry.get_episodes_by_download_status(
+            DownloadStatus.FAILED
+        )
+
+        unfinished_jobs = queued_jobs
+        if not unfinished_jobs:
+            logger.info("No unfinished downloads found.")
+            return
+
+        logger.info(
+            f"Found {len(unfinished_jobs)} unfinished downloads. Re-queueing..."
+        )
+        for media_id, episode_number in unfinished_jobs:
+            if (media_id, str(episode_number)) in self._inflight:
+                continue
+
+            record = self.registry.get_media_record(media_id)
+            if record and record.media_item:
+                for episode in record.media_episodes:
+                    if episode_number != episode.episode_number:
+                        continue
+                    if (
+                        episode.download_attempts
+                        <= self.config.downloads.max_retry_attempts
+                    ):
+                        logger.info(
+                            f"Retrying {episode_number} of {record.media_item.title.english}"
+                        )
+                        self._submit_download(record.media_item, episode_number)
+                    else:
+                        logger.info(
+                            f"Max attempts reached for {episode_number} of {record.media_item.title.english}"
+                        )
+
             else:
                 logger.error(
                     f"Could not find metadata for media ID {media_id}. Cannot resume. Please run 'fastanime registry sync'."

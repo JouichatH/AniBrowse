@@ -30,7 +30,9 @@ class BackgroundWorkerService:
             return
 
         def _handler(signum, frame):  # noqa: ARG001 (signature fixed by signal)
-            logger.info("Received signal %s, shutting down background worker...", signum)
+            logger.info(
+                "Received signal %s, shutting down background worker...", signum
+            )
             self.stop()
 
         try:
@@ -39,7 +41,9 @@ class BackgroundWorkerService:
             self._signals_installed = True
         except Exception:
             # Signal handling may fail in non-main threads or certain environments
-            logger.debug("Signal handlers not installed (non-main thread or unsupported environment).")
+            logger.debug(
+                "Signal handlers not installed (non-main thread or unsupported environment)."
+            )
 
     def run(self):
         """Run the background loop until stopped.
@@ -53,8 +57,13 @@ class BackgroundWorkerService:
         logger.info("Background worker starting...")
 
         # Convert configured minutes to seconds
-        notification_interval_sec = max(60, self.config.notification_check_interval * 60)
+        notification_interval_sec = max(
+            60, self.config.notification_check_interval * 60
+        )
         download_interval_sec = max(60, self.config.download_check_interval * 60)
+        download_retry_interval_sec = max(
+            60, self.config.download_check_failed_interval * 60
+        )
 
         # Start download worker and attempt resuming pending jobs once at startup
         self.download_service.start()
@@ -62,6 +71,7 @@ class BackgroundWorkerService:
         # Schedule the very first execution immediately
         next_notification_ts: Optional[float] = 0.0
         next_download_ts: Optional[float] = 0.0
+        next_retry_download_ts: Optional[float] = 0.0
 
         # Install signal handlers if possible
         self._install_signal_handlers()
@@ -73,6 +83,7 @@ class BackgroundWorkerService:
                 # Check for notifications
                 if next_notification_ts is not None and now >= next_notification_ts:
                     try:
+                        logger.info("Checking for notifications...")
                         self.notification_service.check_and_display_notifications()
                     except Exception:
                         logger.exception("Error during notification check")
@@ -88,8 +99,25 @@ class BackgroundWorkerService:
                     finally:
                         next_download_ts = now + download_interval_sec
 
+                if next_retry_download_ts is not None and now >= next_retry_download_ts:
+                    try:
+                        self.download_service.retry_failed_downloads()
+                    except Exception:
+                        logger.exception(
+                            "Error during failed download queue processing"
+                        )
+                    finally:
+                        next_retry_download_ts = now + download_retry_interval_sec
                 # Determine how long to wait until the next scheduled task
-                next_events = [t for t in (next_notification_ts, next_download_ts) if t is not None]
+                next_events = [
+                    t
+                    for t in (
+                        next_notification_ts,
+                        next_download_ts,
+                        next_retry_download_ts,
+                    )
+                    if t is not None
+                ]
                 if next_events:
                     time_until_next = max(0.0, min(next_events) - time.time())
                 else:

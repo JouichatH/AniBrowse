@@ -244,6 +244,15 @@ class WorkerConfig(OtherConfig):
         ge=1,
         description="How often to process the download queue (in minutes).",
     )
+    download_check_failed_interval: int = Field(
+        default=60,  # in minutes
+        ge=1,
+        description="How often to process the failed download queue (in minutes).",
+    )
+    auto_download_new_episode: bool = Field(
+        default=True,
+        description="Whether to automatically download a new episode that has been notified",
+    )
 
 
 class SessionsConfig(OtherConfig):
@@ -399,7 +408,7 @@ class DownloadsConfig(OtherConfig):
         ge=1,
         description=desc.DOWNLOADS_MAX_CONCURRENT,
     )
-    retry_attempts: int = Field(
+    max_retry_attempts: int = Field(
         default=defaults.DOWNLOADS_RETRY_ATTEMPTS,
         ge=0,
         description=desc.DOWNLOADS_RETRY_ATTEMPTS,

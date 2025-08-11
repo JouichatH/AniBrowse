@@ -11,12 +11,12 @@ def worker(config: AppConfig):
     process any queued downloads. It's recommended to run this in the
     background (e.g., 'fastanime worker &') or as a system service.
     """
+    from fastanime.cli.service.auth import AuthService
     from fastanime.cli.service.download.service import DownloadService
     from fastanime.cli.service.feedback import FeedbackService
     from fastanime.cli.service.notification.service import NotificationService
     from fastanime.cli.service.registry.service import MediaRegistryService
     from fastanime.cli.service.worker.service import BackgroundWorkerService
-    from fastanime.cli.service.auth import AuthService
     from fastanime.libs.media_api.api import create_api_client
     from fastanime.libs.provider.anime.provider import create_provider
 
@@ -37,7 +37,7 @@ def worker(config: AppConfig):
     provider = create_provider(config.general.provider)
     registry = MediaRegistryService(config.general.media_api, config.media_registry)
 
-    notification_service = NotificationService(media_api)
+    notification_service = NotificationService(config, media_api, registry)
     download_service = DownloadService(config, registry, media_api, provider)
     worker_service = BackgroundWorkerService(
         config.worker, notification_service, download_service

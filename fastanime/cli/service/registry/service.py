@@ -85,6 +85,13 @@ class MediaRegistryService:
 
             logger.debug("saved registry index")
 
+    def get_seen_notifications(self) -> dict[int, str]:
+        seen = {}
+        for id, index_entry in self._load_index().media_index.items():
+            if episode := index_entry.last_notified_episode:
+                seen[index_entry.media_id] = episode
+        return seen
+
     def get_media_index_entry(self, media_id: int) -> Optional[MediaRegistryIndexEntry]:
         index = self._load_index()
         return index.media_index.get(f"{self._media_api}_{media_id}")
@@ -102,7 +109,7 @@ class MediaRegistryService:
 
         record = MediaRecord.model_validate(data)
 
-        logger.debug(f"Loaded media record for {media_id}")
+        # logger.debug(f"Loaded media record for {media_id}")
         return record
 
     def get_or_create_index_entry(self, media_id: int) -> MediaRegistryIndexEntry:
