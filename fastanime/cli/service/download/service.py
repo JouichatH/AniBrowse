@@ -34,7 +34,7 @@ class DownloadService:
         media_api_service: "BaseApiClient",
         provider_service: "BaseAnimeProvider",
     ):
-        self.config = config
+        self.app_config = config
         self.registry = registry_service
         self.media_api = media_api_service
         self.provider = provider_service
@@ -157,7 +157,7 @@ class DownloadService:
                         continue
                     if (
                         episode.download_attempts
-                        <= self.config.downloads.max_retry_attempts
+                        <= self.app_config.downloads.max_retry_attempts
                     ):
                         logger.info(
                             f"Retrying {episode_number} of {record.media_item.title.english}"
@@ -187,12 +187,17 @@ class DownloadService:
 
             # 1. Search the provider to get the provider-specific ID
             provider_search_results = self.provider.search(
-                SearchParams(query=media_title)
+                SearchParams(
+                    query=normalize_title(
+                        media_title, self.app_config.general.provider.value, True
+                    ),
+                    translation_type=self.app_config.stream.translation_type,
+                )
             )
 
             if not provider_search_results or not provider_search_results.results:
                 raise ValueError(
-                    f"Could not find '{media_title}' on provider '{self.config.general.provider.value}'"
+                    f"Could not find '{media_title}' on provider '{self.app_config.general.provider.value}'"
                 )
 
             # 2. Find the best match using fuzzy logic (like auto-select)
@@ -203,7 +208,7 @@ class DownloadService:
                 provider_results_map.keys(),
                 key=lambda p_title: fuzz.ratio(
                     normalize_title(
-                        p_title, self.config.general.provider.value
+                        p_title, self.app_config.general.provider.value
                     ).lower(),
                     media_title.lower(),
                 ),
@@ -225,7 +230,7 @@ class DownloadService:
                     anime_id=provider_anime.id,
                     query=media_title,
                     episode=episode_number,
-                    translation_type=self.config.stream.translation_type,
+                    translation_type=self.app_config.stream.translation_type,
                 )
             )
             if not streams_iterator:
@@ -235,11 +240,11 @@ class DownloadService:
             if not server or not server.links:
                 raise ValueError(f"No stream links found for Episode {episode_number}")
 
-            if server.name != self.config.downloads.server.value:
+            if server.name != self.app_config.downloads.server.value:
                 while True:
                     try:
                         _server = next(streams_iterator)
-                        if _server.name == self.config.downloads.server.value:
+                        if _server.name == self.app_config.downloads.server.value:
                             server = _server
                             break
                     except StopIteration:
@@ -259,9 +264,9 @@ class DownloadService:
                 silent=False,
                 headers=server.headers,
                 subtitles=[sub.url for sub in server.subtitles],
-                merge=self.config.downloads.merge_subtitles,
-                clean=self.config.downloads.cleanup_after_merge,
-                no_check_certificate=self.config.downloads.no_check_certificate,
+                merge=self.app_config.downloads.merge_subtitles,
+                clean=self.app_config.downloads.cleanup_after_merge,
+                no_check_certificate=self.app_config.downloads.no_check_certificate,
             )
 
             result = self.downloader.download(download_params)
@@ -280,7 +285,7 @@ class DownloadService:
                     file_path=result.merged_path or result.video_path,
                     file_size=file_size,
                     quality=stream_link.quality,
-                    provider_name=self.config.general.provider.value,
+                    provider_name=self.app_config.general.provider.value,
                     server_name=server.name,
                     subtitle_paths=result.subtitle_paths,
                 )

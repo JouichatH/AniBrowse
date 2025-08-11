@@ -7,7 +7,7 @@ from ...state import InternalDirective, MenuName, ProviderState, State
 @session.menu
 def provider_search(ctx: Context, state: State) -> State | InternalDirective:
     from .....core.utils.fuzzy import fuzz
-    from .....core.utils.normalizer import normalize_title
+    from .....core.utils.normalizer import normalize_title, update_user_normalizer_json
 
     feedback = ctx.feedback
     media_item = state.media_api.media_item
@@ -71,6 +71,12 @@ def provider_search(ctx: Context, state: State) -> State | InternalDirective:
         if not chosen_title or chosen_title == "Back":
             return InternalDirective.BACK
 
+        if selector.confirm(
+            f"Would you like to update your local normalizer json with: {chosen_title} for {media_title}"
+        ):
+            update_user_normalizer_json(
+                chosen_title, media_title, config.general.provider.value
+            )
         selected_provider_anime = provider_results_map[chosen_title]
 
     with feedback.progress(

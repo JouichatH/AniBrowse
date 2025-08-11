@@ -46,14 +46,19 @@ import json
 import logging
 from typing import Dict, Optional
 
-from ..constants import ASSETS_DIR
+from ..constants import APP_DATA_DIR, ASSETS_DIR
 
 logger = logging.getLogger(__name__)
 
 # Cache for the normalizer data to avoid repeated file reads
 _normalizer_cache: Optional[Dict[str, Dict[str, str]]] = None
 
+USER_NORMALIZER_JSON = APP_DATA_DIR / "normalizer.json"
 
+DEFAULT_NORMALIZER_JSON = ASSETS_DIR / "normalizer.json"
+
+
+# will load one in the config dir if available and merge them
 def _load_normalizer_data() -> Dict[str, Dict[str, str]]:
     """
     Load the normalizer.json file and cache it.
@@ -70,21 +75,41 @@ def _load_normalizer_data() -> Dict[str, Dict[str, str]]:
     if _normalizer_cache is not None:
         return _normalizer_cache
 
-    normalizer_path = ASSETS_DIR / "normalizer.json"
+    default_normalizer = {}
+    user_normalizer = {}
+    with open(DEFAULT_NORMALIZER_JSON, "r", encoding="utf-8") as f:
+        default_normalizer: dict = json.load(f)
+    if USER_NORMALIZER_JSON.exists():
+        with open(USER_NORMALIZER_JSON, "r", encoding="utf-8") as f:
+            user_normalizer: dict = json.load(f)
 
-    try:
-        with open(normalizer_path, "r", encoding="utf-8") as f:
-            _normalizer_cache = json.load(f)
-        logger.debug("Loaded normalizer data from %s", normalizer_path)
-        # Type checker now knows _normalizer_cache is not None
-        assert _normalizer_cache is not None
-        return _normalizer_cache
-    except FileNotFoundError:
-        logger.error("Normalizer file not found at %s", normalizer_path)
-        raise
-    except json.JSONDecodeError as e:
-        logger.error("Invalid JSON in normalizer file: %s", e)
-        raise
+    _normalizer_cache = default_normalizer
+    for key in default_normalizer:
+        if key in user_normalizer:
+            _normalizer_cache[key].update(user_normalizer[key])
+
+    return _normalizer_cache
+
+
+def update_user_normalizer_json(
+    provider_title: str, media_api_title: str, provider_name: str
+):
+    import time
+
+    from .file import AtomicWriter
+
+    print(
+        "UPDATING USER NORMALIZER JSON. PLEASE CONTRIBUTE TO THE PROJECT BY OPENING A PR ON GITHUB TO MERGE YOUR NORMALIZER JSON TO MAIN. MAEMOTTE KANSHA SHIMASU :)"
+    )
+    print(f"NORMALIZER JSON PATH IS: {USER_NORMALIZER_JSON}")
+    time.sleep(5)
+    if not _normalizer_cache:
+        raise RuntimeError(
+            "Fatal _normalizer_cache missing this should not be the case : (. Please report"
+        )
+    _normalizer_cache[provider_name][provider_title] = media_api_title
+    with AtomicWriter(USER_NORMALIZER_JSON) as f:
+        json.dump(_normalizer_cache, f, indent=2)
 
 
 def provider_title_to_media_api_title(provider_title: str, provider_name: str) -> str:
