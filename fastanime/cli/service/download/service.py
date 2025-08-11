@@ -1,7 +1,9 @@
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, List
 
 from ....core.config.model import AppConfig
+from ....core.constants import APP_CACHE_DIR
 from ....core.downloader import DownloadParams, create_downloader
 from ....core.utils.concurrency import ManagedBackgroundWorker, thread_manager
 from ....core.utils.fuzzy import fuzz
@@ -21,6 +23,7 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+NOTIFICATION_ICONS_CACHE_DIR = APP_CACHE_DIR / "notification_icons"
 
 
 class DownloadService:
@@ -281,15 +284,45 @@ class DownloadService:
                     server_name=server.name,
                     subtitle_paths=result.subtitle_paths,
                 )
-                logger.info(
-                    f"Successfully downloaded Episode {episode_number} of '{media_title}'"
-                )
+                message = f"Successfully downloaded Episode {episode_number} of '{media_title}'"
+                try:
+                    from plyer import notification
+
+                    icon_path = self._get_or_fetch_icon(media_item)
+                    app_icon = str(icon_path) if icon_path else None
+
+                    notification.notify(  # type: ignore
+                        title="FastAnime: New Episode",
+                        message=message,
+                        app_name="FastAnime",
+                        app_icon=app_icon,
+                        timeout=20,
+                    )
+                except:
+                    pass
+                logger.info(message)
             else:
                 raise ValueError(result.error_message or "Unknown download error")
 
         except Exception as e:
+            message = f"Download failed for '{media_item.title.english}' Ep {episode_number}: {e}"
+            try:
+                from plyer import notification
+
+                icon_path = self._get_or_fetch_icon(media_item)
+                app_icon = str(icon_path) if icon_path else None
+
+                notification.notify(  # type: ignore
+                    title="FastAnime: New Episode",
+                    message=message,
+                    app_name="FastAnime",
+                    app_icon=app_icon,
+                    timeout=20,
+                )
+            except:
+                pass
             logger.error(
-                f"Download failed for '{media_item.title.english}' Ep {episode_number}: {e}",
+                message,
                 exc_info=True,
             )
             self.registry.update_episode_download_status(
@@ -304,3 +337,33 @@ class DownloadService:
                 self._inflight.discard((media_item.id, str(episode_number)))
             except Exception:
                 pass
+
+    def _get_or_fetch_icon(self, media_item: MediaItem) -> Path | None:
+        """Fetch and cache a small cover image for system notifications."""
+        import httpx
+
+        try:
+            cover = media_item.cover_image
+            url = None
+            if cover:
+                url = cover.extra_large or cover.large or cover.medium
+            if not url:
+                return None
+
+            cache_dir = NOTIFICATION_ICONS_CACHE_DIR
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            icon_path = cache_dir / f"{media_item.id}.png"
+            if icon_path.exists() and icon_path.stat().st_size > 0:
+                return icon_path
+
+            # Directly download the image bytes without resizing
+            with httpx.Client(follow_redirects=True, timeout=20) as client:
+                resp = client.get(url)
+                resp.raise_for_status()
+                data = resp.content
+                if data:
+                    icon_path.write_bytes(data)
+                    return icon_path
+        except Exception as e:
+            logger.debug(f"Could not fetch icon for media {media_item.id}: {e}")
+        return None
