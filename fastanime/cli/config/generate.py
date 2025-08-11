@@ -1,6 +1,9 @@
 import textwrap
 from enum import Enum
 from pathlib import Path
+from typing import Any, Literal, get_args, get_origin
+
+from pydantic.fields import FieldInfo
 
 from ...core.config import AppConfig
 from ...core.constants import APP_ASCII_ART, DISCORD_INVITE, PROJECT_NAME, REPO_HOME
@@ -11,7 +14,7 @@ config_asci = "\n".join(
 )
 CONFIG_HEADER = f"""
 # ==============================================================================
-# 
+#
 {config_asci}
 #
 # ==============================================================================
@@ -37,26 +40,16 @@ CONFIG_FOOTER = f"""
 def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
     """Generate a configuration file content from a Pydantic model."""
 
-    model_schema = AppConfig.model_json_schema(mode="serialization")
-    app_model_dict = app_model.model_dump()
     config_ini_content = [CONFIG_HEADER]
 
-    for section_name, section_dict in app_model_dict.items():
-        section_ref = model_schema["properties"][section_name].get("$ref")
-        if not section_ref:
-            continue
-
-        section_class_name = section_ref.split("/")[-1]
-        section_schema = model_schema["$defs"][section_class_name]
-        section_comment = section_schema.get("description", "")
+    for section_name, section_model in app_model:
+        section_comment = section_model.model_config.get("title", "")
 
         config_ini_content.append(f"\n#\n# {section_comment}\n#")
         config_ini_content.append(f"[{section_name}]")
 
-        for field_name, field_value in section_dict.items():
-            field_properties = section_schema.get("properties", {}).get(field_name, {})
-            description = field_properties.get("description", "")
-
+        for field_name, field_info in section_model.model_fields.items():
+            description = field_info.description or ""
             if description:
                 wrapped_comment = textwrap.fill(
                     description,
@@ -66,6 +59,17 @@ def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
                 )
                 config_ini_content.append(f"\n{wrapped_comment}")
 
+            field_type_comment = _get_field_type_comment(field_info)
+            if field_type_comment:
+                wrapped_comment = textwrap.fill(
+                    field_type_comment,
+                    width=78,
+                    initial_indent="# ",
+                    subsequent_indent="# ",
+                )
+                config_ini_content.append(wrapped_comment)
+
+            field_value = getattr(section_model, field_name)
             if isinstance(field_value, bool):
                 value_str = str(field_value).lower()
             elif isinstance(field_value, Path):
@@ -81,3 +85,70 @@ def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
 
     config_ini_content.extend(["\n", CONFIG_FOOTER])
     return "\n".join(config_ini_content)
+
+
+def _get_field_type_comment(field_info: FieldInfo) -> str:
+    """Generate a comment with type information for a field."""
+    field_type = field_info.annotation
+
+    # Handle Literal and Enum types
+    possible_values = []
+    if field_type is not None:
+        if isinstance(field_type, type) and issubclass(field_type, Enum):
+            possible_values = [member.value for member in field_type]
+        elif hasattr(field_type, "__origin__") and get_origin(field_type) is Literal:
+            args = get_args(field_type)
+            if args:
+                possible_values = list(args)
+
+    if possible_values:
+        return f"Possible values: [ {', '.join(map(str, possible_values))} ]"
+
+    # Handle basic types and numeric ranges
+    type_name = _get_type_name(field_type)
+    range_info = _get_range_info(field_info)
+
+    if range_info:
+        return f"Type: {type_name} ({range_info})"
+    elif type_name:
+        return f"Type: {type_name}"
+
+    return ""
+
+
+def _get_type_name(field_type: Any) -> str:
+    """Get a user-friendly name for a field's type."""
+    if field_type is str:
+        return "string"
+    if field_type is int:
+        return "integer"
+    if field_type is float:
+        return "float"
+    if field_type is bool:
+        return "boolean"
+    if field_type is Path:
+        return "path"
+    return ""
+
+
+def _get_range_info(field_info: FieldInfo) -> str:
+    """Get a string describing the numeric range of a field."""
+    constraints = {}
+    if hasattr(field_info, "metadata") and field_info.metadata:
+        for constraint in field_info.metadata:
+            constraint_type = type(constraint).__name__
+            if constraint_type == "Ge" and hasattr(constraint, "ge"):
+                constraints["min"] = constraint.ge
+            elif constraint_type == "Le" and hasattr(constraint, "le"):
+                constraints["max"] = constraint.le
+            elif constraint_type == "Gt" and hasattr(constraint, "gt"):
+                constraints["min"] = constraint.gt + 1
+            elif constraint_type == "Lt" and hasattr(constraint, "lt"):
+                constraints["max"] = constraint.lt - 1
+
+    if constraints:
+        min_val = constraints.get("min", "N/A")
+        max_val = constraints.get("max", "N/A")
+        return f"Range: {min_val}-{max_val}"
+
+    return ""
