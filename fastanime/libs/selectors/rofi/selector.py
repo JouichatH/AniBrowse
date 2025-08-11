@@ -2,6 +2,7 @@ import shutil
 import subprocess
 
 from ....core.config import RofiConfig
+from ....core.utils import detect
 from ..base import BaseSelector
 
 
@@ -13,18 +14,22 @@ class RofiSelector(BaseSelector):
             raise FileNotFoundError("rofi executable not found in PATH.")
 
     def choose(self, prompt, choices, *, preview=None, header=None):
-        rofi_input = "\n".join(choices)
+        if preview and detect.is_bash_script(preview):
+            preview = None
+        rofi_input = preview if preview else "\n".join(choices)
 
         args = [
             self.executable,
             "-no-config",
             "-theme",
-            self.config.theme_main,
+            self.config.theme_preview if preview else self.config.theme_main,
             "-p",
             prompt,
             "-i",
             "-dmenu",
         ]
+        if preview:
+            args.append("-show-icons")
         result = subprocess.run(
             args,
             input=rofi_input,

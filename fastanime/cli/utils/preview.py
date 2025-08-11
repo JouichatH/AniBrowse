@@ -1,10 +1,14 @@
 import logging
 import os
 import re
+from hashlib import sha256
 from typing import Dict, List, Optional
+
+import httpx
 
 from ...core.config import AppConfig
 from ...core.constants import APP_CACHE_DIR, PLATFORM, SCRIPTS_DIR
+from ...core.utils.file import AtomicWriter
 from ...libs.media_api.types import (
     AiringScheduleResult,
     Character,
@@ -13,6 +17,104 @@ from ...libs.media_api.types import (
 )
 from . import ansi
 from .preview_workers import PreviewWorkerManager
+
+
+def get_rofi_preview(
+    items: List[MediaItem], titles: List[str], config: AppConfig
+) -> str:
+    # Ensure cache directories exist on startup
+    IMAGES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    INFO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    return (
+        "".join(
+            [
+                f"{title}\0icon\x1f{_get_image(item)}\n"
+                for item, title in zip(items, titles)
+            ]
+        )
+        + "Back\nExit"
+    )
+
+
+def _get_image(item: MediaItem) -> str:
+    if not item.cover_image:
+        return ""
+
+    hash_id = sha256(item.title.english.encode("utf-8")).hexdigest()
+    image_path = IMAGES_CACHE_DIR / f"{hash_id}.png"
+
+    if image_path.exists():
+        return str(image_path)
+
+    if not item.cover_image.large:
+        return ""
+
+    try:
+        with httpx.stream(
+            "GET", item.cover_image.large, follow_redirects=True
+        ) as response:
+            response.raise_for_status()
+            with AtomicWriter(image_path, "wb", encoding=None) as f:
+                for chunk in response.iter_bytes():
+                    f.write(chunk)
+        return str(image_path)
+    except Exception as e:
+        logger.error(f"Failed to download image {item.cover_image.large}: {e}")
+        return ""
+
+
+def get_rofi_episode_preview(
+    episodes: List[str], media_item: MediaItem, config: AppConfig
+) -> str:
+    # Ensure cache directories exist on startup
+    IMAGES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    INFO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    return (
+        "".join(
+            [
+                f"{episode}\0icon\x1f{_get_episode_image(episode, media_item)}\n"
+                for episode in episodes
+            ]
+        )
+        + "Back\nExit"
+    )
+
+
+def _get_episode_image(episode: str, media_item: MediaItem) -> str:
+    if not media_item.streaming_episodes:
+        return ""
+    if stream := media_item.streaming_episodes.get(episode):
+        image_url = stream.thumbnail
+    else:
+        if not media_item.cover_image:
+            return ""
+        image_url = media_item.cover_image.large
+    if not image_url:
+        return ""
+
+    hash_id = sha256(
+        f"{media_item.title.english}_Episode_{episode}".encode("utf-8")
+    ).hexdigest()
+    image_path = IMAGES_CACHE_DIR / f"{hash_id}.png"
+
+    if image_path.exists():
+        return str(image_path)
+
+    try:
+        with httpx.stream("GET", image_url, follow_redirects=True) as response:
+            response.raise_for_status()
+            with AtomicWriter(image_path, "wb", encoding=None) as f:
+                for chunk in response.iter_bytes():
+                    f.write(chunk)
+        return str(image_path)
+    except Exception as e:
+        logger.error(
+            f"Failed to download image {image_url} for {media_item.title.english}: {e}"
+        )
+        return ""
+
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +268,9 @@ class PreviewContext:
 def get_anime_preview(
     items: List[MediaItem], titles: List[str], config: AppConfig
 ) -> str:
+    if config.general.selector == "rofi":
+        return get_rofi_preview(items, titles, config)
+
     """
     Generate anime preview script and start background caching.
 
@@ -236,6 +341,8 @@ def get_episode_preview(
     Returns:
         Preview script content for fzf
     """
+    if config.general.selector == "rofi":
+        return get_rofi_episode_preview(episodes, media_item, config)
     IMAGES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     INFO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
