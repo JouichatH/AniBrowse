@@ -191,6 +191,8 @@ class MediaRegistryService:
         else:
             if not index_entry.status:
                 index_entry.status = UserMediaListStatus.WATCHING
+            elif index_entry.status == UserMediaListStatus.COMPLETED:
+                index_entry.status = UserMediaListStatus.REPEATING
 
         if last_watch_position:
             index_entry.last_watch_position = last_watch_position

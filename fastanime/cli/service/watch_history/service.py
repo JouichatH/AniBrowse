@@ -28,6 +28,11 @@ class WatchHistoryService:
         )
         status = None
 
+        if (
+            media_item.user_status
+            and media_item.user_status.status == UserMediaListStatus.COMPLETED
+        ):
+            status = UserMediaListStatus.REPEATING
         self.media_registry.update_media_index_entry(
             media_id=media_item.id,
             watched=True,
