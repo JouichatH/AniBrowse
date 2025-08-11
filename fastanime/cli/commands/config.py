@@ -20,7 +20,7 @@ from ...core.config import AppConfig
   fastanime config --path
 \b
   # print desktop entry info
-  fastanime config --desktop-entry
+  fastanime config --generate-desktop-entry
 \b
   # update your config without opening an editor
   fastanime --icons --fzf --preview config --update
@@ -40,9 +40,9 @@ from ...core.config import AppConfig
     is_flag=True,
 )
 @click.option(
-    "--desktop-entry",
+    "--generate-desktop-entry",
     "-d",
-    help="Configure the desktop entry of fastanime",
+    help="Generate the desktop entry of fastanime",
     is_flag=True,
 )
 @click.option(
@@ -59,7 +59,13 @@ from ...core.config import AppConfig
 )
 @click.pass_obj
 def config(
-    user_config: AppConfig, path, view, view_json, desktop_entry, update, interactive
+    user_config: AppConfig,
+    path,
+    view,
+    view_json,
+    generate_desktop_entry,
+    update,
+    interactive,
 ):
     from ...core.constants import USER_CONFIG
     from ..config.editor import InteractiveConfigEditor
@@ -85,7 +91,7 @@ def config(
         import json
 
         print(json.dumps(user_config.model_dump(mode="json")))
-    elif desktop_entry:
+    elif generate_desktop_entry:
         _generate_desktop_entry()
     elif interactive:
         editor = InteractiveConfigEditor(current_config=user_config)
@@ -123,9 +129,9 @@ def _generate_desktop_entry():
 
     EXECUTABLE = shutil.which("fastanime")
     if EXECUTABLE:
-        cmds = f"{EXECUTABLE} --rofi anilist"
+        cmds = f"{EXECUTABLE} --selector rofi anilist"
     else:
-        cmds = f"{sys.executable} -m fastanime --rofi anilist"
+        cmds = f"{sys.executable} -m fastanime --selector rofi anilist"
 
     # TODO: Get funs of the other platforms to complete this lol
     if PLATFORM == "win32":
