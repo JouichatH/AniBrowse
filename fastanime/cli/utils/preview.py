@@ -20,7 +20,7 @@ from .preview_workers import PreviewWorkerManager
 
 
 def get_rofi_preview(
-    items: List[MediaItem], titles: List[str], config: AppConfig
+    media_items: List[MediaItem], titles: List[str], config: AppConfig
 ) -> str:
     # Ensure cache directories exist on startup
     IMAGES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -30,7 +30,7 @@ def get_rofi_preview(
         "".join(
             [
                 f"{title}\0icon\x1f{_get_image(item)}\n"
-                for item, title in zip(items, titles)
+                for item, title in zip(media_items, titles)
             ]
         )
         + "Back\nExit"
@@ -83,9 +83,8 @@ def get_rofi_episode_preview(
 
 
 def _get_episode_image(episode: str, media_item: MediaItem) -> str:
-    if not media_item.streaming_episodes:
-        return ""
-    if stream := media_item.streaming_episodes.get(episode):
+    if media_item.streaming_episodes and media_item.streaming_episodes.get(episode):
+        stream = media_item.streaming_episodes[episode]
         image_url = stream.thumbnail
     else:
         if not media_item.cover_image:
