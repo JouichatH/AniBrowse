@@ -1,47 +1,3 @@
-"""
-Title normalization utilities for converting between provider and media API titles.
-
-This module provides functions to normalize anime titles between different providers
-(allanime, hianime, animepahe) and media APIs (AniList) using the normalizer.json
-mapping file located in the assets directory.
-
-The normalizer.json file contains mappings in the following format:
-{
-    "provider_name": {
-        "provider_title": "media_api_title",
-        ...
-    },
-    ...
-}
-
-Key Features:
-- Bidirectional title conversion (provider ↔ media API)
-- Caching for performance optimization
-- Runtime mapping support for dynamic additions
-- Comprehensive error handling and logging
-- Type hints for better IDE support
-
-Example Usage:
-    >>> from fastanime.core.utils.normalizer import (
-    ...     provider_title_to_media_api_title,
-    ...     media_api_title_to_provider_title
-    ... )
-
-    # Convert provider title to media API title
-    >>> provider_title_to_media_api_title("1P", "allanime")
-    'one piece'
-
-    # Convert media API title to provider title
-    >>> media_api_title_to_provider_title("one piece", "allanime")
-    '1P'
-
-    # Check available providers
-    >>> get_available_providers()
-    ['allanime', 'hianime', 'animepahe']
-
-Author: FastAnime Contributors
-"""
-
 import json
 import logging
 from typing import Dict, Optional
@@ -107,7 +63,7 @@ def update_user_normalizer_json(
         raise RuntimeError(
             "Fatal _normalizer_cache missing this should not be the case : (. Please report"
         )
-    _normalizer_cache[provider_name][provider_title] = media_api_title
+    _normalizer_cache[provider_name][provider_title] = media_api_title.lower()
     with AtomicWriter(USER_NORMALIZER_JSON) as f:
         json.dump(_normalizer_cache, f, indent=2)
 
