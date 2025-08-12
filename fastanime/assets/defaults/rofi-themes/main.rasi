@@ -1,80 +1,104 @@
+/**
+ * Rofi Theme: FastAnime "Tokyo Night" Main
+ * Author: Gemini ft Benexl
+ * Description: A sharp, modern, and ultra-compact theme with a Tokyo Night palette.
+ */
+
+/*****----- Configuration -----*****/
 configuration {
-    font: "Sans 12";
-    line-margin: 10;
-    display-drun: "";
+    font:           "JetBrains Mono Nerd Font 14";
+    show-icons:     false;
+    location:       0;      /* 0 = center */
+    width:          50;
+    yoffset:        -50;    
+    lines:          3;      
 }
 
+/*****----- Global Properties -----*****/
 * {
-    background:     #000000;  /* Black background for everything */
-    background-alt: #000000;  /* Ensures no alternation */
-    foreground:     #CCCCCC;
-    selected:       #3584E4;
-    active:         #2E7D32;
-    urgent:         #C62828;
+    /* Tokyo Night Color Palette */
+    bg-col:       #1a1b26ff; /* Main Background */
+    bg-alt:       #24283bff; /* Lighter Background for elements */
+    fg-col:       #c0caf5ff; /* Main Foreground */
+    fg-alt:       #a9b1d6ff; /* Dimmer Foreground for placeholders */
+    accent:       #bb9af7ff; /* Magenta/Purple for accents */
+    selected:     #7aa2f7ff; /* Blue for selection highlight */
+
+    background-color: transparent;
+    text-color:       @fg-col;
 }
 
+/*****----- Main Window -----*****/
 window {
-    fullscreen: false;
-    background-color: rgba(0, 0, 0, 0.8);  /* Solid black transparent background */
-    border-radius: 50px;
+    transparency:     "real";
+    background-color: @bg-col;
+    border:           2px;
+    border-color:     @selected; /* Using blue for the main border */
+    border-radius:    8px;
+    padding:          12px;
 }
 
+/*****----- Main Box -----*****/
 mainbox {
-    padding: 50px 50px;
-    background-color: transparent;  /* Ensures black background fills entire main area */
-    children: [inputbar, listview];
-    spacing: 20px;
+    children:         [ inputbar, listview ];
+    spacing:          10px;
+    background-color: transparent;
 }
 
+/*****----- Inputbar -----*****/
 inputbar {
-    background-color: #333333;  /* Dark gray background for input bar */
-    padding: 8px;
-    border-radius: 8px;
-    children: [prompt, entry];
+    background-color: @bg-alt;
+    border:           1px;
+    border-color:     @accent; /* Using magenta for the input border */
+    border-radius:    6px;
+    padding:          6px 12px;
+    spacing:          12px;
+    children:         [ prompt, entry ];
 }
 
 prompt {
-    enabled: true;
-    padding: 8px;
-    background-color: @selected;
-    text-color: #000000;
-    border-radius: 4px;
+    background-color: transparent;
+    text-color:       @accent;
 }
 
 entry {
-    padding: 8px;
-    background-color: transparent;  /* Slightly lighter gray for visibility */
-    text-color: #FFFFFF;        /* White text to make typing visible */
-    placeholder: "Search...";
-    placeholder-color: rgba(255, 255, 255, 0.5);
-    border-radius: 6px;
+    background-color:  transparent;
+    text-color:        @fg-col;
+    placeholder:       "Search...";
+    placeholder-color: @fg-alt;
 }
 
+/*****----- List of items -----*****/
 listview {
-    layout: vertical;
-    spacing: 8px;
-    lines: 9;
-    background-color: transparent;  /* Consistent black background for list items */
+    scrollbar:        false;
+    spacing:          4px;
+    padding:          4px 0px;
+    layout:           vertical;
+    background-color: transparent;
 }
 
+/*****----- Elements -----*****/
 element {
-    padding: 12px;
-    border-radius: 4px;
-    background-color: transparent;  /* Uniform color for each list item */
-    text-color: @foreground;
-}
-
-element normal.normal {
-    background-color: transparent;  /* Ensures no alternating color */
-}
-
-element selected.normal {
-    background-color: @selected;
-    text-color: #FFFFFF;
+    padding:          6px 12px;
+    border-radius:    6px;
+    spacing:          15px;
+    background-color: transparent;
 }
 
 element-text {
+    vertical-align:   0.5;
     background-color: transparent;
-    text-color: inherit;
-    vertical-align: 0.5;
+    text-color:       inherit;
+}
+
+/* Default state of elements */
+element normal.normal {
+    background-color: transparent;
+    text-color:       @fg-col;
+}
+
+/* Selected entry in the list */
+element selected.normal {
+    background-color: @selected; /* Blue highlight */
+    text-color:       @bg-col;   /* Dark text for high contrast */
 }

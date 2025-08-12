@@ -1,5 +1,6 @@
 import shutil
 import subprocess
+import textwrap
 
 from ....core.config import RofiConfig
 from ....core.utils import detect
@@ -18,11 +19,14 @@ class RofiSelector(BaseSelector):
             preview = None
         rofi_input = preview if preview else "\n".join(choices)
 
+        theme = self.config.theme_preview if preview else self.config.theme_main
+        theme = theme if choices else self.config.theme_input
+        theme = self.config.theme_confirm if "Yes" in choices else theme
         args = [
             self.executable,
             "-no-config",
             "-theme",
-            self.config.theme_preview if preview else self.config.theme_main,
+            theme,
             "-p",
             prompt,
             "-i",
@@ -40,15 +44,23 @@ class RofiSelector(BaseSelector):
         if result:
             choice = result.stdout.strip()
             return choice
+        else:
+            # HACK: force exit if no input
+            exit(1)
 
     def confirm(self, prompt, *, default=False):
         choices = ["Yes", "No"]
         default_choice = "Yes" if default else "No"
-        result = self.choose(prompt, choices, header=f"Default: {default_choice}")
+
+        result = self.choose(
+            "\n".join(textwrap.wrap(prompt, width=30)),
+            choices,
+            header=f"Default: {default_choice}",
+        )
         return result == "Yes"
 
     def ask(self, prompt, *, default=None):
-        return self.choose(prompt, [])
+        return self.choose("\n".join(textwrap.wrap(prompt, width=30)), [])
 
     def choose_multiple(
         self, prompt: str, choices: list[str], preview: str | None = None
@@ -75,7 +87,9 @@ class RofiSelector(BaseSelector):
         if result:
             choice = result.stdout.strip()
             return choice.split()
-        return []
+
+        # HACK: force exit if no input
+        exit(1)
 
 
 if __name__ == "__main__":
