@@ -85,6 +85,13 @@ class MediaRegistryService:
 
             logger.debug("saved registry index")
 
+    def get_seen_notifications(self) -> dict[int, str]:
+        seen = {}
+        for id, index_entry in self._load_index().media_index.items():
+            if episode := index_entry.last_notified_episode:
+                seen[index_entry.media_id] = episode
+        return seen
+
     def get_media_index_entry(self, media_id: int) -> Optional[MediaRegistryIndexEntry]:
         index = self._load_index()
         return index.media_index.get(f"{self._media_api}_{media_id}")
@@ -102,7 +109,7 @@ class MediaRegistryService:
 
         record = MediaRecord.model_validate(data)
 
-        logger.debug(f"Loaded media record for {media_id}")
+        # logger.debug(f"Loaded media record for {media_id}")
         return record
 
     def get_or_create_index_entry(self, media_id: int) -> MediaRegistryIndexEntry:
@@ -184,6 +191,8 @@ class MediaRegistryService:
         else:
             if not index_entry.status:
                 index_entry.status = UserMediaListStatus.WATCHING
+            elif index_entry.status == UserMediaListStatus.COMPLETED:
+                index_entry.status = UserMediaListStatus.REPEATING
 
         if last_watch_position:
             index_entry.last_watch_position = last_watch_position
@@ -550,13 +559,12 @@ class MediaRegistryService:
                     break
 
             if not episode_record:
-                if not file_path:
-                    logger.error(f"File path required for new episode {episode_number}")
-                    return False
+                # Allow creation without file_path for queued/in-progress states.
+                # Only require file_path once the episode is marked COMPLETED.
                 episode_record = MediaEpisode(
                     episode_number=episode_number,
-                    file_path=file_path,
                     download_status=status,
+                    file_path=file_path,
                 )
                 record.media_episodes.append(episode_record)
 
@@ -564,6 +572,12 @@ class MediaRegistryService:
             episode_record.download_status = status
             if file_path:
                 episode_record.file_path = file_path
+            elif status.name == "COMPLETED" and not episode_record.file_path:
+                logger.warning(
+                    "Completed status set without file_path for media %s episode %s",
+                    media_id,
+                    episode_number,
+                )
             if file_size is not None:
                 episode_record.file_size = file_size
             if quality:

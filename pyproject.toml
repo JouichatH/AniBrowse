@@ -23,7 +23,10 @@ standard = [
  "yt-dlp>=2025.7.21",
  "pycryptodomex>=3.23.0",
 ]
-notifications = ["plyer>=2.1.0"]
+notifications = [
+    "dbus-python>=1.4.0",
+    "plyer>=2.1.0",
+]
 mpv = [
     "mpv>=1.0.7",
 ]

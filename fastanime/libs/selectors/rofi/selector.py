@@ -2,6 +2,7 @@ import shutil
 import subprocess
 
 from ....core.config import RofiConfig
+from ....core.utils import detect
 from ..base import BaseSelector
 
 
@@ -13,13 +14,52 @@ class RofiSelector(BaseSelector):
             raise FileNotFoundError("rofi executable not found in PATH.")
 
     def choose(self, prompt, choices, *, preview=None, header=None):
-        rofi_input = "\n".join(choices)
+        if preview and detect.is_bash_script(preview):
+            preview = None
+        rofi_input = preview if preview else "\n".join(choices)
 
         args = [
             self.executable,
             "-no-config",
             "-theme",
+            self.config.theme_preview if preview else self.config.theme_main,
+            "-p",
+            prompt,
+            "-i",
+            "-dmenu",
+        ]
+        if preview:
+            args.append("-show-icons")
+        result = subprocess.run(
+            args,
+            input=rofi_input,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+
+        if result:
+            choice = result.stdout.strip()
+            return choice
+
+    def confirm(self, prompt, *, default=False):
+        choices = ["Yes", "No"]
+        default_choice = "Yes" if default else "No"
+        result = self.choose(prompt, choices, header=f"Default: {default_choice}")
+        return result == "Yes"
+
+    def ask(self, prompt, *, default=None):
+        return self.choose(prompt, [])
+
+    def choose_multiple(
+        self, prompt: str, choices: list[str], preview: str | None = None
+    ) -> list[str]:
+        rofi_input = "\n".join(choices)
+        args = [
+            self.executable,
+            "-no-config",
+            "-theme",
             self.config.theme_main,
+            "-multi-select",
             "-p",
             prompt,
             "-i",
@@ -34,14 +74,18 @@ class RofiSelector(BaseSelector):
 
         if result:
             choice = result.stdout.strip()
-            return choice
+            return choice.split()
+        return []
 
-    def confirm(self, prompt, *, default=False):
-        # Maps directly to your existing `confirm` method
-        # ... (logic from your `Rofi.confirm` method) ...
-        pass
 
-    def ask(self, prompt, *, default=None):
-        # Maps directly to your existing `ask` method
-        # ... (logic from your `Rofi.ask` method) ...
-        pass
+if __name__ == "__main__":
+    config = RofiConfig()
+    selector = RofiSelector(config)
+    choice = selector.ask("Hello dev :)")
+    print(choice)
+    choice = selector.confirm("Hello dev :)")
+    print(choice)
+    choice = selector.choose_multiple("What comes first", ["a", "b"])
+    print(choice)
+    choice = selector.choose("What comes first", ["a", "b"])
+    print(choice)

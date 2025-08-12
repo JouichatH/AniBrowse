@@ -14,8 +14,7 @@ from fastanime.libs.media_api.types import (
 )
 
 
-@click.command(help="Queue episodes for the background worker to download.")
-# Search/Filter options (mirrors 'fastanime anilist download')
+@click.command(name="add", help="Add episodes to the background download queue.")
 @click.option("--title", "-t")
 @click.option("--page", "-p", type=click.IntRange(min=1), default=1)
 @click.option("--per-page", type=click.IntRange(min=1, max=50))
@@ -33,8 +32,12 @@ from fastanime.libs.media_api.types import (
 @click.option(
     "--genres-not", multiple=True, type=click.Choice([g.value for g in MediaGenre])
 )
-@click.option("--tags", "-T", multiple=True, type=click.Choice([t.value for t in MediaTag]))
-@click.option("--tags-not", multiple=True, type=click.Choice([t.value for t in MediaTag]))
+@click.option(
+    "--tags", "-T", multiple=True, type=click.Choice([t.value for t in MediaTag])
+)
+@click.option(
+    "--tags-not", multiple=True, type=click.Choice([t.value for t in MediaTag])
+)
 @click.option(
     "--media-format",
     "-f",
@@ -63,21 +66,16 @@ from fastanime.libs.media_api.types import (
     "--yes",
     "-Y",
     is_flag=True,
-    help="Automatically queue from all found anime without prompting for selection.",
+    help="Queue for all found anime without prompting for selection.",
 )
 @click.pass_obj
-def queue(config: AppConfig, **options):
-    """
-    Search AniList with filters, select one or more anime (or use --yes),
-    and queue the specified episode range for background download.
-    The background worker should be running to process the queue.
-    """
-    from fastanime.cli.service.download.service import DownloadService
+def add(config: AppConfig, **options):
+    from fastanime.cli.service.download import DownloadService
     from fastanime.cli.service.feedback import FeedbackService
     from fastanime.cli.service.registry import MediaRegistryService
     from fastanime.cli.utils.parser import parse_episode_range
-    from fastanime.libs.media_api.params import MediaSearchParams
     from fastanime.libs.media_api.api import create_api_client
+    from fastanime.libs.media_api.params import MediaSearchParams
     from fastanime.libs.provider.anime.provider import create_provider
     from fastanime.libs.selectors import create_selector
     from rich.progress import Progress
@@ -151,7 +149,7 @@ def queue(config: AppConfig, **options):
             }
             preview_command = None
             if config.general.preview != "none":
-                from ..utils.preview import create_preview_context  # type: ignore
+                from fastanime.cli.utils.preview import create_preview_context
 
                 with create_preview_context() as preview_ctx:
                     preview_command = preview_ctx.get_anime_preview(
@@ -177,6 +175,7 @@ def queue(config: AppConfig, **options):
         episode_range_str = options.get("episode_range")
         total_queued = 0
         for media_item in anime_to_queue:
+            # TODO: do a provider search here to determine episodes available maybe, or allow pasing of an episode list probably just change the format for parsing episodes
             available_episodes = [str(i + 1) for i in range(media_item.episodes or 0)]
             if not available_episodes:
                 feedback.warning(
@@ -213,6 +212,6 @@ def queue(config: AppConfig, **options):
         )
 
     except FastAnimeError as e:
-        feedback.error("Queue command failed", str(e))
+        feedback.error("Queue add failed", str(e))
     except Exception as e:
         feedback.error("An unexpected error occurred", str(e))

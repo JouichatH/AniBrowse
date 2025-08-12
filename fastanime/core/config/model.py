@@ -17,7 +17,57 @@ class GeneralConfig(BaseModel):
         default=defaults.GENERAL_PREFERRED_TRACKER,
         description=desc.GENERAL_PREFERRED_TRACKER,
     )
-    pygment_style: str = Field(
+    pygment_style: Literal[
+        "abap",
+        "algol",
+        "algol_nu",
+        "arduino",
+        "autumn",
+        "bw",
+        "borland",
+        "coffee",
+        "colorful",
+        "default",
+        "dracula",
+        "emacs",
+        "friendly_grayscale",
+        "friendly",
+        "fruity",
+        "github-dark",
+        "gruvbox-dark",
+        "gruvbox-light",
+        "igor",
+        "inkpot",
+        "lightbulb",
+        "lilypond",
+        "lovelace",
+        "manni",
+        "material",
+        "monokai",
+        "murphy",
+        "native",
+        "nord-darker",
+        "nord",
+        "one-dark",
+        "paraiso-dark",
+        "paraiso-light",
+        "pastie",
+        "perldoc",
+        "rainbow_dash",
+        "rrt",
+        "sas",
+        "solarized-dark",
+        "solarized-light",
+        "staroffice",
+        "stata-dark",
+        "stata-light",
+        "tango",
+        "trac",
+        "vim",
+        "vs",
+        "xcode",
+        "zenburn",
+    ] = Field(
         default=defaults.GENERAL_PYGMENT_STYLE, description=desc.GENERAL_PYGMENT_STYLE
     )
     preferred_spinner: Literal[
@@ -244,6 +294,15 @@ class WorkerConfig(OtherConfig):
         ge=1,
         description="How often to process the download queue (in minutes).",
     )
+    download_check_failed_interval: int = Field(
+        default=60,  # in minutes
+        ge=1,
+        description="How often to process the failed download queue (in minutes).",
+    )
+    auto_download_new_episode: bool = Field(
+        default=True,
+        description="Whether to automatically download a new episode that has been notified",
+    )
 
 
 class SessionsConfig(OtherConfig):
@@ -399,7 +458,7 @@ class DownloadsConfig(OtherConfig):
         ge=1,
         description=desc.DOWNLOADS_MAX_CONCURRENT,
     )
-    retry_attempts: int = Field(
+    max_retry_attempts: int = Field(
         default=defaults.DOWNLOADS_RETRY_ATTEMPTS,
         ge=0,
         description=desc.DOWNLOADS_RETRY_ATTEMPTS,

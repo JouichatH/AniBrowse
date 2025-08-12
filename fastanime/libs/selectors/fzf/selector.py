@@ -141,3 +141,16 @@ class FzfSelector(BaseSelector):
         if result.returncode != 0:
             return None
         return result.stdout.strip()
+
+
+if __name__ == "__main__":
+    config = FzfConfig()
+    selector = FzfSelector(config)
+    choice = selector.ask("Hello dev :)")
+    print(choice)
+    choice = selector.confirm("Hello dev :)")
+    print(choice)
+    choice = selector.choose_multiple("What comes first", ["a", "b"])
+    print(choice)
+    choice = selector.choose("What comes first", ["a", "b"])
+    print(choice)

@@ -1,7 +1,9 @@
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, List
 
 from ....core.config.model import AppConfig
+from ....core.constants import APP_CACHE_DIR
 from ....core.downloader import DownloadParams, create_downloader
 from ....core.utils.concurrency import ManagedBackgroundWorker, thread_manager
 from ....core.utils.fuzzy import fuzz
@@ -21,6 +23,7 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+NOTIFICATION_ICONS_CACHE_DIR = APP_CACHE_DIR / "notification_icons"
 
 
 class DownloadService:
@@ -31,13 +34,14 @@ class DownloadService:
         media_api_service: "BaseApiClient",
         provider_service: "BaseAnimeProvider",
     ):
-        self.config = config
+        self.app_config = config
         self.registry = registry_service
         self.media_api = media_api_service
         self.provider = provider_service
         self.downloader = create_downloader(config.downloads)
+        # Track in-flight downloads to avoid duplicate queueing
+        self._inflight: set[tuple[int, str]] = set()
 
-        # Worker is kept for potential future background commands
         self._worker = ManagedBackgroundWorker(
             max_workers=config.downloads.max_concurrent_downloads,
             name="DownloadWorker",
@@ -56,18 +60,25 @@ class DownloadService:
         self._worker.shutdown(wait=False)
 
     def add_to_queue(self, media_item: MediaItem, episode_number: str) -> bool:
-        """Adds a download job to the ASYNCHRONOUS queue."""
+        """Mark an episode as queued in the registry (no immediate download)."""
         logger.info(
-            f"Queueing background download for '{media_item.title.english}' Episode {episode_number}"
+            f"Queueing episode '{episode_number}' for '{media_item.title.english}' (registry only)"
         )
         self.registry.get_or_create_record(media_item)
-        updated = self.registry.update_episode_download_status(
+        return self.registry.update_episode_download_status(
             media_id=media_item.id,
             episode_number=episode_number,
             status=DownloadStatus.QUEUED,
         )
-        if not updated:
+
+    def _submit_download(self, media_item: MediaItem, episode_number: str) -> bool:
+        """Submit a download task to the worker if not already in-flight."""
+        key = (media_item.id, str(episode_number))
+        if key in self._inflight:
             return False
+        if not self._worker.is_running():
+            self._worker.start()
+        self._inflight.add(key)
         self._worker.submit_function(
             self._execute_download_job, media_item, episode_number
         )
@@ -92,6 +103,7 @@ class DownloadService:
     def resume_unfinished_downloads(self):
         """Finds and re-queues any downloads that were left in an unfinished state."""
         logger.info("Checking for unfinished downloads to resume...")
+        # TODO: make the checking of unfinished downloads more efficient probably by modifying the registry to be aware of what actually changed and load that instead
         queued_jobs = self.registry.get_episodes_by_download_status(
             DownloadStatus.QUEUED
         )
@@ -108,9 +120,54 @@ class DownloadService:
             f"Found {len(unfinished_jobs)} unfinished downloads. Re-queueing..."
         )
         for media_id, episode_number in unfinished_jobs:
+            if (media_id, str(episode_number)) in self._inflight:
+                continue
             record = self.registry.get_media_record(media_id)
             if record and record.media_item:
-                self.add_to_queue(record.media_item, episode_number)
+                self._submit_download(record.media_item, episode_number)
+            else:
+                logger.error(
+                    f"Could not find metadata for media ID {media_id}. Cannot resume. Please run 'fastanime registry sync'."
+                )
+
+    def retry_failed_downloads(self):
+        """Finds and re-queues any downloads that were left in an unfinished state."""
+        logger.info("Checking for unfinished downloads to resume...")
+        # TODO: may need to improve this
+        queued_jobs = self.registry.get_episodes_by_download_status(
+            DownloadStatus.FAILED
+        )
+
+        unfinished_jobs = queued_jobs
+        if not unfinished_jobs:
+            logger.info("No unfinished downloads found.")
+            return
+
+        logger.info(
+            f"Found {len(unfinished_jobs)} unfinished downloads. Re-queueing..."
+        )
+        for media_id, episode_number in unfinished_jobs:
+            if (media_id, str(episode_number)) in self._inflight:
+                continue
+
+            record = self.registry.get_media_record(media_id)
+            if record and record.media_item:
+                for episode in record.media_episodes:
+                    if episode_number != episode.episode_number:
+                        continue
+                    if (
+                        episode.download_attempts
+                        <= self.app_config.downloads.max_retry_attempts
+                    ):
+                        logger.info(
+                            f"Retrying {episode_number} of {record.media_item.title.english}"
+                        )
+                        self._submit_download(record.media_item, episode_number)
+                    else:
+                        logger.info(
+                            f"Max attempts reached for {episode_number} of {record.media_item.title.english}"
+                        )
+
             else:
                 logger.error(
                     f"Could not find metadata for media ID {media_id}. Cannot resume. Please run 'fastanime registry sync'."
@@ -130,12 +187,17 @@ class DownloadService:
 
             # 1. Search the provider to get the provider-specific ID
             provider_search_results = self.provider.search(
-                SearchParams(query=media_title)
+                SearchParams(
+                    query=normalize_title(
+                        media_title, self.app_config.general.provider.value, True
+                    ),
+                    translation_type=self.app_config.stream.translation_type,
+                )
             )
 
             if not provider_search_results or not provider_search_results.results:
                 raise ValueError(
-                    f"Could not find '{media_title}' on provider '{self.config.general.provider.value}'"
+                    f"Could not find '{media_title}' on provider '{self.app_config.general.provider.value}'"
                 )
 
             # 2. Find the best match using fuzzy logic (like auto-select)
@@ -146,7 +208,7 @@ class DownloadService:
                 provider_results_map.keys(),
                 key=lambda p_title: fuzz.ratio(
                     normalize_title(
-                        p_title, self.config.general.provider.value
+                        p_title, self.app_config.general.provider.value
                     ).lower(),
                     media_title.lower(),
                 ),
@@ -168,7 +230,7 @@ class DownloadService:
                     anime_id=provider_anime.id,
                     query=media_title,
                     episode=episode_number,
-                    translation_type=self.config.stream.translation_type,
+                    translation_type=self.app_config.stream.translation_type,
                 )
             )
             if not streams_iterator:
@@ -178,11 +240,11 @@ class DownloadService:
             if not server or not server.links:
                 raise ValueError(f"No stream links found for Episode {episode_number}")
 
-            if server.name != self.config.downloads.server.value:
+            if server.name != self.app_config.downloads.server.value:
                 while True:
                     try:
                         _server = next(streams_iterator)
-                        if _server.name == self.config.downloads.server.value:
+                        if _server.name == self.app_config.downloads.server.value:
                             server = _server
                             break
                     except StopIteration:
@@ -202,9 +264,9 @@ class DownloadService:
                 silent=False,
                 headers=server.headers,
                 subtitles=[sub.url for sub in server.subtitles],
-                merge=self.config.downloads.merge_subtitles,
-                clean=self.config.downloads.cleanup_after_merge,
-                no_check_certificate=self.config.downloads.no_check_certificate,
+                merge=self.app_config.downloads.merge_subtitles,
+                clean=self.app_config.downloads.cleanup_after_merge,
+                no_check_certificate=self.app_config.downloads.no_check_certificate,
             )
 
             result = self.downloader.download(download_params)
@@ -223,19 +285,49 @@ class DownloadService:
                     file_path=result.merged_path or result.video_path,
                     file_size=file_size,
                     quality=stream_link.quality,
-                    provider_name=self.config.general.provider.value,
+                    provider_name=self.app_config.general.provider.value,
                     server_name=server.name,
                     subtitle_paths=result.subtitle_paths,
                 )
-                logger.info(
-                    f"Successfully downloaded Episode {episode_number} of '{media_title}'"
-                )
+                message = f"Successfully downloaded Episode {episode_number} of '{media_title}'"
+                try:
+                    from plyer import notification
+
+                    icon_path = self._get_or_fetch_icon(media_item)
+                    app_icon = str(icon_path) if icon_path else None
+
+                    notification.notify(  # type: ignore
+                        title="FastAnime: New Episode",
+                        message=message,
+                        app_name="FastAnime",
+                        app_icon=app_icon,
+                        timeout=20,
+                    )
+                except:
+                    pass
+                logger.info(message)
             else:
                 raise ValueError(result.error_message or "Unknown download error")
 
         except Exception as e:
+            message = f"Download failed for '{media_item.title.english}' Ep {episode_number}: {e}"
+            try:
+                from plyer import notification
+
+                icon_path = self._get_or_fetch_icon(media_item)
+                app_icon = str(icon_path) if icon_path else None
+
+                notification.notify(  # type: ignore
+                    title="FastAnime: New Episode",
+                    message=message,
+                    app_name="FastAnime",
+                    app_icon=app_icon,
+                    timeout=20,
+                )
+            except:
+                pass
             logger.error(
-                f"Download failed for '{media_item.title.english}' Ep {episode_number}: {e}",
+                message,
                 exc_info=True,
             )
             self.registry.update_episode_download_status(
@@ -244,3 +336,39 @@ class DownloadService:
                 status=DownloadStatus.FAILED,
                 error_message=str(e),
             )
+        finally:
+            # Remove from in-flight tracking regardless of outcome
+            try:
+                self._inflight.discard((media_item.id, str(episode_number)))
+            except Exception:
+                pass
+
+    def _get_or_fetch_icon(self, media_item: MediaItem) -> Path | None:
+        """Fetch and cache a small cover image for system notifications."""
+        import httpx
+
+        try:
+            cover = media_item.cover_image
+            url = None
+            if cover:
+                url = cover.extra_large or cover.large or cover.medium
+            if not url:
+                return None
+
+            cache_dir = NOTIFICATION_ICONS_CACHE_DIR
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            icon_path = cache_dir / f"{media_item.id}.png"
+            if icon_path.exists() and icon_path.stat().st_size > 0:
+                return icon_path
+
+            # Directly download the image bytes without resizing
+            with httpx.Client(follow_redirects=True, timeout=20) as client:
+                resp = client.get(url)
+                resp.raise_for_status()
+                data = resp.content
+                if data:
+                    icon_path.write_bytes(data)
+                    return icon_path
+        except Exception as e:
+            logger.debug(f"Could not fetch icon for media {media_item.id}: {e}")
+        return None

@@ -31,6 +31,7 @@ class BaseSelector(ABC):
         """
         pass
 
+    @abstractmethod
     def choose_multiple(
         self,
         prompt: str,
@@ -50,29 +51,7 @@ class BaseSelector(ABC):
         Returns:
             A list of the chosen items.
         """
-        # Default implementation: single selection in a loop
-        selected = []
-        remaining_choices = choices.copy()
-
-        while remaining_choices:
-            choice = self.choose(
-                f"{prompt} (Select multiple, empty to finish)",
-                remaining_choices + ["[DONE] Finish selection"],
-                preview=preview,
-            )
-
-            if not choice or choice == "[DONE] Finish selection":
-                break
-
-            selected.append(choice)
-            remaining_choices.remove(choice)
-
-            if not self.confirm(
-                f"Selected: {', '.join(selected)}. Continue selecting?", default=True
-            ):
-                break
-
-        return selected
+        pass
 
     @abstractmethod
     def confirm(self, prompt: str, *, default: bool = False) -> bool:

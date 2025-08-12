@@ -40,8 +40,6 @@ class MediaEpisode(BaseModel):
     download_attempts: int = 0  # Number of download attempts
     last_error: Optional[str] = None  # Last error message if failed
 
-    model_config = {"arbitrary_types_allowed": True}
-
 
 class MediaRecord(BaseModel):
     media_item: MediaItem
