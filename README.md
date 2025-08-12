@@ -8,17 +8,19 @@
 </p>
 <div align="center">
 
-![PyPI - Downloads](https://img.shields.io/pypi/dm/fastanime) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Benexl/FastAnime/test.yml?label=Tests)
-![Discord](https://img.shields.io/discord/1250887070906323096?label=Discord)
-![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/Benexl/FastAnime)
-![PyPI - License](https://img.shields.io/pypi/l/fastanime)
-![Static Badge](https://img.shields.io/badge/lines%20of%20code-13k%2B-green)
+[![PyPI - Version](https://img.shields.io/pypi/v/fastanime)](https://pypi.org/project/fastanime/)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/fastanime)](https://pypi.org/project/fastanime/)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Benexl/FastAnime/test.yml?label=Tests)](https://github.com/Benexl/FastAnime/actions)
+[![Discord](https://img.shields.io/discord/1250887070906323096?label=Discord&logo=discord)](https://discord.gg/HBEmAwvbHV)
+[![GitHub Issues](https://img.shields.io/github/issues/Benexl/FastAnime)](https://github.com/Benexl/FastAnime/issues)
+[![PyPI - License](https://img.shields.io/pypi/l/fastanime)](https://github.com/Benexl/FastAnime/blob/master/LICENSE)
+
 </div>
 
 <p align="center">
-<a href="https://discord.gg/HBEmAwvbHV">
-<img src="https://invidget.switchblade.xyz/C4rhMA4mmK">
-</a>
+  <a href="https://discord.gg/HBEmAwvbHV">
+    <img src="https://invidget.switchblade.xyz/C4rhMA4mmK" alt="Discord Server Invite">
+  </a>
 </p>
 
 ![fastanime](https://github.com/user-attachments/assets/9ab09f26-e4a8-4b70-a315-7def998cec63)
@@ -53,49 +55,44 @@
 
 </details>
 
+## Core Features
+
+*   📺 **Interactive TUI:** Browse, search, and manage your AniList library in a rich terminal interface powered by `fzf`, `rofi`, or a built-in selector.
+*   ⚡ **Powerful Search:** Filter the entire AniList database with over 20 different criteria, including genres, tags, year, status, and score.
+*   💾 **Local Registry:** Maintain a fast, local database of your anime for offline access, detailed stats, and robust data management.
+*   ⚙️ **Background Downloader:** Queue episodes for download and let a persistent background worker handle the rest.
+*   📜 **Scriptable CLI:** Automate streaming and downloading with powerful, non-interactive commands perfect for scripting.
+*   🔧 **Highly Customizable:** Tailor every aspect—from UI colors and providers to playback behavior—via a simple, well-documented configuration file.
+*   🔌 **Extensible Architecture:** Easily add new providers, media players, and UI selectors to fit your workflow.
+
 ## Installation
 
-![Windows](https://img.shields.io/badge/-Windows_x64-blue.svg?style=for-the-badge&logo=windows)
-![Linux/BSD](https://img.shields.io/badge/-Linux/BSD-red.svg?style=for-the-badge&logo=linux)
-![Arch Linux](https://img.shields.io/badge/-Arch_Linux-black.svg?style=for-the-badge&logo=archlinux)
-![MacOS](https://img.shields.io/badge/-MacOS-lightblue.svg?style=for-the-badge&logo=apple)
-![Android](https://img.shields.io/badge/-Android-green.svg?style=for-the-badge&logo=android)
+FastAnime runs on any platform with Python 3.10+, including Windows, macOS, Linux, and Android (via Termux).
 
-The app runs wherever Python 3.10+ is available. On Android, you can use [Termux](https://github.com/termux/termux-app). For installation help, join our [Discord](https://discord.gg/HBEmAwvbHV).
+### Prerequisites
 
-### Installation on NixOS
+For the best experience, please install these external tools:
 
-![Static Badge](https://img.shields.io/badge/NixOs-black?style=flat&logo=nixos)
-
-```bash
-nix profile install github:Benexl/fastanime
-```
-
-### Installation on Arch Linux
-
-![Static Badge](https://img.shields.io/badge/arch-black?style=flat&logo=archlinux)
-
-Install from the AUR using an AUR helper like `yay` or `paru`.
-
-```bash
-# Stable version (recommended)
-yay -S fastanime
-
-# Git version (latest commit)
-yay -S fastanime-git
-```
+*   **Required for Streaming:**
+    *   [**mpv**](https://mpv.io/installation/) - The primary and recommended media player.
+*   **Recommended for UI & Previews:**
+    *   [**fzf**](https://github.com/junegunn/fzf) - For the best fuzzy-finder interface.
+    *   [**chafa**](https://github.com/hpjansson/chafa) or [**kitty's icat**](https://sw.kovidgoyal.net/kitty/kittens/icat/) - For image previews in the terminal.
+*   **Recommended for Downloads & Advanced Features:**
+    *   [**ffmpeg**](https://www.ffmpeg.org/) - Required for downloading HLS streams and merging subtitles.
+    *   [**webtorrent-cli**](https://github.com/webtorrent/webtorrent-cli) - For streaming torrents directly.
 
 ### Recommended Installation (uv)
 
-The recommended installation method is with [uv](https://docs.astral.sh/uv/), a fast Python package manager.
+The best way to install FastAnime is with [**uv**](https://github.com/astral-sh/uv), a lightning-fast Python package manager.
 
 ```bash
-# Install with all optional features (recommended for the full experience)
+# Install with all optional features for the full experience
 uv tool install "fastanime[standard]"
 
-# Stripped-down installations
+# Or, pick and choose the extras you need:
 uv tool install fastanime  # Core functionality only
-uv tool install "fastanime[download]"  # For advanced downloading
+uv tool install "fastanime[download]"  # For advanced downloading with yt-dlp
 uv tool install "fastanime[discord]"   # For Discord Rich Presence
 uv tool install "fastanime[notifications]" # For desktop notifications
 ```
@@ -103,9 +100,24 @@ uv tool install "fastanime[notifications]" # For desktop notifications
 ### Other Installation Methods
 
 <details>
-  <summary><b>pipx or pip</b></summary>
+  <summary><b>Platform-Specific and Alternative Installers</b></summary>
   
-  #### Using pipx (Recommended for isolated environments)
+  #### Nix / NixOS
+  ```bash
+  nix profile install github:Benexl/fastanime
+  ```
+
+  #### Arch Linux (AUR)
+  Use an AUR helper like `yay` or `paru`.
+  ```bash
+  # Stable version (recommended)
+  yay -S fastanime
+
+  # Git version (latest commit)
+  yay -S fastanime-git
+  ```
+
+  #### Using pipx (for isolated environments)
   ```bash
   pipx install "fastanime[standard]"
   ```
@@ -117,17 +129,9 @@ uv tool install "fastanime[notifications]" # For desktop notifications
 </details>
 
 <details>
-  <summary><b>Bleeding Edge & Building from Source</b></summary>
+  <summary><b>Building from Source</b></summary>
   
-  ### Installing the Bleeding Edge Version
-  Download the latest `fastanime_debug_build` artifact from the [GitHub Actions page](https://github.com/Benexl/FastAnime/actions), then:
-  ```bash
-  unzip fastanime_debug_build.zip
-  uv tool install fastanime-*.whl
-  ```
-
-  ### Building from Source
-  Requirements: [Git](https://git-scm.com/), [Python 3.10+](https://www.python.org/), and [uv](https://astral.sh/blog/uv).
+  Requires [Git](https://git-scm.com/), [Python 3.10+](https://www.python.org/), and [uv](https://astral.sh/blog/uv).
   ```bash
   git clone https://github.com/Benexl/FastAnime.git --depth 1
   cd FastAnime
@@ -139,63 +143,37 @@ uv tool install "fastanime[notifications]" # For desktop notifications
 > [!TIP]
 > Enable shell completions for a much better experience by running `fastanime completions` and following the on-screen instructions for your shell.
 
-### External Dependencies
+## Getting Started: Quick Start
 
-For the best experience, install these external tools:
+Get up and running in three simple steps:
 
-*   **Required for Streaming:**
-    *   [**mpv**](https://mpv.io/installation/) - The primary media player.
-*   **Recommended for UI & Previews:**
-    *   [**fzf**](https://github.com/junegunn/fzf) - For a powerful fuzzy-finder interface.
-    *   [**chafa**](https://github.com/hpjansson/chafa) or [**kitty's icat**](https://sw.kovidgoyal.net/kitty/kittens/icat/) - For image previews in the terminal.
-*   **Recommended for Downloads & Features:**
-    *   [**ffmpeg**](https://www.ffmpeg.org/) - Required for downloading HLS streams.
-    *   [**webtorrent-cli**](https://github.com/webtorrent/webtorrent-cli) - For streaming torrents.
-    *   [**syncplay**](https://syncplay.pl/) - To watch anime together with friends.
-    *   [**feh**](https://github.com/derf/feh) or **kitty's icat** - For the experimental manga mode.
+1.  **Authenticate with AniList:**
+    ```bash
+    fastanime anilist auth
+    ```
+    This will open your browser. Authorize the app and paste the obtained token back into the terminal.
 
-## Usage
+2.  **Launch the Interactive TUI:**
+    ```bash
+    fastanime anilist
+    ```
 
-FastAnime offers a rich interactive TUI for browsing and a powerful CLI for scripting and automation.
+3.  **Browse & Play:** Use your arrow keys to navigate the menus, select an anime, and choose an episode to stream instantly.
 
-### Global Options
+## Usage Guide
 
-Most options can be passed directly to the `fastanime` command to override your config for that session.
+### The Interactive TUI (`fastanime anilist`)
 
-*   `--provider <allanime|animepahe>`: Choose the streaming site to use.
-*   `--selector <fzf|rofi|default>`: Choose the UI backend.
-*   `--preview`, `--no-preview`: Enable/disable image and info previews (requires `fzf`).
-*   `--dub`, `--sub`: Set preferred translation type.
-*   `--icons`, `--no-icons`: Toggle UI icons.
-*   `--log`, `--log-file`: Enable logging to stdout or a file for debugging.
-*   `--rich-traceback`: Show detailed, formatted tracebacks on error.
-
-### Main Commands
-
-*   `fastanime anilist`: The main entry point for the interactive TUI. Browse, search, and manage your lists.
-*   `fastanime registry`: Manage your local database of anime. Sync, search, backup, and restore.
-*   `fastanime download`: Scriptable command to download specific episodes.
-*   `fastanime search`: Scriptable command to find and stream episodes directly.
-*   `fastanime config`: Manage your configuration file.
-*   `fastanime update`: Update FastAnime to the latest version.
-*   `fastanime queue`: Add episodes to the background download queue.
-*   `fastanime worker`: Run the background worker for downloads and notifications.
-
----
-
-### Deep Dive: `fastanime anilist` (Interactive TUI)
-
-This is the primary way to use FastAnime. Simply run `fastanime anilist` to launch a rich, interactive terminal experience. From here you can:
-
+This is the main, user-friendly way to use FastAnime. It provides a rich terminal experience where you can:
 *   Browse trending, popular, and seasonal anime.
-*   Manage your personal lists (Watching, Completed, etc.) after logging in with `fastanime anilist auth`.
+*   Manage your personal lists (Watching, Completed, Paused, etc.).
 *   Search for any anime in the AniList database.
 *   View detailed information, characters, recommendations, reviews, and airing schedules.
-*   Stream or download episodes.
+*   Stream or download episodes directly from the menus.
 
-#### `anilist search` Subcommand
+### Powerful Searching (`fastanime anilist search`)
 
-A powerful command to filter the AniList database directly from your terminal.
+Filter the entire AniList database with powerful command-line flags.
 
 ```bash
 # Search for anime from 2024, sorted by popularity, that is releasing and not on your list
@@ -208,33 +186,27 @@ fastanime anilist search -g Fantasy -f MOVIE -s POPULARITY_DESC
 fastanime anilist search -t "Demon Slayer" --dump-json
 ```
 
-#### `anilist download` Subcommand
+### Background Downloads (`fastanime queue` & `worker`)
 
-Combines the power of `anilist search` with the `download` command, allowing you to batch-download based on filters.
+FastAnime includes a robust background downloading system.
 
-```bash
-# Download episodes 1-12 of all fantasy anime that aired in Winter 2024
-fastanime anilist download --season WINTER -y 2024 -g Fantasy -r "0:12"
-```
+1.  **Add episodes to the queue:**
+    ```bash
+    # Add episodes 1-12 of Jujutsu Kaisen to the download queue
+    fastanime queue add -t "Jujutsu Kaisen" -r "0:12"
+    ```
+2.  **Start the worker process:**
+    ```bash
+    # Run the worker in the foreground (press Ctrl+C to stop)
+    fastanime worker
 
----
+    # Or run it as a background process
+    fastanime worker &
+    ```The worker will now process the queue, download your episodes, and check for notifications.
 
-### Deep Dive: `fastanime registry` (Local Database)
+### Scriptable Commands (`download` & `search`)
 
-FastAnime maintains a local registry of your anime for offline access, enhanced performance, and powerful data management.
-
-*   `registry sync`: Synchronize your local data with your remote AniList account.
-*   `registry stats`: Show detailed statistics about your viewing habits.
-*   `registry search`: Search your locally stored anime data.
-*   `registry backup`: Create a compressed backup of your entire registry.
-*   `registry restore`: Restore your data from a backup file.
-*   `registry export/import`: Export your data to JSON/CSV for use in other applications.
-
----
-
-### Scriptable Commands: `download` & `search`
-
-These commands are designed for automation and quick access.
+These commands are designed for automation and quick, non-interactive tasks.
 
 #### `download` Examples
 ```bash
@@ -253,109 +225,121 @@ fastanime search -t "Attack on Titan" -r ":"
 # Watch the latest episode directly
 fastanime search -t "My Hero Academia" -r "-1"
 ```
----
+
+### Local Data Management (`fastanime registry`)
+
+FastAnime maintains a local database of your anime for offline access and enhanced performance.
+
+*   `registry sync`: Synchronize your local data with your remote AniList account.
+*   `registry stats`: Show detailed statistics about your viewing habits.
+*   `registry backup`: Create a compressed backup of your entire registry.
+*   `registry restore`: Restore your data from a backup file.
+*   `registry export/import`: Export/import your data to JSON/CSV for use in other applications.
+*   `registry clean`: Clean up orphaned or invalid entries from your local database.
+
+## Configuration
+
+FastAnime is highly customizable. A default configuration file with detailed comments is created on the first run.
+
+*   **Find your config file:** `fastanime config --path`
+*   **Edit in your default editor:** `fastanime config`
+*   **Use the interactive wizard:** `fastanime config --interactive`
+
+Most settings in the config file can be temporarily overridden with command-line flags (e.g., `fastanime --provider animepahe anilist`).
+
+<details>
+  <summary><b>Default Configuration (`config.ini`) Explained</b></summary>
+
+```ini
+# [general] Section: Controls overall application behavior.
+[general]
+provider = allanime          ; The default anime provider (allanime, animepahe).
+selector = fzf               ; The interactive UI tool (fzf, rofi, default).
+preview = full               ; Preview type in selectors (full, text, image, none).
+image_renderer = icat        ; Tool for terminal image previews (icat, chafa).
+icons = True                 ; Display emoji icons in the UI.
+auto_select_anime_result = True ; Automatically select the best search match.
+...
+
+# [stream] Section: Controls playback and streaming.
+[stream]
+player = mpv                 ; The media player to use (mpv, vlc).
+quality = 1080               ; Preferred stream quality (1080, 720, 480, 360).
+translation_type = sub       ; Preferred audio/subtitle type (sub, dub).
+auto_next = False            ; Automatically play the next episode.
+continue_from_watch_history = True ; Resume playback from where you left off.
+use_ipc = True               ; Enable in-player controls via MPV's IPC.
+...
+
+# [downloads] Section: Controls the downloader.
+[downloads]
+downloader = auto            ; Downloader to use (auto, default, yt-dlp).
+downloads_dir = ...          ; Directory to save downloaded anime.
+max_concurrent_downloads = 3 ; Number of parallel downloads in the worker.
+merge_subtitles = True       ; Automatically merge subtitles into the video file.
+cleanup_after_merge = True   ; Delete original files after merging.
+...
+
+# [worker] Section: Controls the background worker process.
+[worker]
+enabled = True
+notification_check_interval = 15 ; How often to check for new episodes (minutes).
+download_check_interval = 5      ; How often to process the download queue (minutes).
+...
+```
+</details>
+
+## Advanced Features
+
 ### MPV IPC Integration
 
-When `use_ipc` is enabled, FastAnime provides powerful in-player controls without closing MPV.
+When `use_ipc = True` is set in your config, FastAnime provides powerful in-player controls without needing to close MPV.
 
-#### Key Bindings
+**Key Bindings:**
 *   `Shift+N`: Play the next episode.
 *   `Shift+P`: Play the previous episode.
 *   `Shift+R`: Reload the current episode.
 *   `Shift+A`: Toggle auto-play for the next episode.
 *   `Shift+T`: Toggle between `dub` and `sub`.
 
-#### Script Messages (MPV Console)
+**Script Messages (For MPV Console):**
 *   `script-message select-episode <number>`: Jump to a specific episode.
 *   `script-message select-server <name>`: Switch to a different streaming server.
 
-## Configuration
+### Running as a Service (Linux/systemd)
 
-FastAnime is highly customizable via its configuration file, located at `~/.config/fastanime/config.ini` (path may vary by OS).
-Run `fastanime config --path` to find the exact location on your system.
+You can run the background worker as a systemd service for persistence.
 
-A default configuration file with detailed comments is created on first run. You can edit it with `fastanime config` or use the interactive wizard with `fastanime config --interactive`.
+1.  Create a service file at `~/.config/systemd/user/fastanime-worker.service`:
+    ```ini
+    [Unit]
+    Description=FastAnime Background Worker
+    After=network-online.target
 
-<details>
-  <summary><b>Default Configuration (`config.ini`)</b></summary>
-  
-```ini
-[general]
-# The preferred watch history tracker (local,remote) in cases of conflicts
-preferred_tracker = local
-# The pygment style to use
-pygment_style = github-dark
-# The spinner to use
-preferred_spinner = smiley
-# The media database API to use (e.g., 'anilist', 'jikan').
-media_api = anilist
-# The default anime provider to use for scraping.
-provider = allanime
-# The interactive selector tool to use for menus.
-selector = fzf
-# Automatically select the best-matching search result from a provider.
-auto_select_anime_result = True
-# Display emoji icons in the user interface.
-icons = True
-# Type of preview to display in selectors.
-preview = full
-# The command-line tool to use for rendering images in the terminal.
-image_renderer = icat
-# The external application to use for viewing manga pages.
-manga_viewer = feh
-# Automatically check for new versions of FastAnime on startup.
-check_for_updates = True
-# Enable caching of network requests to speed up subsequent operations.
-cache_requests = True
-# Maximum lifetime for a cached request in DD:HH:MM format.
-max_cache_lifetime = 03:00:00
-# Attempt to normalize provider titles to match AniList titles.
-normalize_titles = True
-# Enable Discord Rich Presence to show your current activity.
-discord = False
-# Number of recently watched anime to keep in history.
-recent = 50
+    [Service]
+    Type=simple
+    ExecStart=/path/to/your/fastanime worker --log
+    Restart=always
+    RestartSec=30
 
-[stream]
-# The media player to use for streaming.
-player = mpv
-# Preferred stream quality.
-quality = 1080
-# Preferred audio/subtitle language type.
-translation_type = sub
-# The default server to use from a provider. 'top' uses the first available.
-server = TOP
-# Automatically play the next episode when the current one finishes.
-auto_next = False
-# Automatically resume playback from the last known episode and position.
-continue_from_watch_history = True
-# Which watch history to prioritize: local file or remote AniList progress.
-preferred_watch_history = local
-# Automatically skip openings/endings if skip data is available.
-auto_skip = False
-# Percentage of an episode to watch before it's marked as complete.
-episode_complete_at = 80
-# The format selection string for yt-dlp.
-ytdlp_format = best[height<=1080]/bestvideo[height<=1080]+bestaudio/best
-# Prevent updating AniList progress to a lower episode number.
-force_forward_tracking = True
-# Default behavior for tracking progress on AniList.
-default_media_list_tracking = prompt
-# Preferred language code for subtitles (e.g., 'en', 'es').
-sub_lang = eng
-# Use IPC communication with the player for advanced features like episode navigation.
-use_ipc = True
-```
-</details>
+    [Install]
+    WantedBy=default.target
+    ```
+    *Replace `/path/to/your/fastanime` with the output of `which fastanime`.*
+
+2.  Enable and start the service:
+    ```bash
+    systemctl --user daemon-reload
+    systemctl --user enable --now fastanime-worker.service
+    ```
 
 ## Contributing
 
-Pull requests are highly welcome! Please read our [**Contributing Guidelines**](CONTRIBUTIONS.md) to get started with setting up a development environment and understanding our coding standards.
+Contributions are welcome! Whether it's reporting a bug, proposing a feature, or writing code, your help is appreciated. Please read our [**Contributing Guidelines**](CONTRIBUTIONS.md) to get started.
 
 ## Disclaimer
 
 > [!IMPORTANT]
->
-> This project scrapes public-facing websites (`allanime`, `animepahe`). The developer(s) of this application have no affiliation with these content providers. This application hosts zero content. Use at your own risk.
->
-> [**Full Disclaimer**](DISCLAIMER.md)
+> This project scrapes public-facing websites. The developer(s) of this application have no affiliation with these content providers. This application hosts zero content and is intended for educational and personal use only. Use at your own risk.
+> 
+> [**Read the Full Disclaimer**](DISCLAIMER.md)
