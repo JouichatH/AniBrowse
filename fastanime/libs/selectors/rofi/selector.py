@@ -1,5 +1,6 @@
 import shutil
 import subprocess
+import sys
 import textwrap
 
 from ....core.config import RofiConfig
@@ -41,12 +42,12 @@ class RofiSelector(BaseSelector):
             text=True,
         )
 
-        if result:
+        if result.returncode == 0:
             choice = result.stdout.strip()
             return choice
         else:
             # HACK: force exit if no input
-            exit(1)
+            sys.exit(1)
 
     def confirm(self, prompt, *, default=False):
         choices = ["Yes", "No"]
@@ -84,12 +85,12 @@ class RofiSelector(BaseSelector):
             text=True,
         )
 
-        if result:
+        if result.returncode == 0:
             choice = result.stdout.strip()
             return choice.split()
 
         # HACK: force exit if no input
-        exit(1)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
