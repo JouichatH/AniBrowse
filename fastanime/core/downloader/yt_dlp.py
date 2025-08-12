@@ -93,7 +93,7 @@ class YtDLPDownloader(BaseDownloader):
             "nocheckcertificate": params.no_check_certificate,
         }
         opts = opts
-        if params.force_ffmpeg:
+        if params.force_ffmpeg or params.hls_use_mpegts or params.hls_use_h264:
             opts = opts | {
                 "external_downloader": {"default": "ffmpeg"},
                 "external_downloader_args": {
