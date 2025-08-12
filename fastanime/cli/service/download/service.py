@@ -301,7 +301,8 @@ class DownloadService:
                         message=message,
                         app_name="FastAnime",
                         app_icon=app_icon,
-                        timeout=20,
+                        timeout=self.app_config.general.desktop_notification_duration
+                        * 60,
                     )
                 except:
                     pass
@@ -322,7 +323,7 @@ class DownloadService:
                     message=message,
                     app_name="FastAnime",
                     app_icon=app_icon,
-                    timeout=20,
+                    timeout=self.app_config.general.desktop_notification_duration * 60,
                 )
             except:
                 pass

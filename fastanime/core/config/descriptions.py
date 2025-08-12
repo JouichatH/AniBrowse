@@ -6,6 +6,7 @@ GENERAL_API_CLIENT = "The media database API to use (e.g., 'anilist', 'jikan')."
 GENERAL_PREFERRED_TRACKER = (
     "The preferred watch history tracker (local,remote) in cases of conflicts"
 )
+GENERAL_DESKTOP_NOTIFICATION_DURATION = "The duration desktop notifications should be displayed before they disappear in minutes"
 GENERAL_PROVIDER = "The default anime provider to use for scraping."
 GENERAL_SELECTOR = "The interactive selector tool to use for menus."
 GENERAL_AUTO_SELECT_ANIME_RESULT = (

@@ -101,7 +101,7 @@ class NotificationService:
                     message=message,
                     app_name="FastAnime",
                     app_icon=app_icon,  # plyer supports file paths or URLs depending on platform
-                    timeout=20,
+                    timeout=self.app_config.general.desktop_notification_duration * 60,
                 )
                 logger.info(f"Displayed notification: {message}")
                 self._mark_seen(

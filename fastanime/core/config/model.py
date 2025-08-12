@@ -13,6 +13,10 @@ from . import descriptions as desc
 class GeneralConfig(BaseModel):
     """Configuration for general application behavior and integrations."""
 
+    desktop_notification_duration: int = Field(
+        default=defaults.GENERAL_DESKTOP_NOTIFICATION_DURATION,
+        description=desc.GENERAL_DESKTOP_NOTIFICATION_DURATION,
+    )
     preferred_tracker: Literal["local", "remote"] = Field(
         default=defaults.GENERAL_PREFERRED_TRACKER,
         description=desc.GENERAL_PREFERRED_TRACKER,
