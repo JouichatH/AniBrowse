@@ -21,6 +21,9 @@ standard = [
  "thefuzz>=0.22.1",
  "yt-dlp>=2025.7.21",
  "pycryptodomex>=3.23.0",
+    "dbus-python>=1.4.0",
+    "plyer>=2.1.0",
+"lxml>=6.0.0"
 ]
 notifications = [
     "dbus-python>=1.4.0",

@@ -132,6 +132,9 @@ notifications = [
     { name = "plyer" },
 ]
 standard = [
+    { name = "dbus-python" },
+    { name = "lxml" },
+    { name = "plyer" },
     { name = "pycryptodomex" },
     { name = "thefuzz" },
     { name = "yt-dlp" },
@@ -157,13 +160,16 @@ dev = [
 requires-dist = [
     { name = "click", specifier = ">=8.1.7" },
     { name = "dbus-python", marker = "extra == 'notifications'", specifier = ">=1.4.0" },
+    { name = "dbus-python", marker = "extra == 'standard'", specifier = ">=1.4.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "inquirerpy", specifier = ">=0.3.4" },
     { name = "libtorrent", marker = "extra == 'torrent'", specifier = ">=2.0.11" },
     { name = "libtorrent", marker = "extra == 'torrents'", specifier = ">=2.0.11" },
     { name = "lxml", marker = "extra == 'lxml'", specifier = ">=6.0.0" },
+    { name = "lxml", marker = "extra == 'standard'", specifier = ">=6.0.0" },
     { name = "mpv", marker = "extra == 'mpv'", specifier = ">=1.0.7" },
     { name = "plyer", marker = "extra == 'notifications'", specifier = ">=2.1.0" },
+    { name = "plyer", marker = "extra == 'standard'", specifier = ">=2.1.0" },
     { name = "pycryptodomex", marker = "extra == 'download'", specifier = ">=3.23.0" },
     { name = "pycryptodomex", marker = "extra == 'standard'", specifier = ">=3.23.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
