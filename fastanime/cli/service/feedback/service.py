@@ -1,3 +1,4 @@
+import logging
 from contextlib import contextmanager
 from typing import Optional
 
@@ -13,6 +14,8 @@ from rich.progress import (
 
 from ....core.config import AppConfig
 
+logger = logging.getLogger(__name__)
+
 console = Console()
 
 
@@ -20,13 +23,29 @@ class FeedbackService:
     """Centralized manager for user feedback in interactive menus."""
 
     def __init__(self, config: AppConfig):
-        self.config = config
+        self.app_config = config
 
     def success(self, message: str, details: Optional[str] = None) -> None:
         """Show a success message with optional details."""
-        icon = "✅ " if self.config.general.icons else ""
+        icon = "✅ " if self.app_config.general.icons else ""
         main_msg = f"[bold green]{icon}{message}[/bold green]"
 
+        if self.app_config.general.selector == "rofi":
+            try:
+                from plyer import notification
+
+                from ....core.constants import ICON_PATH, PROJECT_NAME
+
+                notification.notify(  # type: ignore
+                    title=f"{PROJECT_NAME} notification".title(),
+                    message=message,
+                    app_name=PROJECT_NAME,
+                    app_icon=str(ICON_PATH),
+                    timeout=self.app_config.general.desktop_notification_duration * 60,
+                )
+                return
+            except:
+                logger.warning("Using rofi without plyer for notifications")
         if details:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
@@ -34,9 +53,25 @@ class FeedbackService:
 
     def error(self, message: str, details: Optional[str] = None) -> None:
         """Show an error message with optional details."""
-        icon = "❌ " if self.config.general.icons else ""
+        icon = "❌ " if self.app_config.general.icons else ""
         main_msg = f"[bold red]{icon}Error: {message}[/bold red]"
 
+        if self.app_config.general.selector == "rofi":
+            try:
+                from plyer import notification
+
+                from ....core.constants import ICON_PATH, PROJECT_NAME
+
+                notification.notify(  # type: ignore
+                    title=f"{PROJECT_NAME} notification".title(),
+                    message=message,
+                    app_name=PROJECT_NAME,
+                    app_icon=str(ICON_PATH),
+                    timeout=self.app_config.general.desktop_notification_duration * 60,
+                )
+                return
+            except:
+                logger.warning("Using rofi without plyer for notifications")
         if details:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
@@ -45,9 +80,25 @@ class FeedbackService:
 
     def warning(self, message: str, details: Optional[str] = None) -> None:
         """Show a warning message with optional details."""
-        icon = "⚠️ " if self.config.general.icons else ""
+        icon = "⚠️ " if self.app_config.general.icons else ""
         main_msg = f"[bold yellow]{icon}Warning: {message}[/bold yellow]"
 
+        if self.app_config.general.selector == "rofi":
+            try:
+                from plyer import notification
+
+                from ....core.constants import ICON_PATH, PROJECT_NAME
+
+                notification.notify(  # type: ignore
+                    title=f"{PROJECT_NAME} notification".title(),
+                    message=message,
+                    app_name=PROJECT_NAME,
+                    app_icon=str(ICON_PATH),
+                    timeout=self.app_config.general.desktop_notification_duration * 60,
+                )
+                return
+            except:
+                logger.warning("Using rofi without plyer for notifications")
         if details:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
@@ -55,9 +106,25 @@ class FeedbackService:
 
     def info(self, message: str, details: Optional[str] = None) -> None:
         """Show an informational message with optional details."""
-        icon = "" if self.config.general.icons else ""
+        icon = "" if self.app_config.general.icons else ""
         main_msg = f"[bold blue]{icon}{message}[/bold blue]"
 
+        if self.app_config.general.selector == "rofi":
+            try:
+                from plyer import notification
+
+                from ....core.constants import ICON_PATH, PROJECT_NAME
+
+                notification.notify(  # type: ignore
+                    title=f"{PROJECT_NAME} notification".title(),
+                    message=message,
+                    app_name=PROJECT_NAME,
+                    app_icon=str(ICON_PATH),
+                    timeout=self.app_config.general.desktop_notification_duration * 60,
+                )
+                return
+            except:
+                logger.warning("Using rofi without plyer for notifications")
         if details:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
         else:
@@ -76,7 +143,7 @@ class FeedbackService:
     ):
         """Context manager for operations with loading indicator and result feedback."""
         with Progress(
-            SpinnerColumn(self.config.general.preferred_spinner),
+            SpinnerColumn(self.app_config.general.preferred_spinner),
             TextColumn(f"[cyan]{message}..."),
             BarColumn(),
             TaskProgressColumn(),
@@ -96,7 +163,24 @@ class FeedbackService:
 
     def pause_for_user(self, message: str = "Press Enter to continue") -> None:
         """Pause execution and wait for user input."""
-        icon = "⏸️ " if self.config.general.icons else ""
+        icon = "⏸️ " if self.app_config.general.icons else ""
+
+        if self.app_config.general.selector == "rofi":
+            try:
+                from plyer import notification
+
+                from ....core.constants import ICON_PATH, PROJECT_NAME
+
+                notification.notify(  # type: ignore
+                    title=f"{PROJECT_NAME} notification".title(),
+                    message="No current way to display info in rofi, use fzf and the terminal instead",
+                    app_name=PROJECT_NAME,
+                    app_icon=str(ICON_PATH),
+                    timeout=self.app_config.general.desktop_notification_duration * 60,
+                )
+                return
+            except:
+                logger.warning("Using rofi without plyer for notifications")
         click.pause(f"{icon}{message}...")
 
     def clear_console(self):

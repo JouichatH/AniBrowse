@@ -1,3 +1,4 @@
+import logging
 import shutil
 import subprocess
 import sys
@@ -6,6 +7,8 @@ import textwrap
 from ....core.config import RofiConfig
 from ....core.utils import detect
 from ..base import BaseSelector
+
+logger = logging.getLogger(__name__)
 
 
 class RofiSelector(BaseSelector):
@@ -47,6 +50,24 @@ class RofiSelector(BaseSelector):
             return choice
         else:
             # HACK: force exit if no input
+            try:
+                from plyer import notification
+
+                from ....core.constants import (
+                    ICON_PATH,
+                    PROJECT_NAME,
+                    PROJECT_NAME_LOWER,
+                )
+
+                notification.notify(  # type: ignore
+                    title=f"{PROJECT_NAME} notification".title(),
+                    message=f"Nothing was selected {PROJECT_NAME_LOWER} is shutting down",
+                    app_name=PROJECT_NAME,
+                    app_icon=str(ICON_PATH),
+                    timeout=2 * 60,
+                )
+            except:
+                logger.warning("Using rofi without plyer for notifications")
             sys.exit(1)
 
     def confirm(self, prompt, *, default=False):
@@ -66,12 +87,14 @@ class RofiSelector(BaseSelector):
     def choose_multiple(
         self, prompt: str, choices: list[str], preview: str | None = None
     ) -> list[str]:
-        rofi_input = "\n".join(choices)
+        if preview and detect.is_bash_script(preview):
+            preview = None
+        rofi_input = preview or "\n".join(choices)
         args = [
             self.executable,
             "-no-config",
             "-theme",
-            self.config.theme_main,
+            self.config.theme_main if not preview else self.config.theme_preview,
             "-multi-select",
             "-p",
             prompt,
@@ -86,9 +109,31 @@ class RofiSelector(BaseSelector):
         )
 
         if result.returncode == 0:
-            choice = result.stdout.strip()
-            return choice.split()
+            selections = [
+                line.strip()
+                for line in result.stdout.strip().split("\n")
+                if line.strip()
+            ]
+            return selections
 
+        try:
+            from plyer import notification
+
+            from ....core.constants import (
+                ICON_PATH,
+                PROJECT_NAME,
+                PROJECT_NAME_LOWER,
+            )
+
+            notification.notify(  # type: ignore
+                title=f"{PROJECT_NAME} notification".title(),
+                message=f"Nothing was selected {PROJECT_NAME_LOWER} is shutting down",
+                app_name=PROJECT_NAME,
+                app_icon=str(ICON_PATH),
+                timeout=2 * 60,
+            )
+        except:
+            logger.warning("Using rofi without plyer for notifications")
         # HACK: force exit if no input
         sys.exit(1)
 
