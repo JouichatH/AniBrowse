@@ -19,7 +19,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
         inherit (pkgs) lib python3Packages;
 
-        version = "3.0.0";
+        version = "3.1.0";
       in
       {
         packages.default = python3Packages.buildPythonApplication {

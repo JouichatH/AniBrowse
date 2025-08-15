@@ -1,6 +1,6 @@
 [project]
 name = "fastanime"
-version = "3.0.0"
+version = "3.1.0"
 description = "A browser anime site experience from the terminal"
 license = "UNLICENSE"
 readme = "README.md"
@@ -21,9 +21,9 @@ standard = [
  "thefuzz>=0.22.1",
  "yt-dlp>=2025.7.21",
  "pycryptodomex>=3.23.0",
-    "dbus-python>=1.4.0",
-    "plyer>=2.1.0",
-"lxml>=6.0.0"
+ "dbus-python>=1.4.0",
+ "plyer>=2.1.0",
+ "lxml>=6.0.0"
 ]
 notifications = [
     "dbus-python>=1.4.0",
