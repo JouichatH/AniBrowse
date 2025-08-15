@@ -29,10 +29,20 @@
   <summary>
     <b>Screenshots</b>
   </summary>
-  <b>Media Results Menu:</b>
-  <img width="1346" height="710" alt="image" src="https://github.com/user-attachments/assets/c56da5d2-d55d-445c-9ad7-4e007e986d5b" />
-  <b>Episodes Menu with Preview:</b>
-  <img width="1346" height="710" alt="image" src="https://github.com/user-attachments/assets/2294f621-8549-4b1c-9e28-d851b2585037" />
+  <b>Fzf:</b>
+  <img width="1346" height="710" alt="250815_13h29m15s_screenshot" src="https://github.com/user-attachments/assets/d8fb8473-a0fe-47b1-b112-5cd8bec51937" />
+<img width="1346" height="710" alt="250815_13h29m43s_screenshot" src="https://github.com/user-attachments/assets/16a2555d-f81e-4044-9e65-e61205dfe899" />
+<img width="1346" height="710" alt="250815_13h30m09s_screenshot" src="https://github.com/user-attachments/assets/f521670a-c04f-4f5e-a62a-6c849fbf49bd" />
+<img width="1346" height="710" alt="250815_13h30m33s_screenshot" src="https://github.com/user-attachments/assets/27fd2ef9-ec1f-4677-b816-038eaaca1391" />
+<img width="1346" height="710" alt="250815_13h31m07s_screenshot" src="https://github.com/user-attachments/assets/6a64aa99-507e-449a-9e4a-9daa4fe496a3" />
+<img width="1346" height="710" alt="250815_13h31m44s_screenshot" src="https://github.com/user-attachments/assets/a2896d1f-0e23-4ff3-b0c6-121d21a9f99a" />
+
+  <b>Rofi:</b>
+<img width="1366" height="729" alt="250815_13h23m12s_screenshot" src="https://github.com/user-attachments/assets/6d18d950-11e5-41fc-a7fe-1f9eaa481e46" />
+<img width="1366" height="765" alt="250815_13h24m09s_screenshot" src="https://github.com/user-attachments/assets/af852fee-17bf-4f24-ada9-7cf0e6f3451c" />
+<img width="1366" height="768" alt="250815_13h24m57s_screenshot" src="https://github.com/user-attachments/assets/d3b4e2ab-10bd-40ae-88ed-0720b57957c1" />
+<img width="1366" height="735" alt="250815_13h26m47s_screenshot" src="https://github.com/user-attachments/assets/64682b09-c88e-4d4c-ae26-a3aa34dd08a1" />
+<img width="1366" height="768" alt="250815_13h28m05s_screenshot" src="https://github.com/user-attachments/assets/d6cd6931-0113-462c-86bb-abe6f3e12d68" />
 
 </details>
   
