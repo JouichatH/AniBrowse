@@ -21,7 +21,9 @@ standard = [
  "thefuzz>=0.22.1",
  "yt-dlp>=2025.7.21",
  "pycryptodomex>=3.23.0",
- "dbus-python>=1.4.0",
+ "pypiwin32; sys_platform == 'win32'", # For Windows-specific functionality
+ "pyobjc; sys_platform == 'darwin'", # For macOS-specific functionality
+ "dbus-python; sys_platform == 'linux'", # For Linux-specific functionality (e.g., notifications),
  "plyer>=2.1.0",
  "lxml>=6.0.0"
 ]
