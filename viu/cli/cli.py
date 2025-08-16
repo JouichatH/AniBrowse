@@ -38,6 +38,7 @@ commands = {
     "registry": "registry.registry",
     "worker": "worker.worker",
     "queue": "queue.queue",
+    "completions": "completions.completions",
 }
 
 
