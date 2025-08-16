@@ -1,6 +1,6 @@
 [project]
 name = "viu_cli"
-version = "3.2.4"
+version = "3.2.5"
 description = "A browser anime site experience from the terminal"
 license = "UNLICENSE"
 readme = "README.md"
