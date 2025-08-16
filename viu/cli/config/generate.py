@@ -1,9 +1,11 @@
+import itertools
 import textwrap
 from enum import Enum
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin
 
-from pydantic.fields import FieldInfo
+from pydantic.fields import ComputedFieldInfo, FieldInfo
+from pydantic_core import PydanticUndefined
 
 from ...core.config import AppConfig
 from ...core.constants import APP_ASCII_ART, DISCORD_INVITE, PROJECT_NAME, REPO_HOME
@@ -48,7 +50,10 @@ def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
         config_ini_content.append(f"\n#\n# {section_comment}\n#")
         config_ini_content.append(f"[{section_name}]")
 
-        for field_name, field_info in section_model.model_fields.items():
+        for field_name, field_info in itertools.chain(
+            section_model.model_fields.items(),
+            section_model.model_computed_fields.items(),
+        ):
             description = field_info.description or ""
             if description:
                 wrapped_comment = textwrap.fill(
@@ -63,6 +68,17 @@ def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
             if field_type_comment:
                 wrapped_comment = textwrap.fill(
                     field_type_comment,
+                    width=78,
+                    initial_indent="# ",
+                    subsequent_indent="# ",
+                )
+                config_ini_content.append(wrapped_comment)
+            if (
+                hasattr(field_info, "default")
+                and field_info.default != PydanticUndefined
+            ):
+                wrapped_comment = textwrap.fill(
+                    f"Default: {field_info.default.value if isinstance(field_info.default, Enum) else field_info.default}",
                     width=78,
                     initial_indent="# ",
                     subsequent_indent="# ",
@@ -87,9 +103,13 @@ def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
     return "\n".join(config_ini_content)
 
 
-def _get_field_type_comment(field_info: FieldInfo) -> str:
+def _get_field_type_comment(field_info: FieldInfo | ComputedFieldInfo) -> str:
     """Generate a comment with type information for a field."""
-    field_type = field_info.annotation
+    field_type = (
+        field_info.annotation
+        if isinstance(field_info, FieldInfo)
+        else field_info.return_type
+    )
 
     # Handle Literal and Enum types
     possible_values = []
@@ -131,10 +151,14 @@ def _get_type_name(field_type: Any) -> str:
     return ""
 
 
-def _get_range_info(field_info: FieldInfo) -> str:
+def _get_range_info(field_info: FieldInfo | ComputedFieldInfo) -> str:
     """Get a string describing the numeric range of a field."""
     constraints = {}
-    if hasattr(field_info, "metadata") and field_info.metadata:
+    if (
+        isinstance(field_info, FieldInfo)
+        and hasattr(field_info, "metadata")
+        and field_info.metadata
+    ):
         for constraint in field_info.metadata:
             constraint_type = type(constraint).__name__
             if constraint_type == "Ge" and hasattr(constraint, "ge"):
