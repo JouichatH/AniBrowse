@@ -3,4 +3,4 @@ provider_type=$1
 provider_name=$2
 [ -z "$provider_type" ] && echo "Please specify provider type" && exit
 [ -z "$provider_name" ] && echo "Please specify provider type" && exit
-uv run python -m viu.libs.provider.${provider_type}.${provider_name}.provider
+uv run python -m viu_cli.libs.provider.${provider_type}.${provider_name}.provider

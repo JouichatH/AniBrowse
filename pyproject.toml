@@ -1,5 +1,5 @@
 [project]
-name = "viu"
+name = "viu_cli"
 version = "3.1.0"
 description = "A browser anime site experience from the terminal"
 license = "UNLICENSE"
@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-viu = 'viu:Cli'
+viu = 'viu_cli:Cli'
 
 [project.optional-dependencies]
 standard = [
