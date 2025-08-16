@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">FastAnime</h1>
+  <h1 align="center">Viu</h1>
 </p>
 <p align="center">
   <sup>
@@ -8,12 +8,12 @@
 </p>
 <div align="center">
 
-[![PyPI - Version](https://img.shields.io/pypi/v/fastanime)](https://pypi.org/project/fastanime/)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/fastanime)](https://pypi.org/project/fastanime/)
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Benexl/FastAnime/test.yml?label=Tests)](https://github.com/Benexl/FastAnime/actions)
+[![PyPI - Version](https://img.shields.io/pypi/v/viu)](https://pypi.org/project/viu/)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/viu)](https://pypi.org/project/viu/)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Benexl/Viu/test.yml?label=Tests)](https://github.com/Benexl/Viu/actions)
 [![Discord](https://img.shields.io/discord/1250887070906323096?label=Discord&logo=discord)](https://discord.gg/HBEmAwvbHV)
-[![GitHub Issues](https://img.shields.io/github/issues/Benexl/FastAnime)](https://github.com/Benexl/FastAnime/issues)
-[![PyPI - License](https://img.shields.io/pypi/l/fastanime)](https://github.com/Benexl/FastAnime/blob/master/LICENSE)
+[![GitHub Issues](https://img.shields.io/github/issues/Benexl/Viu)](https://github.com/Benexl/Viu/issues)
+[![PyPI - License](https://img.shields.io/pypi/l/viu)](https://github.com/Benexl/Viu/blob/master/LICENSE)
 
 </div>
 
@@ -23,7 +23,7 @@
   </a>
 </p>
 
-![fastanime](https://github.com/user-attachments/assets/9ab09f26-e4a8-4b70-a315-7def998cec63)
+![viu](https://github.com/user-attachments/assets/9ab09f26-e4a8-4b70-a315-7def998cec63)
 
 <details>
   <summary>
@@ -77,7 +77,7 @@
 
 ## Installation
 
-FastAnime runs on any platform with Python 3.10+, including Windows, macOS, Linux, and Android (via Termux).
+Viu runs on any platform with Python 3.10+, including Windows, macOS, Linux, and Android (via Termux).
 
 ### Prerequisites
 
@@ -94,17 +94,17 @@ For the best experience, please install these external tools:
 
 ### Recommended Installation (uv)
 
-The best way to install FastAnime is with [**uv**](https://github.com/astral-sh/uv), a lightning-fast Python package manager.
+The best way to install Viu is with [**uv**](https://github.com/astral-sh/uv), a lightning-fast Python package manager.
 
 ```bash
 # Install with all optional features for the full experience
-uv tool install "fastanime[standard]"
+uv tool install "viu[standard]"
 
 # Or, pick and choose the extras you need:
-uv tool install fastanime  # Core functionality only
-uv tool install "fastanime[download]"  # For advanced downloading with yt-dlp
-uv tool install "fastanime[discord]"   # For Discord Rich Presence
-uv tool install "fastanime[notifications]" # For desktop notifications
+uv tool install viu  # Core functionality only
+uv tool install "viu[download]"  # For advanced downloading with yt-dlp
+uv tool install "viu[discord]"   # For Discord Rich Presence
+uv tool install "viu[notifications]" # For desktop notifications
 ```
 
 ### Other Installation Methods
@@ -114,27 +114,27 @@ uv tool install "fastanime[notifications]" # For desktop notifications
   
   #### Nix / NixOS
   ```bash
-  nix profile install github:Benexl/fastanime
+  nix profile install github:Benexl/viu
   ```
 
   #### Arch Linux (AUR)
   Use an AUR helper like `yay` or `paru`.
   ```bash
   # Stable version (recommended)
-  yay -S fastanime
+  yay -S viu
 
   # Git version (latest commit)
-  yay -S fastanime-git
+  yay -S viu-git
   ```
 
   #### Using pipx (for isolated environments)
   ```bash
-  pipx install "fastanime[standard]"
+  pipx install "viu[standard]"
   ```
   
   #### Using pip
   ```bash
-  pip install "fastanime[standard]"
+  pip install "viu[standard]"
   ```
 </details>
 
@@ -143,15 +143,15 @@ uv tool install "fastanime[notifications]" # For desktop notifications
   
   Requires [Git](https://git-scm.com/), [Python 3.10+](https://www.python.org/), and [uv](https://astral.sh/blog/uv).
   ```bash
-  git clone https://github.com/Benexl/FastAnime.git --depth 1
-  cd FastAnime
+  git clone https://github.com/Benexl/Viu.git --depth 1
+  cd Viu
   uv tool install .
-  fastanime --version
+  viu --version
   ```
 </details>
 
 > [!TIP]
-> Enable shell completions for a much better experience by running `fastanime completions` and following the on-screen instructions for your shell.
+> Enable shell completions for a much better experience by running `viu completions` and following the on-screen instructions for your shell.
 
 ## Getting Started: Quick Start
 
@@ -159,59 +159,59 @@ Get up and running in three simple steps:
 
 1.  **Authenticate with AniList:**
     ```bash
-    fastanime anilist auth
+    viu anilist auth
     ```
     This will open your browser. Authorize the app and paste the obtained token back into the terminal.
 
 2.  **Launch the Interactive TUI:**
     ```bash
-    fastanime anilist
+    viu anilist
     ```
 
 3.  **Browse & Play:** Use your arrow keys to navigate the menus, select an anime, and choose an episode to stream instantly.
 
 ## Usage Guide
 
-### The Interactive TUI (`fastanime anilist`)
+### The Interactive TUI (`viu anilist`)
 
-This is the main, user-friendly way to use FastAnime. It provides a rich terminal experience where you can:
+This is the main, user-friendly way to use Viu. It provides a rich terminal experience where you can:
 *   Browse trending, popular, and seasonal anime.
 *   Manage your personal lists (Watching, Completed, Paused, etc.).
 *   Search for any anime in the AniList database.
 *   View detailed information, characters, recommendations, reviews, and airing schedules.
 *   Stream or download episodes directly from the menus.
 
-### Powerful Searching (`fastanime anilist search`)
+### Powerful Searching (`viu anilist search`)
 
 Filter the entire AniList database with powerful command-line flags.
 
 ```bash
 # Search for anime from 2024, sorted by popularity, that is releasing and not on your list
-fastanime anilist search -y 2024 -s POPULARITY_DESC --status RELEASING --not-on-list
+viu anilist search -y 2024 -s POPULARITY_DESC --status RELEASING --not-on-list
 
 # Find the most popular movies with the "Fantasy" genre
-fastanime anilist search -g Fantasy -f MOVIE -s POPULARITY_DESC
+viu anilist search -g Fantasy -f MOVIE -s POPULARITY_DESC
 
 # Dump search results as JSON instead of launching the TUI
-fastanime anilist search -t "Demon Slayer" --dump-json
+viu anilist search -t "Demon Slayer" --dump-json
 ```
 
-### Background Downloads (`fastanime queue` & `worker`)
+### Background Downloads (`viu queue` & `worker`)
 
-FastAnime includes a robust background downloading system.
+Viu includes a robust background downloading system.
 
 1.  **Add episodes to the queue:**
     ```bash
     # Add episodes 1-12 of Jujutsu Kaisen to the download queue
-    fastanime queue add -t "Jujutsu Kaisen" -r "0:12"
+    viu queue add -t "Jujutsu Kaisen" -r "0:12"
     ```
 2.  **Start the worker process:**
     ```bash
     # Run the worker in the foreground (press Ctrl+C to stop)
-    fastanime worker
+    viu worker
 
     # Or run it as a background process
-    fastanime worker &
+    viu worker &
     ```The worker will now process the queue, download your episodes, and check for notifications.
 
 ### Scriptable Commands (`download` & `search`)
@@ -221,24 +221,24 @@ These commands are designed for automation and quick, non-interactive tasks.
 #### `download` Examples
 ```bash
 # Download the latest 5 episodes of One Piece
-fastanime download -t "One Piece" -r "-5"
+viu download -t "One Piece" -r "-5"
 
 # Download episodes 1 to 24, merge subtitles, and clean up original files
-fastanime download -t "Jujutsu Kaisen" -r "0:24" --merge --clean
+viu download -t "Jujutsu Kaisen" -r "0:24" --merge --clean
 ```
 
 #### `search` (Binging) Examples
 ```bash
 # Start binging an anime from the first episode
-fastanime search -t "Attack on Titan" -r ":"
+viu search -t "Attack on Titan" -r ":"
 
 # Watch the latest episode directly
-fastanime search -t "My Hero Academia" -r "-1"
+viu search -t "My Hero Academia" -r "-1"
 ```
 
-### Local Data Management (`fastanime registry`)
+### Local Data Management (`viu registry`)
 
-FastAnime maintains a local database of your anime for offline access and enhanced performance.
+Viu maintains a local database of your anime for offline access and enhanced performance.
 
 *   `registry sync`: Synchronize your local data with your remote AniList account.
 *   `registry stats`: Show detailed statistics about your viewing habits.
@@ -249,13 +249,13 @@ FastAnime maintains a local database of your anime for offline access and enhanc
 
 ## Configuration
 
-FastAnime is highly customizable. A default configuration file with detailed comments is created on the first run.
+Viu is highly customizable. A default configuration file with detailed comments is created on the first run.
 
-*   **Find your config file:** `fastanime config --path`
-*   **Edit in your default editor:** `fastanime config`
-*   **Use the interactive wizard:** `fastanime config --interactive`
+*   **Find your config file:** `viu config --path`
+*   **Edit in your default editor:** `viu config`
+*   **Use the interactive wizard:** `viu config --interactive`
 
-Most settings in the config file can be temporarily overridden with command-line flags (e.g., `fastanime --provider animepahe anilist`).
+Most settings in the config file can be temporarily overridden with command-line flags (e.g., `viu --provider animepahe anilist`).
 
 <details>
   <summary><b>Default Configuration (`config.ini`) Explained</b></summary>
@@ -303,7 +303,7 @@ download_check_interval = 5      ; How often to process the download queue (minu
 
 ### MPV IPC Integration
 
-When `use_ipc = True` is set in your config, FastAnime provides powerful in-player controls without needing to close MPV.
+When `use_ipc = True` is set in your config, Viu provides powerful in-player controls without needing to close MPV.
 
 **Key Bindings:**
 *   `Shift+N`: Play the next episode.
@@ -320,27 +320,27 @@ When `use_ipc = True` is set in your config, FastAnime provides powerful in-play
 
 You can run the background worker as a systemd service for persistence.
 
-1.  Create a service file at `~/.config/systemd/user/fastanime-worker.service`:
+1.  Create a service file at `~/.config/systemd/user/viu-worker.service`:
     ```ini
     [Unit]
-    Description=FastAnime Background Worker
+    Description=Viu Background Worker
     After=network-online.target
 
     [Service]
     Type=simple
-    ExecStart=/path/to/your/fastanime worker --log
+    ExecStart=/path/to/your/viu worker --log
     Restart=always
     RestartSec=30
 
     [Install]
     WantedBy=default.target
     ```
-    *Replace `/path/to/your/fastanime` with the output of `which fastanime`.*
+    *Replace `/path/to/your/viu` with the output of `which viu`.*
 
 2.  Enable and start the service:
     ```bash
     systemctl --user daemon-reload
-    systemctl --user enable --now fastanime-worker.service
+    systemctl --user enable --now viu-worker.service
     ```
 
 ## Contributing

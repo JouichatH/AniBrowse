@@ -20,13 +20,13 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Build fastanime
+      - name: Build viu
         run: uv build
 
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: fastanime_debug_build
+          name: viu_debug_build
           path: |
             dist
 

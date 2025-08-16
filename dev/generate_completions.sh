@@ -5,10 +5,10 @@ APP_DIR="$(
 )"
 
 # fish shell completions
-_FASTANIME_COMPLETE=fish_source fastanime >"$APP_DIR/completions/fastanime.fish"
+_VIU_COMPLETE=fish_source viu >"$APP_DIR/completions/viu.fish"
 
 # zsh completions
-_FASTANIME_COMPLETE=zsh_source fastanime >"$APP_DIR/completions/fastanime.zsh"
+_VIU_COMPLETE=zsh_source viu >"$APP_DIR/completions/viu.zsh"
 
 # bash completions
-_FASTANIME_COMPLETE=bash_source fastanime >"$APP_DIR/completions/fastanime.bash"
+_VIU_COMPLETE=bash_source viu >"$APP_DIR/completions/viu.bash"

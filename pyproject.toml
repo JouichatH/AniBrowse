@@ -1,5 +1,5 @@
 [project]
-name = "fastanime"
+name = "viu"
 version = "3.1.0"
 description = "A browser anime site experience from the terminal"
 license = "UNLICENSE"
@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-fastanime = 'fastanime:Cli'
+viu = 'viu:Cli'
 
 [project.optional-dependencies]
 standard = [

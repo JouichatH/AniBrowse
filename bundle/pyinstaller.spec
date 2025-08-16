@@ -5,7 +5,7 @@ block_cipher = None
 
 # Collect all required data files
 datas = [
-    ('fastanime/assets/*', 'fastanime/assets'),
+    ('viu/assets/*', 'viu/assets'),
 ]
 
 # Collect all required hidden imports
@@ -16,11 +16,11 @@ hiddenimports = [
     'yt_dlp',
     'python_mpv',
     'fuzzywuzzy',
-    'fastanime',
-] + collect_submodules('fastanime')
+    'viu',
+] + collect_submodules('viu')
 
 a = Analysis(
-    ['./fastanime/fastanime.py'],  # Changed entry point
+    ['./viu/viu.py'],  # Changed entry point
     pathex=[],
     binaries=[],
     datas=datas,
@@ -49,7 +49,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='fastanime',
+    name='viu',
     debug=False,
     bootloader_ignore_signals=False,
     strip=True,
@@ -61,5 +61,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='fastanime/assets/logo.ico'
+    icon='viu/assets/logo.ico'
 )

@@ -1,5 +1,5 @@
 {
-  description = "FastAnime Project Flake";
+  description = "Viu Project Flake";
 
   inputs = {
     # The nixpkgs unstable latest commit breaks the plyer python package
@@ -23,7 +23,7 @@
       in
       {
         packages.default = python3Packages.buildPythonApplication {
-          pname = "fastanime";
+          pname = "viu";
           inherit version;
           pyproject = true;
 
@@ -67,13 +67,13 @@
           # Needs to be adapted for the nix derivation build
           doCheck = false;
 
-          pythonImportsCheck = [ "fastanime" ];
+          pythonImportsCheck = [ "viu" ];
 
           meta = {
             description = "Your browser anime experience from the terminal";
-            homepage = "https://github.com/Benexl/FastAnime";
-            changelog = "https://github.com/Benexl/FastAnime/releases/tag/v${version}";
-            mainProgram = "fastanime";
+            homepage = "https://github.com/Benexl/Viu";
+            changelog = "https://github.com/Benexl/Viu/releases/tag/v${version}";
+            mainProgram = "viu";
             license = lib.licenses.unlicense;
             maintainers = with lib.maintainers; [ theobori ];
           };
