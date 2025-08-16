@@ -3,6 +3,8 @@ name: Upload Python Package
 on:
   release:
     types: [published]
+  worflow_dispatch:
+    types: [published]
 
 permissions:
   contents: read
