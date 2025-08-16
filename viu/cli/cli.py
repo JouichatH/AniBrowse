@@ -45,6 +45,7 @@ commands = {
 @click.group(
     cls=LazyGroup,
     root="viu.cli.commands",
+    invoke_without_command=True,
     lazy_subcommands=commands,
     context_settings=dict(auto_envvar_prefix=PROJECT_NAME),
 )
@@ -107,3 +108,7 @@ def cli(ctx: click.Context, **options: "Unpack[Options]"):
         else loader.load(cli_overrides)
     )
     ctx.obj = config
+    if ctx.invoked_subcommand is None:
+        from .commands.anilist import cmd
+
+        ctx.invoke(cmd.anilist)
