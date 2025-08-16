@@ -23,47 +23,6 @@
   </a>
 </p>
 
-![viu](https://github.com/user-attachments/assets/9ab09f26-e4a8-4b70-a315-7def998cec63)
-
-<details>
-  <summary>
-    <b>Screenshots</b>
-  </summary>
-  <b>Fzf:</b>
-  <img width="1346" height="710" alt="250815_13h29m15s_screenshot" src="https://github.com/user-attachments/assets/d8fb8473-a0fe-47b1-b112-5cd8bec51937" />
-<img width="1346" height="710" alt="250815_13h29m43s_screenshot" src="https://github.com/user-attachments/assets/16a2555d-f81e-4044-9e65-e61205dfe899" />
-<img width="1346" height="710" alt="250815_13h30m09s_screenshot" src="https://github.com/user-attachments/assets/f521670a-c04f-4f5e-a62a-6c849fbf49bd" />
-<img width="1346" height="710" alt="250815_13h30m33s_screenshot" src="https://github.com/user-attachments/assets/27fd2ef9-ec1f-4677-b816-038eaaca1391" />
-<img width="1346" height="710" alt="250815_13h31m07s_screenshot" src="https://github.com/user-attachments/assets/6a64aa99-507e-449a-9e4a-9daa4fe496a3" />
-<img width="1346" height="710" alt="250815_13h31m44s_screenshot" src="https://github.com/user-attachments/assets/a2896d1f-0e23-4ff3-b0c6-121d21a9f99a" />
-
-  <b>Rofi:</b>
-<img width="1366" height="729" alt="250815_13h23m12s_screenshot" src="https://github.com/user-attachments/assets/6d18d950-11e5-41fc-a7fe-1f9eaa481e46" />
-<img width="1366" height="765" alt="250815_13h24m09s_screenshot" src="https://github.com/user-attachments/assets/af852fee-17bf-4f24-ada9-7cf0e6f3451c" />
-<img width="1366" height="768" alt="250815_13h24m57s_screenshot" src="https://github.com/user-attachments/assets/d3b4e2ab-10bd-40ae-88ed-0720b57957c1" />
-<img width="1366" height="735" alt="250815_13h26m47s_screenshot" src="https://github.com/user-attachments/assets/64682b09-c88e-4d4c-ae26-a3aa34dd08a1" />
-<img width="1366" height="768" alt="250815_13h28m05s_screenshot" src="https://github.com/user-attachments/assets/d6cd6931-0113-462c-86bb-abe6f3e12d68" />
-
-</details>
-  
-<details>
-  <summary>
-    <b>Riced Preview Examples</b>
-  </summary>
-
-**Anilist Results Menu (FZF):**
-![image](https://github.com/user-attachments/assets/240023a7-7e4e-47dd-80ff-017d65081ee1)
-
-**Episodes Menu with Preview (FZF):**
-![image](https://github.com/user-attachments/assets/580f86ef-326f-4ab3-9bd8-c1cb312fbfa6)
-
-**No Image Preview Mode:**
-![image](https://github.com/user-attachments/assets/e1248a85-438f-4758-ae34-b0e0b224addd)
-
-**Desktop Notifications + Episodes Menu:**
-![image](https://github.com/user-attachments/assets/b7802ef1-ca0d-45f5-a13a-e39c96a5d499)
-
-</details>
 
 ## Core Features
 
