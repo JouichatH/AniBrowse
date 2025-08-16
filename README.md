@@ -8,7 +8,7 @@
 </p>
 <div align="center">
 
-[![PyPI - Version](https://img.shields.io/pypi/v/viu)](https://pypi.org/project/viu_cli/)
+[![PyPI - Version](https://img.shields.io/pypi/v/viu_cli)](https://pypi.org/project/viu_cli/)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/viu_cli)](https://pypi.org/project/viu_cli/)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Benexl/Viu/test.yml?label=Tests)](https://github.com/Benexl/Viu/actions)
 [![Discord](https://img.shields.io/discord/1250887070906323096?label=Discord&logo=discord)](https://discord.gg/HBEmAwvbHV)
