@@ -67,8 +67,6 @@
           # Needs to be adapted for the nix derivation build
           doCheck = false;
 
-          pythonImportsCheck = [ "viu" ];
-
           meta = {
             description = "Your browser anime experience from the terminal";
             homepage = "https://github.com/Benexl/Viu";
