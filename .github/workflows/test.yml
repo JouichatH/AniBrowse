@@ -23,7 +23,7 @@ jobs:
       - name: Install dbus-python build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get -y install libdbus-1-dev
+          sudo apt-get -y install libdbus-1-dev libglib2.0-dev
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
