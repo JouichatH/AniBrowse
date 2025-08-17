@@ -15,9 +15,6 @@ def play_downloads(ctx: Context, state: State) -> State | InternalDirective:
     feedback = ctx.feedback
     media_item = state.media_api.media_item
     current_episode_num = state.provider.episode
-    if not media_item:
-        feedback.error("No media item selected.")
-        return InternalDirective.BACK
 
     record = ctx.media_registry.get_media_record(media_item.id)
     if not record or not record.media_episodes:
@@ -65,9 +62,7 @@ def play_downloads(ctx: Context, state: State) -> State | InternalDirective:
                     return InternalDirective.BACK
 
                 chosen_episode = chosen_episode_str
-                # Workers are automatically cleaned up when exiting the context
         else:
-            # No preview mode
             chosen_episode_str = ctx.selector.choose(
                 prompt="Select Episode", choices=choices, preview=None
             )
@@ -84,7 +79,7 @@ def play_downloads(ctx: Context, state: State) -> State | InternalDirective:
         menu_name=MenuName.DOWNLOADS_PLAYER_CONTROLS,
         media_api=state.media_api,
         provider=state.provider.model_copy(
-            update={"episode": chosen_episode, "start_time": start_time}
+            update={"episode_": chosen_episode, "start_time_": start_time}
         ),
     )
 
@@ -155,7 +150,7 @@ def downloads_player_controls(
             menu_name=MenuName.DOWNLOADS_PLAYER_CONTROLS,
             media_api=state.media_api,
             provider=state.provider.model_copy(
-                update={"episode": next_episode_num, "start_time": None}
+                update={"episode_": next_episode_num, "start_time_": None}
             ),
         )
 
@@ -230,7 +225,7 @@ def _next_episode(ctx: Context, state: State) -> MenuAction:
                 menu_name=MenuName.DOWNLOADS_PLAYER_CONTROLS,
                 media_api=state.media_api,
                 provider=state.provider.model_copy(
-                    update={"episode": next_episode_num, "start_time": None}
+                    update={"episode_": next_episode_num, "start_time_": None}
                 ),
             )
         feedback.warning("This is the last available episode.")
@@ -279,7 +274,7 @@ def _previous_episode(ctx: Context, state: State) -> MenuAction:
                 menu_name=MenuName.DOWNLOADS_PLAYER_CONTROLS,
                 media_api=state.media_api,
                 provider=state.provider.model_copy(
-                    update={"episode": prev_episode_num, "start_time": None}
+                    update={"episode_": prev_episode_num, "start_time_": None}
                 ),
             )
         feedback.warning("This is the last available episode.")

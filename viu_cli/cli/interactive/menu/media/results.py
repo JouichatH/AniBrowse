@@ -13,11 +13,7 @@ def results(ctx: Context, state: State) -> State | InternalDirective:
     feedback.clear_console()
 
     search_result = state.media_api.search_result
-    page_info = state.media_api.page_info
-
-    if not search_result:
-        feedback.info("No anime found for the given criteria")
-        return InternalDirective.BACK
+    page_info = state.media_api.page_info_
 
     search_result_dict = {
         _format_title(ctx, media_item): media_item

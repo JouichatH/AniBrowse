@@ -7,13 +7,11 @@ from ...state import InternalDirective, MenuName, ProviderState, State
 @session.menu
 def provider_search(ctx: Context, state: State) -> State | InternalDirective:
     from viu_cli.cli.utils.search import find_best_match_title
+
     from .....core.utils.normalizer import normalize_title, update_user_normalizer_json
 
     feedback = ctx.feedback
     media_item = state.media_api.media_item
-    if not media_item:
-        feedback.error("No AniList anime to search for", "Please select an anime first")
-        return InternalDirective.BACK
 
     provider = ctx.provider
     selector = ctx.selector

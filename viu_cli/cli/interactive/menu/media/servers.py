@@ -18,8 +18,6 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
     provider_anime = state.provider.anime
     media_item = state.media_api.media_item
 
-    if not media_item:
-        return InternalDirective.BACK
     anime_title = media_item.title.romaji or media_item.title.english
     episode_number = state.provider.episode
 
@@ -106,8 +104,8 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
         media_api=state.media_api,
         provider=state.provider.model_copy(
             update={
-                "servers": server_map,
-                "server_name": selected_server.name,
+                "servers_": server_map,
+                "server_name_": selected_server.name,
             }
         ),
     )

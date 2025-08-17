@@ -72,6 +72,6 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
         menu_name=MenuName.SERVERS,
         media_api=state.media_api,
         provider=state.provider.model_copy(
-            update={"episode": chosen_episode, "start_time": start_time}
+            update={"episode_": chosen_episode, "start_time_": start_time}
         ),
     )

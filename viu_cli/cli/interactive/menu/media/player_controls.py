@@ -42,7 +42,7 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
         return State(
             menu_name=MenuName.SERVERS,
             media_api=state.media_api,
-            provider=state.provider.model_copy(update={"episode": next_episode_num}),
+            provider=state.provider.model_copy(update={"episode_": next_episode_num}),
         )
 
     # --- Menu Options ---
@@ -116,7 +116,7 @@ def _next_episode(ctx: Context, state: State) -> MenuAction:
                 menu_name=MenuName.SERVERS,
                 media_api=state.media_api,
                 provider=state.provider.model_copy(
-                    update={"episode": next_episode_num}
+                    update={"episode_": next_episode_num}
                 ),
             )
         feedback.warning("This is the last available episode.")
@@ -150,7 +150,7 @@ def _previous_episode(ctx: Context, state: State) -> MenuAction:
                 menu_name=MenuName.SERVERS,
                 media_api=state.media_api,
                 provider=state.provider.model_copy(
-                    update={"episode": prev_episode_num}
+                    update={"episode_": prev_episode_num}
                 ),
             )
         feedback.warning("This is the last available episode.")
