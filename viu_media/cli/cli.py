@@ -6,7 +6,7 @@ import click
 from click.core import ParameterSource
 
 from ..core.config import AppConfig
-from ..core.constants import PROJECT_NAME, USER_CONFIG, __version__
+from ..core.constants import CLI_NAME, USER_CONFIG, __version__
 from .config import ConfigLoader
 from .options import options_from_model
 from .utils.exception import setup_exceptions_handler
@@ -47,7 +47,7 @@ commands = {
     root="viu_media.cli.commands",
     invoke_without_command=True,
     lazy_subcommands=commands,
-    context_settings=dict(auto_envvar_prefix=PROJECT_NAME),
+    context_settings=dict(auto_envvar_prefix=CLI_NAME),
 )
 @click.version_option(__version__, "--version")
 @click.option("--no-config", is_flag=True, help="Don't load the user config file.")

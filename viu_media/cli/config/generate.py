@@ -8,7 +8,7 @@ from pydantic.fields import ComputedFieldInfo, FieldInfo
 from pydantic_core import PydanticUndefined
 
 from ...core.config import AppConfig
-from ...core.constants import APP_ASCII_ART, DISCORD_INVITE, PROJECT_NAME, REPO_HOME
+from ...core.constants import APP_ASCII_ART, CLI_NAME, DISCORD_INVITE, REPO_HOME
 
 # The header for the config file.
 config_asci = "\n".join(
@@ -28,7 +28,7 @@ CONFIG_HEADER = f"""
 CONFIG_FOOTER = f"""
 # ==============================================================================
 #
-# HOPE YOU ENJOY {PROJECT_NAME} AND BE SURE TO STAR THE PROJECT ON GITHUB
+# HOPE YOU ENJOY {CLI_NAME} AND BE SURE TO STAR THE PROJECT ON GITHUB
 # {REPO_HOME}
 #
 # Also join the discord server

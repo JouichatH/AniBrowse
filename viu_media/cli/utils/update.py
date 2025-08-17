@@ -9,13 +9,19 @@ import sys
 from httpx import get
 from rich import print
 
-from ...core.constants import AUTHOR, GIT_REPO, PROJECT_NAME_LOWER, __version__
+from ...core.constants import (
+    AUTHOR,
+    CLI_NAME_LOWER,
+    GIT_REPO,
+    PROJECT_NAME,
+    __version__,
+)
 
-API_URL = f"https://api.{GIT_REPO}/repos/{AUTHOR}/{PROJECT_NAME_LOWER}/releases/latest"
+API_URL = f"https://api.{GIT_REPO}/repos/{AUTHOR}/{CLI_NAME_LOWER}/releases/latest"
 
 
 def check_for_updates():
-    USER_AGENT = f"{PROJECT_NAME_LOWER} user"
+    USER_AGENT = f"{CLI_NAME_LOWER} user"
     try:
         response = get(
             API_URL,
@@ -96,9 +102,9 @@ def update_app(force=False):
             return False, release_json
 
         process = subprocess.run(
-            [NIX, "profile", "upgrade", PROJECT_NAME_LOWER], check=False
+            [NIX, "profile", "upgrade", CLI_NAME_LOWER], check=False
         )
-    elif is_git_repo(AUTHOR, PROJECT_NAME_LOWER):
+    elif is_git_repo(AUTHOR, CLI_NAME_LOWER):
         GIT_EXECUTABLE = shutil.which("git")
         args = [
             GIT_EXECUTABLE,
@@ -117,11 +123,9 @@ def update_app(force=False):
         )
 
     elif UV := shutil.which("uv"):
-        process = subprocess.run(
-            [UV, "tool", "upgrade", PROJECT_NAME_LOWER], check=False
-        )
+        process = subprocess.run([UV, "tool", "upgrade", PROJECT_NAME], check=False)
     elif PIPX := shutil.which("pipx"):
-        process = subprocess.run([PIPX, "upgrade", PROJECT_NAME_LOWER], check=False)
+        process = subprocess.run([PIPX, "upgrade", PROJECT_NAME], check=False)
     else:
         PYTHON_EXECUTABLE = sys.executable
 
@@ -130,7 +134,7 @@ def update_app(force=False):
             "-m",
             "pip",
             "install",
-            PROJECT_NAME_LOWER,
+            PROJECT_NAME,
             "-U",
             "--no-warn-script-location",
         ]

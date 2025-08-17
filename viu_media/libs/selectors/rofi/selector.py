@@ -54,15 +54,15 @@ class RofiSelector(BaseSelector):
                 from plyer import notification
 
                 from ....core.constants import (
+                    CLI_NAME,
+                    CLI_NAME_LOWER,
                     ICON_PATH,
-                    PROJECT_NAME,
-                    PROJECT_NAME_LOWER,
                 )
 
                 notification.notify(  # type: ignore
-                    title=f"{PROJECT_NAME} notification".title(),
-                    message=f"Nothing was selected {PROJECT_NAME_LOWER} is shutting down",
-                    app_name=PROJECT_NAME,
+                    title=f"{CLI_NAME} notification".title(),
+                    message=f"Nothing was selected {CLI_NAME_LOWER} is shutting down",
+                    app_name=CLI_NAME,
                     app_icon=str(ICON_PATH),
                     timeout=2 * 60,
                 )
@@ -120,15 +120,15 @@ class RofiSelector(BaseSelector):
             from plyer import notification
 
             from ....core.constants import (
+                CLI_NAME,
+                CLI_NAME_LOWER,
                 ICON_PATH,
-                PROJECT_NAME,
-                PROJECT_NAME_LOWER,
             )
 
             notification.notify(  # type: ignore
-                title=f"{PROJECT_NAME} notification".title(),
-                message=f"Nothing was selected {PROJECT_NAME_LOWER} is shutting down",
-                app_name=PROJECT_NAME,
+                title=f"{CLI_NAME} notification".title(),
+                message=f"Nothing was selected {CLI_NAME_LOWER} is shutting down",
+                app_name=CLI_NAME,
                 app_icon=str(ICON_PATH),
                 timeout=2 * 60,
             )

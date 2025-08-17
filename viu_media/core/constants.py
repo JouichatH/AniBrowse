@@ -4,9 +4,10 @@ from importlib import metadata, resources
 from pathlib import Path
 
 PLATFORM = sys.platform
-PROJECT_NAME = "VIU"
-PROJECT_NAME_LOWER = "viu"
-APP_NAME = os.environ.get(f"{PROJECT_NAME}_APP_NAME", PROJECT_NAME_LOWER)
+CLI_NAME = "VIU"
+CLI_NAME_LOWER = "viu"
+PROJECT_NAME = "viu-media"
+APP_NAME = os.environ.get(f"{CLI_NAME}_APP_NAME", CLI_NAME_LOWER)
 
 USER_NAME = os.environ.get("USERNAME", "User")
 
@@ -24,7 +25,7 @@ ANILIST_AUTH = (
 )
 
 try:
-    APP_DIR = Path(str(resources.files(PROJECT_NAME.lower())))
+    APP_DIR = Path(str(resources.files(CLI_NAME.lower())))
 
 except ModuleNotFoundError:
     from pathlib import Path

@@ -34,12 +34,12 @@ class FeedbackService:
             try:
                 from plyer import notification
 
-                from ....core.constants import ICON_PATH, PROJECT_NAME
+                from ....core.constants import CLI_NAME, ICON_PATH
 
                 notification.notify(  # type: ignore
-                    title=f"{PROJECT_NAME} notification".title(),
+                    title=f"{CLI_NAME} notification".title(),
                     message=message,
-                    app_name=PROJECT_NAME,
+                    app_name=CLI_NAME,
                     app_icon=str(ICON_PATH),
                     timeout=self.app_config.general.desktop_notification_duration * 60,
                 )
@@ -60,12 +60,12 @@ class FeedbackService:
             try:
                 from plyer import notification
 
-                from ....core.constants import ICON_PATH, PROJECT_NAME
+                from ....core.constants import CLI_NAME, ICON_PATH
 
                 notification.notify(  # type: ignore
-                    title=f"{PROJECT_NAME} notification".title(),
+                    title=f"{CLI_NAME} notification".title(),
                     message=message,
-                    app_name=PROJECT_NAME,
+                    app_name=CLI_NAME,
                     app_icon=str(ICON_PATH),
                     timeout=self.app_config.general.desktop_notification_duration * 60,
                 )
@@ -87,12 +87,12 @@ class FeedbackService:
             try:
                 from plyer import notification
 
-                from ....core.constants import ICON_PATH, PROJECT_NAME
+                from ....core.constants import CLI_NAME, ICON_PATH
 
                 notification.notify(  # type: ignore
-                    title=f"{PROJECT_NAME} notification".title(),
+                    title=f"{CLI_NAME} notification".title(),
                     message=message,
-                    app_name=PROJECT_NAME,
+                    app_name=CLI_NAME,
                     app_icon=str(ICON_PATH),
                     timeout=self.app_config.general.desktop_notification_duration * 60,
                 )
@@ -113,12 +113,12 @@ class FeedbackService:
             try:
                 from plyer import notification
 
-                from ....core.constants import ICON_PATH, PROJECT_NAME
+                from ....core.constants import CLI_NAME, ICON_PATH
 
                 notification.notify(  # type: ignore
-                    title=f"{PROJECT_NAME} notification".title(),
+                    title=f"{CLI_NAME} notification".title(),
                     message=message,
-                    app_name=PROJECT_NAME,
+                    app_name=CLI_NAME,
                     app_icon=str(ICON_PATH),
                     timeout=self.app_config.general.desktop_notification_duration * 60,
                 )
@@ -169,12 +169,12 @@ class FeedbackService:
             try:
                 from plyer import notification
 
-                from ....core.constants import ICON_PATH, PROJECT_NAME
+                from ....core.constants import CLI_NAME, ICON_PATH
 
                 notification.notify(  # type: ignore
-                    title=f"{PROJECT_NAME} notification".title(),
+                    title=f"{CLI_NAME} notification".title(),
                     message="No current way to display info in rofi, use fzf and the terminal instead",
-                    app_name=PROJECT_NAME,
+                    app_name=CLI_NAME,
                     app_icon=str(ICON_PATH),
                     timeout=self.app_config.general.desktop_notification_duration * 60,
                 )

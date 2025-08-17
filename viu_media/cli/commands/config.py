@@ -123,9 +123,9 @@ def _generate_desktop_entry():
     from rich.prompt import Confirm
 
     from ...core.constants import (
+        CLI_NAME,
         ICON_PATH,
         PLATFORM,
-        PROJECT_NAME,
         USER_APPLICATIONS,
         __version__,
     )
@@ -149,7 +149,7 @@ def _generate_desktop_entry():
         desktop_entry = dedent(
             f"""
             [Desktop Entry]
-            Name={PROJECT_NAME.title()}
+            Name={CLI_NAME.title()}
             Type=Application
             version={__version__}
             Path={Path().home()}
@@ -160,7 +160,7 @@ def _generate_desktop_entry():
             Categories=Entertainment
         """
         )
-        desktop_entry_path = USER_APPLICATIONS / f"{PROJECT_NAME}.desktop"
+        desktop_entry_path = USER_APPLICATIONS / f"{CLI_NAME}.desktop"
         if desktop_entry_path.exists():
             if not Confirm.ask(
                 f"The file already exists {desktop_entry_path}; or would you like to rewrite it",
