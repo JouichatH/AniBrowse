@@ -1,15 +1,3 @@
->[!IMPORTANT]
-> looking for a new project name
->
->if you have any that is not already being used by someone on pypi please share on discord
->
->and let me warn yah am not good at naming things so help before disaster strikes again lol
->
->i dont want it to end up like viu where i added cli lol since viu was taken
->
->
-
-
 <p align="center">
   <h1 align="center">Viu</h1>
 </p>
