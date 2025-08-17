@@ -19,7 +19,7 @@ commands = {
 @click.group(
     cls=LazyGroup,
     name="registry",
-    root="viu_cli.cli.commands.registry.commands",
+    root="viu_media.cli.commands.registry.commands",
     invoke_without_command=True,
     help="Manage your local media registry - sync, search, backup and maintain your anime database",
     short_help="Local media registry management",

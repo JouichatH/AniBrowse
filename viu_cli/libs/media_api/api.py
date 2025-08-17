@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 # Map the client name to its import path AND the config section it needs.
 API_CLIENTS = {
-    "anilist": ("viu_cli.libs.media_api.anilist.api.AniListApi", "anilist"),
-    "jikan": ("viu_cli.libs.media_api.jikan.api.JikanApi", "jikan"),  # For the future
+    "anilist": ("viu_media.libs.media_api.anilist.api.AniListApi", "anilist"),
+    "jikan": ("viu_media.libs.media_api.jikan.api.JikanApi", "jikan"),  # For the future
 }
 
 

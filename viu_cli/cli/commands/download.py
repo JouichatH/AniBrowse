@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import TypedDict
 
-    from viu_cli.cli.service.feedback.service import FeedbackService
+    from viu_media.cli.service.feedback.service import FeedbackService
     from typing_extensions import Unpack
 
     from ...libs.provider.anime.base import BaseAnimeProvider
@@ -103,7 +103,7 @@ if TYPE_CHECKING:
 )
 @click.pass_obj
 def download(config: AppConfig, **options: "Unpack[Options]"):
-    from viu_cli.cli.service.feedback.service import FeedbackService
+    from viu_media.cli.service.feedback.service import FeedbackService
 
     from ...core.exceptions import ViuError
     from ...libs.provider.anime.params import (

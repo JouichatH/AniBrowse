@@ -1,5 +1,5 @@
 import click
-from viu_cli.core.config import AppConfig
+from viu_media.core.config import AppConfig
 from rich.console import Console
 from rich.table import Table
 
@@ -11,8 +11,8 @@ def notifications(config: AppConfig):
     Displays unread notifications from AniList.
     Running this command will also mark the notifications as read on the AniList website.
     """
-    from viu_cli.cli.service.feedback import FeedbackService
-    from viu_cli.libs.media_api.api import create_api_client
+    from viu_media.cli.service.feedback import FeedbackService
+    from viu_media.libs.media_api.api import create_api_client
 
     from ....service.auth import AuthService
 

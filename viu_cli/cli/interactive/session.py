@@ -317,7 +317,7 @@ class Session:
             if filename.endswith(".py") and not filename.startswith("__"):
                 module_name = filename[:-3]
                 full_module_name = (
-                    f"viu_cli.cli.interactive.menu.{package_name}.{module_name}"
+                    f"viu_media.cli.interactive.menu.{package_name}.{module_name}"
                 )
                 file_path = package_path / filename
 

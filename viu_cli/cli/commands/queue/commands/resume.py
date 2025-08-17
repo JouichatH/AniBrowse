@@ -1,5 +1,5 @@
 import click
-from viu_cli.core.config import AppConfig
+from viu_media.core.config import AppConfig
 
 
 @click.command(
@@ -7,11 +7,11 @@ from viu_cli.core.config import AppConfig
 )
 @click.pass_obj
 def resume(config: AppConfig):
-    from viu_cli.cli.service.download.service import DownloadService
-    from viu_cli.cli.service.feedback import FeedbackService
-    from viu_cli.cli.service.registry import MediaRegistryService
-    from viu_cli.libs.media_api.api import create_api_client
-    from viu_cli.libs.provider.anime.provider import create_provider
+    from viu_media.cli.service.download.service import DownloadService
+    from viu_media.cli.service.feedback import FeedbackService
+    from viu_media.cli.service.registry import MediaRegistryService
+    from viu_media.libs.media_api.api import create_api_client
+    from viu_media.libs.provider.anime.provider import create_provider
 
     feedback = FeedbackService(config)
     media_api = create_api_client(config.general.media_api, config)

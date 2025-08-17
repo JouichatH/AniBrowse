@@ -3,8 +3,8 @@ Registry sync command - synchronize local registry with remote media API
 """
 
 import click
-from viu_cli.cli.service.feedback.service import FeedbackService
-from viu_cli.cli.service.registry.service import MediaRegistryService
+from viu_media.cli.service.feedback.service import FeedbackService
+from viu_media.cli.service.registry.service import MediaRegistryService
 
 from .....core.config import AppConfig
 

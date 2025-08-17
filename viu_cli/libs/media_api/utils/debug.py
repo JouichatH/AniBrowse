@@ -25,7 +25,7 @@ def test_media_api(api_client: BaseApiClient):
         api_client: An instance of AniListApi to test
 
     Usage:
-        Run this module directly: python -m viu_cli.libs.media_api.anilist.api
+        Run this module directly: python -m viu_media.libs.media_api.anilist.api
         Or import and call: test_media_api(AniListApi(config, client))
     """
     from ....core.constants import APP_ASCII_ART

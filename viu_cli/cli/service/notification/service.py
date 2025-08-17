@@ -3,12 +3,12 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
-from viu_cli.cli.service.registry import MediaRegistryService
-from viu_cli.cli.service.registry.models import DownloadStatus
-from viu_cli.core.config.model import AppConfig
-from viu_cli.core.constants import APP_CACHE_DIR
-from viu_cli.libs.media_api.base import BaseApiClient
-from viu_cli.libs.media_api.types import MediaItem, Notification
+from viu_media.cli.service.registry import MediaRegistryService
+from viu_media.cli.service.registry.models import DownloadStatus
+from viu_media.core.config.model import AppConfig
+from viu_media.core.constants import APP_CACHE_DIR
+from viu_media.libs.media_api.base import BaseApiClient
+from viu_media.libs.media_api.types import MediaItem, Notification
 
 try:
     from plyer import notification as plyer_notification

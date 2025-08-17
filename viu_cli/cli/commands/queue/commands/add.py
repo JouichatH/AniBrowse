@@ -1,7 +1,7 @@
 import click
-from viu_cli.core.config import AppConfig
-from viu_cli.core.exceptions import ViuError
-from viu_cli.libs.media_api.types import (
+from viu_media.core.config import AppConfig
+from viu_media.core.exceptions import ViuError
+from viu_media.libs.media_api.types import (
     MediaFormat,
     MediaGenre,
     MediaItem,
@@ -70,14 +70,14 @@ from viu_cli.libs.media_api.types import (
 )
 @click.pass_obj
 def add(config: AppConfig, **options):
-    from viu_cli.cli.service.download import DownloadService
-    from viu_cli.cli.service.feedback import FeedbackService
-    from viu_cli.cli.service.registry import MediaRegistryService
-    from viu_cli.cli.utils.parser import parse_episode_range
-    from viu_cli.libs.media_api.api import create_api_client
-    from viu_cli.libs.media_api.params import MediaSearchParams
-    from viu_cli.libs.provider.anime.provider import create_provider
-    from viu_cli.libs.selectors import create_selector
+    from viu_media.cli.service.download import DownloadService
+    from viu_media.cli.service.feedback import FeedbackService
+    from viu_media.cli.service.registry import MediaRegistryService
+    from viu_media.cli.utils.parser import parse_episode_range
+    from viu_media.libs.media_api.api import create_api_client
+    from viu_media.libs.media_api.params import MediaSearchParams
+    from viu_media.libs.provider.anime.provider import create_provider
+    from viu_media.libs.selectors import create_selector
     from rich.progress import Progress
 
     feedback = FeedbackService(config)
@@ -149,7 +149,7 @@ def add(config: AppConfig, **options):
             }
             preview_command = None
             if config.general.preview != "none":
-                from viu_cli.cli.utils.preview import create_preview_context
+                from viu_media.cli.utils.preview import create_preview_context
 
                 with create_preview_context() as preview_ctx:
                     preview_command = preview_ctx.get_anime_preview(

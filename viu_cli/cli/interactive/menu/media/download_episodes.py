@@ -6,7 +6,7 @@ from ...state import InternalDirective, State
 @session.menu
 def download_episodes(ctx: Context, state: State) -> State | InternalDirective:
     """Menu to select and download episodes synchronously."""
-    from viu_cli.cli.utils.search import find_best_match_title
+    from viu_media.cli.utils.search import find_best_match_title
     from .....core.utils.normalizer import normalize_title
     from ....service.download.service import DownloadService
 

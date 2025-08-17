@@ -7,7 +7,7 @@ otherwise falls back to a pure Python implementation with the same API.
 Usage:
     Basic usage with the convenience functions:
 
-    >>> from viu_cli.core.utils.fuzzy import fuzz
+    >>> from viu_media.core.utils.fuzzy import fuzz
     >>> fuzz.ratio("hello world", "hello")
     62
     >>> fuzz.partial_ratio("hello world", "hello")
@@ -15,7 +15,7 @@ Usage:
 
     Using the FuzzyMatcher class directly:
 
-    >>> from viu_cli.core.utils.fuzzy import FuzzyMatcher
+    >>> from viu_media.core.utils.fuzzy import FuzzyMatcher
     >>> matcher = FuzzyMatcher()
     >>> matcher.backend
     'thefuzz'  # or 'pure_python' if thefuzz is not available
@@ -24,7 +24,7 @@ Usage:
 
     For drop-in replacement of thefuzz.fuzz:
 
-    >>> from viu_cli.core.utils.fuzzy import ratio, partial_ratio
+    >>> from viu_media.core.utils.fuzzy import ratio, partial_ratio
     >>> ratio("test", "best")
     75
 """

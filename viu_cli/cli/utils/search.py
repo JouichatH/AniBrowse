@@ -1,9 +1,9 @@
 """Search functionality."""
 
-from viu_cli.core.utils.fuzzy import fuzz
-from viu_cli.core.utils.normalizer import normalize_title
-from viu_cli.libs.provider.anime.types import SearchResult, ProviderName
-from viu_cli.libs.media_api.types import MediaItem
+from viu_media.core.utils.fuzzy import fuzz
+from viu_media.core.utils.normalizer import normalize_title
+from viu_media.libs.provider.anime.types import SearchResult, ProviderName
+from viu_media.libs.media_api.types import MediaItem
 
 
 def find_best_match_title(

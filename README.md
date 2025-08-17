@@ -20,8 +20,8 @@
 </p>
 <div align="center">
 
-[![PyPI - Version](https://img.shields.io/pypi/v/viu_cli)](https://pypi.org/project/viu_cli/)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/viu_cli)](https://pypi.org/project/viu_cli/)
+[![PyPI - Version](https://img.shields.io/pypi/v/viu-media)](https://pypi.org/project/viu-media/)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/viu-media)](https://pypi.org/project/viu-media/)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Benexl/Viu/test.yml?label=Tests)](https://github.com/Benexl/Viu/actions)
 [![Discord](https://img.shields.io/discord/1250887070906323096?label=Discord&logo=discord)](https://discord.gg/HBEmAwvbHV)
 [![GitHub Issues](https://img.shields.io/github/issues/Benexl/Viu)](https://github.com/Benexl/Viu/issues)
@@ -69,13 +69,13 @@ The best way to install Viu is with [**uv**](https://github.com/astral-sh/uv), a
 
 ```bash
 # Install with all optional features for the full experience
-uv tool install "viu_cli[standard]"
+uv tool install "viu-media[standard]"
 
 # Or, pick and choose the extras you need:
-uv tool install viu_cli  # Core functionality only
-uv tool install "viu_cli[download]"  # For advanced downloading with yt-dlp
-uv tool install "viu_cli[discord]"   # For Discord Rich Presence
-uv tool install "viu_cli[notifications]" # For desktop notifications
+uv tool install viu-media  # Core functionality only
+uv tool install "viu-media[download]"  # For advanced downloading with yt-dlp
+uv tool install "viu-media[discord]"   # For Discord Rich Presence
+uv tool install "viu-media[notifications]" # For desktop notifications
 ```
 
 ### Other Installation Methods
@@ -100,12 +100,12 @@ uv tool install "viu_cli[notifications]" # For desktop notifications
 
   #### Using pipx (for isolated environments)
   ```bash
-  pipx install "viu_cli[standard]"
+  pipx install "viu-media[standard]"
   ```
   
   #### Using pip
   ```bash
-  pip install "viu_cli[standard]"
+  pip install "viu-media[standard]"
   ```
 </details>
 

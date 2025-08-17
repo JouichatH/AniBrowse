@@ -1,5 +1,5 @@
 import click
-from viu_cli.core.config import AppConfig
+from viu_media.core.config import AppConfig
 
 
 @click.command(name="list", help="List items in the download queue and their statuses.")
@@ -10,9 +10,9 @@ from viu_cli.core.config import AppConfig
 @click.option("--detailed", is_flag=True)
 @click.pass_obj
 def list_cmd(config: AppConfig, status: str | None, detailed: bool | None):
-    from viu_cli.cli.service.feedback import FeedbackService
-    from viu_cli.cli.service.registry import MediaRegistryService
-    from viu_cli.cli.service.registry.models import DownloadStatus
+    from viu_media.cli.service.feedback import FeedbackService
+    from viu_media.cli.service.registry import MediaRegistryService
+    from viu_media.cli.service.registry.models import DownloadStatus
 
     feedback = FeedbackService(config)
     registry = MediaRegistryService(config.general.media_api, config.media_registry)

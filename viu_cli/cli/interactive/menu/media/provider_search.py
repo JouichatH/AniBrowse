@@ -6,7 +6,7 @@ from ...state import InternalDirective, MenuName, ProviderState, State
 
 @session.menu
 def provider_search(ctx: Context, state: State) -> State | InternalDirective:
-    from viu_cli.cli.utils.search import find_best_match_title
+    from viu_media.cli.utils.search import find_best_match_title
 
     from .....core.utils.normalizer import normalize_title, update_user_normalizer_json
 

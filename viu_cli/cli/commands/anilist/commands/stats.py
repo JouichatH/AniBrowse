@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import click
 
 if TYPE_CHECKING:
-    from viu_cli.core.config import AppConfig
+    from viu_media.core.config import AppConfig
 
 
 @click.command(help="Print out your anilist stats")

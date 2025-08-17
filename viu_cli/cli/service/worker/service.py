@@ -4,9 +4,9 @@ import threading
 import time
 from typing import Optional
 
-from viu_cli.cli.service.download.service import DownloadService
-from viu_cli.cli.service.notification.service import NotificationService
-from viu_cli.core.config.model import WorkerConfig
+from viu_media.cli.service.download.service import DownloadService
+from viu_media.cli.service.notification.service import NotificationService
+from viu_media.core.config.model import WorkerConfig
 
 logger = logging.getLogger(__name__)
 

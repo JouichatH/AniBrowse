@@ -1,5 +1,5 @@
 import click
-from viu_cli.core.config import AppConfig
+from viu_media.core.config import AppConfig
 
 
 @click.command(help="Run the background worker for notifications and downloads.")
@@ -11,14 +11,14 @@ def worker(config: AppConfig):
     process any queued downloads. It's recommended to run this in the
     background (e.g., 'viu worker &') or as a system service.
     """
-    from viu_cli.cli.service.auth import AuthService
-    from viu_cli.cli.service.download.service import DownloadService
-    from viu_cli.cli.service.feedback import FeedbackService
-    from viu_cli.cli.service.notification.service import NotificationService
-    from viu_cli.cli.service.registry.service import MediaRegistryService
-    from viu_cli.cli.service.worker.service import BackgroundWorkerService
-    from viu_cli.libs.media_api.api import create_api_client
-    from viu_cli.libs.provider.anime.provider import create_provider
+    from viu_media.cli.service.auth import AuthService
+    from viu_media.cli.service.download.service import DownloadService
+    from viu_media.cli.service.feedback import FeedbackService
+    from viu_media.cli.service.notification.service import NotificationService
+    from viu_media.cli.service.registry.service import MediaRegistryService
+    from viu_media.cli.service.worker.service import BackgroundWorkerService
+    from viu_media.libs.media_api.api import create_api_client
+    from viu_media.libs.provider.anime.provider import create_provider
 
     feedback = FeedbackService(config)
     if not config.worker.enabled:

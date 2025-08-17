@@ -13,7 +13,7 @@ commands = {
 @click.group(
     cls=LazyGroup,
     name="queue",
-    root="viu_cli.cli.commands.queue.commands",
+    root="viu_media.cli.commands.queue.commands",
     invoke_without_command=False,
     help="Manage the download queue (add, list, resume, clear).",
     short_help="Manage the download queue.",

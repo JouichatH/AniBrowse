@@ -10,7 +10,7 @@ APP_NAME = os.environ.get(f"{PROJECT_NAME}_APP_NAME", PROJECT_NAME_LOWER)
 
 USER_NAME = os.environ.get("USERNAME", "User")
 
-__version__ = metadata.version("viu_cli")
+__version__ = metadata.version("viu_media")
 
 AUTHOR = "Benexl"
 GIT_REPO = "github.com"

@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, List
 
-from viu_cli.cli.utils.search import find_best_match_title
+from viu_media.cli.utils.search import find_best_match_title
 
 from ....core.config.model import AppConfig
 from ....core.constants import APP_CACHE_DIR

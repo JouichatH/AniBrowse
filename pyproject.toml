@@ -1,5 +1,5 @@
 [project]
-name = "viu_cli"
+name = "viu-media"
 version = "3.2.6"
 description = "A browser anime site experience from the terminal"
 license = "UNLICENSE"
@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-viu = 'viu_cli:Cli'
+viu = 'viu_media:Cli'
 
 [project.optional-dependencies]
 standard = [

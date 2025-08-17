@@ -44,7 +44,7 @@ commands = {
 
 @click.group(
     cls=LazyGroup,
-    root="viu_cli.cli.commands",
+    root="viu_media.cli.commands",
     invoke_without_command=True,
     lazy_subcommands=commands,
     context_settings=dict(auto_envvar_prefix=PROJECT_NAME),

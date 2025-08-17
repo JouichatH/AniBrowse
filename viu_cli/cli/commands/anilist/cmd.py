@@ -18,7 +18,7 @@ commands = {
 @click.group(
     cls=LazyGroup,
     name="anilist",
-    root="viu_cli.cli.commands.anilist.commands",
+    root="viu_media.cli.commands.anilist.commands",
     invoke_without_command=True,
     help="A beautiful interface that gives you access to a commplete streaming experience",
     short_help="Access all streaming options",

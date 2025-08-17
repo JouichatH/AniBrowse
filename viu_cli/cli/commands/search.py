@@ -10,7 +10,7 @@ from . import examples
 if TYPE_CHECKING:
     from typing import TypedDict
 
-    from viu_cli.cli.service.feedback.service import FeedbackService
+    from viu_media.cli.service.feedback.service import FeedbackService
     from typing_extensions import Unpack
 
     from ...libs.provider.anime.base import BaseAnimeProvider
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 )
 @click.pass_obj
 def search(config: AppConfig, **options: "Unpack[Options]"):
-    from viu_cli.cli.service.feedback.service import FeedbackService
+    from viu_media.cli.service.feedback.service import FeedbackService
 
     from ...core.exceptions import ViuError
     from ...libs.provider.anime.params import (
@@ -134,7 +134,7 @@ def stream_anime(
     episode: str,
     anime_title: str,
 ):
-    from viu_cli.cli.service.player.service import PlayerService
+    from viu_media.cli.service.player.service import PlayerService
 
     from ...libs.player.params import PlayerParams
     from ...libs.provider.anime.params import EpisodeStreamsParams
