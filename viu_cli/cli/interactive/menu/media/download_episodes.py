@@ -6,7 +6,7 @@ from ...state import InternalDirective, State
 @session.menu
 def download_episodes(ctx: Context, state: State) -> State | InternalDirective:
     """Menu to select and download episodes synchronously."""
-    from .....core.utils.fuzzy import fuzz
+    from viu_cli.cli.utils.search import find_best_match_title
     from .....core.utils.normalizer import normalize_title
     from ....service.download.service import DownloadService
 
@@ -40,12 +40,8 @@ def download_episodes(ctx: Context, state: State) -> State | InternalDirective:
         return InternalDirective.BACK
 
     provider_results_map = {res.title: res for res in provider_search_results.results}
-    best_match_title = max(
-        provider_results_map.keys(),
-        key=lambda p_title: fuzz.ratio(
-            normalize_title(p_title, config.general.provider.value).lower(),
-            media_title.lower(),
-        ),
+    best_match_title = find_best_match_title(
+        provider_results_map, config.general.provider, media_item
     )
     selected_provider_anime_ref = provider_results_map[best_match_title]
 
