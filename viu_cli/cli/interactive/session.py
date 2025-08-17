@@ -111,17 +111,25 @@ class Context:
     @property
     def media_api(self) -> "BaseApiClient":
         if not self._media_api:
+            import httpx
+
             from ...libs.media_api.api import create_api_client
 
             media_api = create_api_client(self.config.general.media_api, self.config)
 
             auth = self.auth
             if auth_profile := auth.get_auth():
-                p = media_api.authenticate(auth_profile.token)
-                if p:
-                    logger.debug(f"Authenticated as {p.name}")
-                else:
-                    logger.warning(f"Failed to authenticate with {auth_profile.token}")
+                try:
+                    p = media_api.authenticate(auth_profile.token)
+                    if p:
+                        logger.debug(f"Authenticated as {p.name}")
+                    else:
+                        logger.warning(
+                            f"Failed to authenticate with {auth_profile.token}"
+                        )
+                except httpx.ConnectError as e:
+                    logger.warning(f"It seems you are offline: {e}")
+
             else:
                 logger.debug("Not authenticated")
             self._media_api = media_api
