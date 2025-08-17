@@ -146,5 +146,5 @@ class ProviderState(StateModel):
 
 class State(StateModel):
     menu_name: MenuName
-    provider: ProviderState = Field(default_factory=ProviderState)
     media_api: MediaApiState = Field(default_factory=MediaApiState)
+    provider: ProviderState = Field(default_factory=ProviderState)
