@@ -66,7 +66,7 @@ class RofiSelector(BaseSelector):
                     app_icon=str(ICON_PATH),
                     timeout=2 * 60,
                 )
-            except:
+            except:  # noqa: E722
                 logger.warning("Using rofi without plyer for notifications")
             sys.exit(1)
 
@@ -132,7 +132,7 @@ class RofiSelector(BaseSelector):
                 app_icon=str(ICON_PATH),
                 timeout=2 * 60,
             )
-        except:
+        except:  # noqa: E722
             logger.warning("Using rofi without plyer for notifications")
         # HACK: force exit if no input
         sys.exit(1)
