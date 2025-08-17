@@ -299,7 +299,7 @@ class DownloadService:
                         timeout=self.app_config.general.desktop_notification_duration
                         * 60,
                     )
-                except:
+                except:  # noqa: E722
                     pass
                 logger.info(message)
             else:
@@ -320,7 +320,7 @@ class DownloadService:
                     app_icon=app_icon,
                     timeout=self.app_config.general.desktop_notification_duration * 60,
                 )
-            except:
+            except:  # noqa: E722
                 pass
             logger.error(
                 message,

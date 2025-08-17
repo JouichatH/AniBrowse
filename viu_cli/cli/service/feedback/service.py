@@ -44,7 +44,7 @@ class FeedbackService:
                     timeout=self.app_config.general.desktop_notification_duration * 60,
                 )
                 return
-            except:
+            except:  # noqa: E722
                 logger.warning("Using rofi without plyer for notifications")
         if details:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
@@ -70,7 +70,7 @@ class FeedbackService:
                     timeout=self.app_config.general.desktop_notification_duration * 60,
                 )
                 return
-            except:
+            except:  # noqa: E722
                 logger.warning("Using rofi without plyer for notifications")
         if details:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
@@ -97,7 +97,7 @@ class FeedbackService:
                     timeout=self.app_config.general.desktop_notification_duration * 60,
                 )
                 return
-            except:
+            except:  # noqa: E722
                 logger.warning("Using rofi without plyer for notifications")
         if details:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
@@ -123,7 +123,7 @@ class FeedbackService:
                     timeout=self.app_config.general.desktop_notification_duration * 60,
                 )
                 return
-            except:
+            except:  # noqa: E722
                 logger.warning("Using rofi without plyer for notifications")
         if details:
             console.print(f"{main_msg}\n[dim]{details}[/dim]")
@@ -179,7 +179,7 @@ class FeedbackService:
                     timeout=self.app_config.general.desktop_notification_duration * 60,
                 )
                 return
-            except:
+            except:  # noqa: E722
                 logger.warning("Using rofi without plyer for notifications")
         click.pause(f"{icon}{message}...")
 
