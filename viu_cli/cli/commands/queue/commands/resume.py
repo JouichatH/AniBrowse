@@ -2,7 +2,9 @@ import click
 from viu_cli.core.config import AppConfig
 
 
-@click.command(name="resume", help="Submit any queued or in-progress downloads to the worker.")
+@click.command(
+    name="resume", help="Submit any queued or in-progress downloads to the worker."
+)
 @click.pass_obj
 def resume(config: AppConfig):
     from viu_cli.cli.service.download.service import DownloadService

@@ -23,9 +23,7 @@ GENERAL_IMAGE_RENDERER = (
     "The command-line tool to use for rendering images in the terminal."
 )
 GENERAL_MANGA_VIEWER = "The external application to use for viewing manga pages."
-GENERAL_CHECK_FOR_UPDATES = (
-    "Automatically check for new versions of Viu on startup."
-)
+GENERAL_CHECK_FOR_UPDATES = "Automatically check for new versions of Viu on startup."
 GENERAL_CACHE_REQUESTS = (
     "Enable caching of network requests to speed up subsequent operations."
 )

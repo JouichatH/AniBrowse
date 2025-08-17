@@ -251,18 +251,14 @@ def search(config: AppConfig, **options: "Unpack[SearchOptions]"):
             and start_date_lesser is not None
             and start_date_greater > start_date_lesser
         ):
-            raise ViuError(
-                "Start date greater cannot be later than start date lesser"
-            )
+            raise ViuError("Start date greater cannot be later than start date lesser")
 
         if (
             end_date_greater is not None
             and end_date_lesser is not None
             and end_date_greater > end_date_lesser
         ):
-            raise ViuError(
-                "End date greater cannot be later than end date lesser"
-            )
+            raise ViuError("End date greater cannot be later than end date lesser")
 
         # Build search parameters
         search_params = MediaSearchParams(

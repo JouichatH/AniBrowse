@@ -2,7 +2,10 @@ import click
 from viu_cli.core.config import AppConfig
 
 
-@click.command(name="clear", help="Clear queued items from the registry (QUEUED -> NOT_DOWNLOADED).")
+@click.command(
+    name="clear",
+    help="Clear queued items from the registry (QUEUED -> NOT_DOWNLOADED).",
+)
 @click.option("--force", is_flag=True, help="Do not prompt for confirmation.")
 @click.pass_obj
 def clear_cmd(config: AppConfig, force: bool):

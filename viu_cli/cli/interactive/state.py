@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, Mapping, Optional, Union
+from typing import Dict, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, computed_field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ...libs.media_api.params import MediaSearchParams, UserMediaListSearchParams
 from ...libs.media_api.types import MediaItem, PageInfo

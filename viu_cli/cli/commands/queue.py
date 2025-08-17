@@ -33,8 +33,12 @@ from viu_cli.libs.media_api.types import (
 @click.option(
     "--genres-not", multiple=True, type=click.Choice([g.value for g in MediaGenre])
 )
-@click.option("--tags", "-T", multiple=True, type=click.Choice([t.value for t in MediaTag]))
-@click.option("--tags-not", multiple=True, type=click.Choice([t.value for t in MediaTag]))
+@click.option(
+    "--tags", "-T", multiple=True, type=click.Choice([t.value for t in MediaTag])
+)
+@click.option(
+    "--tags-not", multiple=True, type=click.Choice([t.value for t in MediaTag])
+)
 @click.option(
     "--media-format",
     "-f",

@@ -203,9 +203,7 @@ class MpvPlayer(BasePlayer):
         """
         WEBTORRENT_CLI = shutil.which("webtorrent")
         if not WEBTORRENT_CLI:
-            raise ViuError(
-                "Please Install webtorrent cli inorder to stream torrents"
-            )
+            raise ViuError("Please Install webtorrent cli inorder to stream torrents")
 
         args = [WEBTORRENT_CLI, params.url, "--mpv"]
         if mpv_args := self._create_mpv_cli_options(params):
