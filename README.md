@@ -5,7 +5,7 @@
 >
 >and let me warn yah am not good at naming things so help before disaster strikes again lol
 >
->i didnt want it to end up like viu where i added cli lol since viu was taken
+>i dont want it to end up like viu where i added cli lol since viu was taken
 >
 >
 
