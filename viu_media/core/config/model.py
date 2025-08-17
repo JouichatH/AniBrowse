@@ -190,6 +190,10 @@ class GeneralConfig(BaseModel):
         default=defaults.GENERAL_CHECK_FOR_UPDATES,
         description=desc.GENERAL_CHECK_FOR_UPDATES,
     )
+    update_check_interval: float = Field(
+        default=defaults.GENERAL_UPDATE_CHECK_INTERVAL,
+        description=desc.GENERAL_UPDATE_CHECK_INTERVAL,
+    )
     cache_requests: bool = Field(
         default=defaults.GENERAL_CACHE_REQUESTS,
         description=desc.GENERAL_CACHE_REQUESTS,

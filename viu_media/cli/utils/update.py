@@ -8,6 +8,8 @@ import sys
 
 from httpx import get
 from rich import print
+from rich.console import Console
+from rich.markdown import Markdown
 
 from ...core.constants import (
     AUTHOR,
@@ -18,6 +20,25 @@ from ...core.constants import (
 )
 
 API_URL = f"https://api.{GIT_REPO}/repos/{AUTHOR}/{CLI_NAME_LOWER}/releases/latest"
+
+
+def print_release_json(release_json):
+    version = release_json.get("tag_name", "unknown")
+    release_name = release_json.get("name", version)
+    release_body = release_json.get("body", "No release notes available.")
+    published_at = release_json.get("published_at", "unknown")
+
+    console = Console()
+
+    print(f"[bold cyan]Release: {release_name}[/]")
+    print(f"[dim]Version: {version}[/]")
+    print(f"[dim]Published: {published_at}[/]")
+    print()
+
+    # Display release notes as markdown if available
+    if release_body and release_body.strip():
+        markdown = Markdown(release_body)
+        console.print(markdown)
 
 
 def check_for_updates():
