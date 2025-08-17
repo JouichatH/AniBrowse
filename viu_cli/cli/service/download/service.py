@@ -2,11 +2,12 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, List
 
+from viu_cli.cli.utils.search import find_best_match_title
+
 from ....core.config.model import AppConfig
 from ....core.constants import APP_CACHE_DIR
 from ....core.downloader import DownloadParams, create_downloader
 from ....core.utils.concurrency import ManagedBackgroundWorker, thread_manager
-from ....core.utils.fuzzy import fuzz
 from ....core.utils.normalizer import normalize_title
 from ....libs.media_api.types import MediaItem
 from ....libs.provider.anime.params import (
@@ -204,14 +205,8 @@ class DownloadService:
             provider_results_map = {
                 result.title: result for result in provider_search_results.results
             }
-            best_match_title = max(
-                provider_results_map.keys(),
-                key=lambda p_title: fuzz.ratio(
-                    normalize_title(
-                        p_title, self.app_config.general.provider.value
-                    ).lower(),
-                    media_title.lower(),
-                ),
+            best_match_title = find_best_match_title(
+                provider_results_map, self.app_config.general.provider, media_item
             )
             provider_anime_ref = provider_results_map[best_match_title]
 

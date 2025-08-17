@@ -6,7 +6,7 @@ from ...state import InternalDirective, MenuName, ProviderState, State
 
 @session.menu
 def provider_search(ctx: Context, state: State) -> State | InternalDirective:
-    from .....core.utils.fuzzy import fuzz
+    from viu_cli.cli.utils.search import find_best_match_title
     from .....core.utils.normalizer import normalize_title, update_user_normalizer_json
 
     feedback = ctx.feedback
@@ -51,12 +51,8 @@ def provider_search(ctx: Context, state: State) -> State | InternalDirective:
     # --- Auto-Select or Prompt ---
     if config.general.auto_select_anime_result:
         # Use fuzzy matching to find the best title
-        best_match_title = max(
-            provider_results_map.keys(),
-            key=lambda p_title: fuzz.ratio(
-                normalize_title(p_title, config.general.provider.value).lower(),
-                media_title.lower(),
-            ),
+        best_match_title = find_best_match_title(
+            provider_results_map, config.general.provider, media_item
         )
         feedback.info(f"Auto-selecting best match: {best_match_title}")
         selected_provider_anime = provider_results_map[best_match_title]
