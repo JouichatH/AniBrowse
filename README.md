@@ -83,7 +83,7 @@ uv tool install "viu-media[notifications]" # For desktop notifications
   ##### Declarative Installation
   ###### in your flake.nix
   ```nix
-  viu.url = "github.com:Benexl/viu";
+  viu.url = "github:Benexl/viu";
   ```
   ###### in your system or home-manager packages
   ```nix
