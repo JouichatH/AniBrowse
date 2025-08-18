@@ -1,4 +1,5 @@
 import configparser
+import os
 from pathlib import Path
 from typing import Dict
 
@@ -28,10 +29,9 @@ class ConfigLoader:
         """
         self.config_path = config_path
         self.parser = configparser.ConfigParser(
-            interpolation=None,
-            # Allow boolean values without a corresponding value (e.g., `enabled` vs `enabled = true`)
+            interpolation=configparser.ExtendedInterpolation(),
+            defaults=os.environ,
             allow_no_value=True,
-            # Behave like a dictionary, preserving case sensitivity of keys
             dict_type=dict,
         )
 
