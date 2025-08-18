@@ -1,4 +1,6 @@
+# viu_media/cli/config/generate.py
 import itertools
+import json
 import textwrap
 from enum import Enum
 from pathlib import Path
@@ -20,9 +22,11 @@ CONFIG_HEADER = f"""
 {config_asci}
 #
 # ==============================================================================
-# This file was auto-generated from the application's configuration model.
+# This is the Viu configuration file. It uses the TOML format.
 # You can modify these values to customize the behavior of Viu.
-# For path-based options, you can use '~' for your home directory.
+# For more information on the available options, please refer to the
+# official documentation on GitHub.
+# ==============================================================================
 """.lstrip()
 
 CONFIG_FOOTER = f"""
@@ -39,21 +43,22 @@ CONFIG_FOOTER = f"""
 """.lstrip()
 
 
-def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
-    """Generate a configuration file content from a Pydantic model."""
+def generate_config_toml_from_app_model(app_model: AppConfig) -> str:
+    """Generate a TOML configuration file content from a Pydantic model with comments."""
 
-    config_ini_content = [CONFIG_HEADER]
+    config_content_parts = [CONFIG_HEADER]
 
     for section_name, section_model in app_model:
-        section_comment = section_model.model_config.get("title", "")
+        section_title = section_model.model_config.get("title", section_name.title())
 
-        config_ini_content.append(f"\n#\n# {section_comment}\n#")
-        config_ini_content.append(f"[{section_name}]")
+        config_content_parts.append(f"\n#\n# {section_title}\n#")
+        config_content_parts.append(f"[{section_name}]")
 
         for field_name, field_info in itertools.chain(
             section_model.model_fields.items(),
             section_model.model_computed_fields.items(),
         ):
+            # --- Generate Comments ---
             description = field_info.description or ""
             if description:
                 wrapped_comment = textwrap.fill(
@@ -62,7 +67,7 @@ def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
                     initial_indent="# ",
                     subsequent_indent="# ",
                 )
-                config_ini_content.append(f"\n{wrapped_comment}")
+                config_content_parts.append(f"\n{wrapped_comment}")
 
             field_type_comment = _get_field_type_comment(field_info)
             if field_type_comment:
@@ -72,35 +77,65 @@ def generate_config_ini_from_app_model(app_model: AppConfig) -> str:
                     initial_indent="# ",
                     subsequent_indent="# ",
                 )
-                config_ini_content.append(wrapped_comment)
+                config_content_parts.append(wrapped_comment)
+
             if (
                 hasattr(field_info, "default")
-                and field_info.default != PydanticUndefined
+                and field_info.default is not PydanticUndefined
             ):
+                default_val = (
+                    field_info.default.value
+                    if isinstance(field_info.default, Enum)
+                    else field_info.default
+                )
                 wrapped_comment = textwrap.fill(
-                    f"Default: {field_info.default.value if isinstance(field_info.default, Enum) else field_info.default}",
+                    f"Default: {_format_toml_value(default_val)}",
                     width=78,
                     initial_indent="# ",
                     subsequent_indent="# ",
                 )
-                config_ini_content.append(wrapped_comment)
+                config_content_parts.append(wrapped_comment)
 
+            # --- Generate Key-Value Pair ---
             field_value = getattr(section_model, field_name)
-            if isinstance(field_value, bool):
-                value_str = str(field_value).lower()
-            elif isinstance(field_value, Path):
-                value_str = str(field_value)
-            elif field_value is None:
-                value_str = ""
-            elif isinstance(field_value, Enum):
-                value_str = field_value.value
+
+            if field_value is None:
+                config_content_parts.append(f"# {field_name} =")
             else:
-                value_str = str(field_value)
+                value_str = _format_toml_value(field_value)
+                config_content_parts.append(f"{field_name} = {value_str}")
 
-            config_ini_content.append(f"{field_name} = {value_str}")
+    config_content_parts.extend(["\n", CONFIG_FOOTER])
+    return "\n".join(config_content_parts)
 
-    config_ini_content.extend(["\n", CONFIG_FOOTER])
-    return "\n".join(config_ini_content)
+
+def _format_toml_value(value: Any) -> str:
+    """
+    Manually formats a Python value into a TOML-compliant string.
+    This avoids needing an external TOML writer dependency.
+    """
+    if isinstance(value, bool):
+        return str(value).lower()
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, Enum):
+        return f'"{value.value}"'
+
+    # Handle strings and Paths, differentiating between single and multi-line
+    if isinstance(value, (str, Path)):
+        str_val = str(value)
+        if "\n" in str_val:
+            # For multi-line strings, use triple quotes.
+            # Also, escape any triple quotes that might be in the string itself.
+            escaped_val = str_val.replace('"""', '\\"\\"\\"')
+            return f'"""\n{escaped_val}"""'
+        else:
+            # For single-line strings, use double quotes and escape relevant characters.
+            escaped_val = str_val.replace("\\", "\\\\").replace('"', '\\"')
+            return f'"{escaped_val}"'
+
+    # Fallback for any other types
+    return f'"{str(value)}"'
 
 
 def _get_field_type_comment(field_info: FieldInfo | ComputedFieldInfo) -> str:
@@ -111,7 +146,6 @@ def _get_field_type_comment(field_info: FieldInfo | ComputedFieldInfo) -> str:
         else field_info.return_type
     )
 
-    # Handle Literal and Enum types
     possible_values = []
     if field_type is not None:
         if isinstance(field_type, type) and issubclass(field_type, Enum):
@@ -122,9 +156,8 @@ def _get_field_type_comment(field_info: FieldInfo | ComputedFieldInfo) -> str:
                 possible_values = list(args)
 
     if possible_values:
-        return f"Possible values: [ {', '.join(map(str, possible_values))} ]"
-
-    # Handle basic types and numeric ranges
+        formatted_values = ", ".join(json.dumps(v) for v in possible_values)
+        return f"Possible values: [ {formatted_values} ]"
     type_name = _get_type_name(field_type)
     range_info = _get_range_info(field_info)
 

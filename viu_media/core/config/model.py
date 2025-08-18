@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, PrivateAttr, computed_field
+from pydantic import BaseModel, Field
 
 from ...libs.media_api.types import MediaSort, UserMediaListSort
 from ...libs.provider.anime.types import ProviderName, ProviderServer
@@ -323,14 +323,16 @@ class SessionsConfig(OtherConfig):
 class FzfConfig(OtherConfig):
     """Configuration specific to the FZF selector."""
 
-    _opts: str = PrivateAttr(
-        default_factory=lambda: defaults.FZF_OPTS.read_text(encoding="utf-8")
+    opts: str = Field(
+        default_factory=lambda: defaults.FZF_OPTS.read_text(encoding="utf-8"),
+        description=desc.FZF_OPTS,
     )
     header_color: str = Field(
         default=defaults.FZF_HEADER_COLOR, description=desc.FZF_HEADER_COLOR
     )
-    _header_ascii_art: str = PrivateAttr(
-        default_factory=lambda: APP_ASCII_ART.read_text(encoding="utf-8")
+    header_ascii_art: str = Field(
+        default_factory=lambda: APP_ASCII_ART.read_text(encoding="utf-8"),
+        description=desc.FZF_HEADER_ASCII_ART,
     )
     preview_header_color: str = Field(
         default=defaults.FZF_PREVIEW_HEADER_COLOR,
@@ -340,28 +342,6 @@ class FzfConfig(OtherConfig):
         default=defaults.FZF_PREVIEW_SEPARATOR_COLOR,
         description=desc.FZF_PREVIEW_SEPARATOR_COLOR,
     )
-
-    def __init__(self, **kwargs):
-        opts = kwargs.pop("opts", None)
-        header_ascii_art = kwargs.pop("header_ascii_art", None)
-
-        super().__init__(**kwargs)
-        if opts:
-            self._opts = opts
-        if header_ascii_art:
-            self._header_ascii_art = header_ascii_art
-
-    @computed_field(description=desc.FZF_OPTS)
-    @property
-    def opts(self) -> str:
-        return "\n" + "\n".join([f"\t{line}" for line in self._opts.split()])
-
-    @computed_field(description=desc.FZF_HEADER_ASCII_ART)
-    @property
-    def header_ascii_art(self) -> str:
-        return "\n" + "\n".join(
-            [f"\t{line}" for line in self._header_ascii_art.split()]
-        )
 
 
 class RofiConfig(OtherConfig):

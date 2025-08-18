@@ -82,6 +82,6 @@ APP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FOLDER.mkdir(parents=True, exist_ok=True)
 USER_VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 
-USER_CONFIG = APP_DATA_DIR / "config.ini"
+USER_CONFIG = APP_DATA_DIR / "config.toml"
 
 LOG_FILE = LOG_FOLDER / "app.log"

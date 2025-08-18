@@ -72,7 +72,7 @@ def config(
 ):
     from ...core.constants import USER_CONFIG
     from ..config.editor import InteractiveConfigEditor
-    from ..config.generate import generate_config_ini_from_app_model
+    from ..config.generate import generate_config_toml_from_app_model
 
     if path:
         print(USER_CONFIG)
@@ -81,9 +81,9 @@ def config(
         from rich.syntax import Syntax
 
         console = Console()
-        config_ini = generate_config_ini_from_app_model(user_config)
+        config_toml = generate_config_toml_from_app_model(user_config)
         syntax = Syntax(
-            config_ini,
+            config_toml,
             "ini",
             theme=user_config.general.pygment_style,
             line_numbers=True,
@@ -99,12 +99,14 @@ def config(
     elif interactive:
         editor = InteractiveConfigEditor(current_config=user_config)
         new_config = editor.run()
-        with open(USER_CONFIG, "w", encoding="utf-8") as file:
-            file.write(generate_config_ini_from_app_model(new_config))
+        USER_CONFIG.write_text(
+            generate_config_toml_from_app_model(new_config), encoding="utf-8"
+        )
         click.echo(f"Configuration saved successfully to {USER_CONFIG}")
     elif update:
-        with open(USER_CONFIG, "w", encoding="utf-8") as file:
-            file.write(generate_config_ini_from_app_model(user_config))
+        USER_CONFIG.write_text(
+            generate_config_toml_from_app_model(user_config), encoding="utf-8"
+        )
         print("update successfull")
     else:
         click.edit(filename=str(USER_CONFIG))
