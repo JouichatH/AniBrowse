@@ -72,8 +72,22 @@ uv tool install "viu-media[notifications]" # For desktop notifications
   <summary><b>Platform-Specific and Alternative Installers</b></summary>
   
   #### Nix / NixOS
+  ##### Ephemeral / One-Off Run (No Installation)
+  ```bash
+  nix run github:Benexl/viu
+  ```
+  ##### Imperative Installation
   ```bash
   nix profile install github:Benexl/viu
+  ```
+  ##### Declarative Installation
+  ###### in your flake.nix
+  ```nix
+  viu.url = "github.com:Benexl/viu";
+  ```
+  ###### in your system or home-manager packages
+  ```nix
+  inputs.viu.packages.${pkgs.system}.default
   ```
 
   #### Arch Linux (AUR)
