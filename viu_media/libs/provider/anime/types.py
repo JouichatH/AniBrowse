@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict
 class ProviderName(Enum):
     ALLANIME = "allanime"
     ANIMEPAHE = "animepahe"
+    ANIMEUNITY = "animeunity"
 
 
 class ProviderServer(Enum):
