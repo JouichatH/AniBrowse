@@ -1,16 +1,12 @@
 import logging
-import re
-import time
 from functools import lru_cache
-
-import httpx
 
 from ...scraping.user_agents import UserAgentGenerator
 from ..base import BaseAnimeProvider
 from ..params import AnimeParams, EpisodeStreamsParams, SearchParams
 from ..types import Anime, AnimeEpisodeInfo, SearchResult, SearchResults
 from ..utils.debug import debug_provider
-from .constants import ANIMEUNITY_BASE, DOWNLOAD_URL_REGEX, MAX_TIMEOUT
+from .constants import ANIMEUNITY_BASE, DOWNLOAD_URL_REGEX, MAX_TIMEOUT, TOKEN_REGEX
 from .mappers import map_to_anime_result, map_to_search_results, map_to_server
 
 logger = logging.getLogger(__name__)
@@ -18,19 +14,25 @@ logger = logging.getLogger(__name__)
 
 class AnimeUnity(BaseAnimeProvider):
     HEADERS = {
-        "user-agent": UserAgentGenerator().random(),
+        "User-Agent": UserAgentGenerator().random(),
     }
 
     @lru_cache
-    def _get_token(self) -> dict[str, str]:
-        response = self.client.get(ANIMEUNITY_BASE, headers=self.HEADERS)
-        data = response.cookies
-        cookies = {
-            "animeunity_session": data["animeunity_session"],
+    def _get_token(self) -> None:
+        response = self.client.get(
+            ANIMEUNITY_BASE,
+            headers=self.HEADERS,
+            timeout=MAX_TIMEOUT,
+            follow_redirects=True,
+        )
+        response.raise_for_status()
+        token_match = TOKEN_REGEX.search(response.text)
+        if token_match:
+            self.HEADERS["x-csrf-token"] = token_match.group(1)
+        self.client.cookies = {
+            "animeunity_session": response.cookies.get("animeunity_session") or ""
         }
-
-        self.HEADERS["x-xsrf-token"] = data["XSRF-TOKEN"]
-        return cookies
+        self.client.headers = self.HEADERS
 
     @debug_provider
     def search(self, params: SearchParams) -> SearchResults | None:
@@ -38,23 +40,14 @@ class AnimeUnity(BaseAnimeProvider):
 
     @lru_cache
     def _search(self, params: SearchParams) -> SearchResults | None:
-        cookies = self._get_token()
-        try:
-            response = self.client.post(
-                url=f"{ANIMEUNITY_BASE}/livesearch",
-                data={"title": params.query},
-                headers=self.HEADERS,
-                cookies=cookies,
-                timeout=MAX_TIMEOUT,
-            )
-            response.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            logger.error(f"AnimeUnity 500 error for query '{params.query}'")
-            # Opzionale: retry dopo un breve delay
-            logger.info("Retrying after 2 seconds...")
-            time.sleep(2)
-            return self._search(params)
-        return map_to_search_results(response)
+        self._get_token()
+        response = self.client.post(
+            url=f"{ANIMEUNITY_BASE}/livesearch",
+            data={"title": params.query},
+            timeout=MAX_TIMEOUT,
+        )
+        response.raise_for_status()
+        return map_to_search_results(response.json().get("records", []))
 
     @debug_provider
     def get(self, params: AnimeParams) -> Anime | None:
@@ -77,21 +70,27 @@ class AnimeUnity(BaseAnimeProvider):
             logger.error(f"No search result found for ID {params.id}")
             return None
 
-        cookies = self._get_token()
-        response = self.client.get(
-            url=f"{ANIMEUNITY_BASE}/info_api/{params.id}/1",
-            params={
-                "start_range": 0,
-                "end_range": max(
-                    len(search_result.episodes.sub), len(search_result.episodes.dub)
-                ),
-            },
-            headers=self.HEADERS,
-            cookies=cookies,
-            timeout=MAX_TIMEOUT,
+        # Fetch episodes in chunks
+        data = []
+        start_range = 1
+        episode_count = max(
+            len(search_result.episodes.sub), len(search_result.episodes.dub)
         )
-        response.raise_for_status()
-        return map_to_anime_result(response, search_result)
+        while start_range <= episode_count:
+            end_range = min(start_range + 119, episode_count)
+            response = self.client.get(
+                url=f"{ANIMEUNITY_BASE}/info_api/{params.id}/1",
+                params={
+                    "start_range": start_range,
+                    "end_range": end_range,
+                },
+                timeout=MAX_TIMEOUT,
+            )
+            response.raise_for_status()
+            data.extend(response.json().get("episodes", []))
+            start_range = end_range + 1
+
+        return map_to_anime_result(data, search_result)
 
     @lru_cache()
     def _get_episode_info(
@@ -119,23 +118,18 @@ class AnimeUnity(BaseAnimeProvider):
             )
             return
 
-        cookies = self._get_token()
         response = self.client.get(
             url=f"{ANIMEUNITY_BASE}/embed-url/{episode.id}",
-            headers=self.HEADERS,
-            cookies=cookies,
             timeout=MAX_TIMEOUT,
         )
         response.raise_for_status()
         # The embed URL is returned as plain text
         iframe_src = response.text.strip()
         # Fetch the video page
-        video_response = self.client.get(
-            iframe_src, headers=self.HEADERS, cookies=cookies, timeout=MAX_TIMEOUT
-        )
+        video_response = self.client.get(iframe_src, timeout=MAX_TIMEOUT)
         video_response.raise_for_status()
 
-        download_url_match = re.search(DOWNLOAD_URL_REGEX, video_response.text)
+        download_url_match = DOWNLOAD_URL_REGEX.search(video_response.text)
         if download_url_match:
             yield map_to_server(episode, download_url_match.group(1))
         return None

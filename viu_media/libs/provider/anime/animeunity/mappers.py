@@ -1,5 +1,3 @@
-from httpx import Response
-
 from ..types import (
     Anime,
     AnimeEpisodeInfo,
@@ -19,19 +17,7 @@ translation_type_map = {
 }
 
 
-def map_to_search_results(response: Response) -> SearchResults:
-    """
-    animes = list[Anime]()
-       for result in results:
-           title, anilist_id, info = self._parse_info(result)
-           anime = Anime(title, result['id'])
-           anime._set_info(anilist_id, info)
-           animes.append(anime)
-
-       return animes
-    """
-    data = response.json().get("records", [])
-
+def map_to_search_results(data: dict) -> SearchResults:
     return SearchResults(
         page_info=PageInfo(),
         results=[
@@ -40,12 +26,12 @@ def map_to_search_results(response: Response) -> SearchResults:
                 title=get_real_title(result),
                 episodes=AnimeEpisodes(
                     sub=(
-                        list(map(str, range(1, result["episodes_count"] + 1)))
+                        list(map(str, range(1, get_episodes_count(result) + 1)))
                         if result["dub"] == 0
                         else []
                     ),
                     dub=(
-                        list(map(str, range(1, result["episodes_count"] + 1)))
+                        list(map(str, range(1, get_episodes_count(result) + 1)))
                         if result["dub"] == 1
                         else []
                     ),
@@ -63,8 +49,7 @@ def map_to_search_results(response: Response) -> SearchResults:
     )
 
 
-def map_to_anime_result(response: Response, search_result: SearchResult) -> Anime:
-    data = response.json()["episodes"]
+def map_to_anime_result(data: list, search_result: SearchResult) -> Anime:
     return Anime(
         id=search_result.id,
         title=search_result.title,
@@ -109,3 +94,13 @@ def get_real_title(record: dict) -> str:
         return record["title"]
     else:
         return record.get("title_it", "")
+
+
+def get_episodes_count(record: dict) -> int:
+    """
+    Return the number of episodes from the record.
+    """
+    if record.get("episodes_count", 0) > 0:
+        return record["episodes_count"]
+    else:
+        return record.get("real_episodes_count", 0)
