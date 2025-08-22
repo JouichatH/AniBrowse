@@ -53,7 +53,18 @@ def map_to_anime_result(data: list, search_result: SearchResult) -> Anime:
     return Anime(
         id=search_result.id,
         title=search_result.title,
-        episodes=search_result.episodes,
+        episodes=AnimeEpisodes(
+            sub=[
+                episode["number"]
+                for episode in data
+                if len(search_result.episodes.sub) > 0
+            ],
+            dub=[
+                episode["number"]
+                for episode in data
+                if len(search_result.episodes.dub) > 0
+            ],
+        ),
         episodes_info=[
             AnimeEpisodeInfo(
                 id=str(episode["id"]),
