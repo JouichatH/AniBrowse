@@ -29,6 +29,9 @@ class ProviderServer(Enum):
     # AnimePaheServer values
     KWIK = "kwik"
 
+    # AnimeUnityServer values
+    VIXCLOUD = "vixcloud"
+
 
 class MediaTranslationType(Enum):
     SUB = "sub"
