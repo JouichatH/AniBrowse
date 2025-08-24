@@ -6,8 +6,19 @@ from ..base import BaseAnimeProvider
 from ..params import AnimeParams, EpisodeStreamsParams, SearchParams
 from ..types import Anime, AnimeEpisodeInfo, SearchResult, SearchResults
 from ..utils.debug import debug_provider
-from .constants import ANIMEUNITY_BASE, DOWNLOAD_URL_REGEX, MAX_TIMEOUT, TOKEN_REGEX
-from .mappers import map_to_anime_result, map_to_search_results, map_to_server
+from .constants import (
+    ANIMEUNITY_BASE,
+    DOWNLOAD_URL_REGEX,
+    MAX_TIMEOUT,
+    REPLACEMENT_WORDS,
+    TOKEN_REGEX,
+)
+from .mappers import (
+    map_to_anime_result,
+    map_to_search_result,
+    map_to_search_results,
+    map_to_server,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +27,7 @@ class AnimeUnity(BaseAnimeProvider):
     HEADERS = {
         "User-Agent": UserAgentGenerator().random(),
     }
+    _cache = dict[str, SearchResult]()
 
     @lru_cache
     def _get_token(self) -> None:
@@ -36,18 +48,32 @@ class AnimeUnity(BaseAnimeProvider):
 
     @debug_provider
     def search(self, params: SearchParams) -> SearchResults | None:
-        return self._search(params)
+        if not (res := self._search(params)):
+            return None
+
+        for result in res.results:
+            self._cache[result.id] = result
+
+        return res
 
     @lru_cache
     def _search(self, params: SearchParams) -> SearchResults | None:
         self._get_token()
+        # Replace words in query to
+        query = params.query
+        for old, new in REPLACEMENT_WORDS.items():
+            query = query.replace(old, new)
+
         response = self.client.post(
             url=f"{ANIMEUNITY_BASE}/livesearch",
-            data={"title": params.query},
+            data={"title": query},
             timeout=MAX_TIMEOUT,
         )
+
         response.raise_for_status()
-        return map_to_search_results(response.json().get("records", []))
+        return map_to_search_results(
+            response.json().get("records", []), params.translation_type
+        )
 
     @debug_provider
     def get(self, params: AnimeParams) -> Anime | None:
@@ -55,18 +81,23 @@ class AnimeUnity(BaseAnimeProvider):
 
     @lru_cache()
     def _get_search_result(self, params: AnimeParams) -> SearchResult | None:
-        search_results = self._search(SearchParams(query=params.query))
-        if not search_results or not search_results.results:
-            logger.error(f"No search results found for ID {params.id}")
-            return None
-        for search_result in search_results.results:
-            if search_result.id == params.id:
-                return search_result
+        if cached := self._cache.get(params.id):
+            return cached
+
+        response = self.client.get(
+            url=f"{ANIMEUNITY_BASE}/info_api/{params.id}/",
+            timeout=MAX_TIMEOUT,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        if res := map_to_search_result(data, None):
+            self._cache[params.id] = res
+        return res
 
     @lru_cache
     def _get_anime(self, params: AnimeParams) -> Anime | None:
-        search_result = self._get_search_result(params)
-        if not search_result:
+        if (search_result := self._get_search_result(params)) is None:
             logger.error(f"No search result found for ID {params.id}")
             return None
 
