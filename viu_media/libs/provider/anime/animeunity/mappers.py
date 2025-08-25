@@ -92,14 +92,14 @@ def map_to_server(
         name="vixcloud",
         links=[
             EpisodeStream(
-                link=info["link"].replace(str(info["quality"]), str(quality)),
+                link=info["link"].replace(str(info["quality"]), quality),
                 title=info["name"],
-                quality=str(quality),  # type: ignore
+                quality=quality,  # type: ignore
                 translation_type=MediaTranslationType(translation_type),
                 mp4=True,
             )
             for quality in AVAILABLE_VIDEO_QUALITY
-            if quality <= info["quality"]
+            if int(quality) <= info["quality"]
         ],
         episode_title=episode.title,
     )
