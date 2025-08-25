@@ -5,11 +5,13 @@ from ..types import (
     AnimeEpisodeInfo,
     AnimeEpisodes,
     EpisodeStream,
+    MediaTranslationType,
     PageInfo,
     SearchResult,
     SearchResults,
     Server,
 )
+from .constants import AVAILABLE_VIDEO_QUALITY
 
 
 def map_to_search_results(
@@ -47,11 +49,7 @@ def map_to_search_result(
                 else []
             ),
         ),
-        # other_titles=[title for title in [result["title_eng"], result["title_it"]] if title],
-        media_type=data["type"],
         score=data["score"],
-        status=data["status"],
-        # season=result["season"],
         poster=data["imageurl"],
         year=data["date"],
     )
@@ -87,13 +85,21 @@ def map_to_anime_result(data: list, search_result: SearchResult) -> Anime:
     )
 
 
-def map_to_server(episode: AnimeEpisodeInfo, download_url: str) -> Server:
+def map_to_server(
+    episode: AnimeEpisodeInfo, info: dict, translation_type: Literal["sub", "dub"]
+) -> Server:
     return Server(
         name="vixcloud",
         links=[
             EpisodeStream(
-                link=download_url,
+                link=info["link"].replace(str(info["quality"]), str(quality)),
+                title=info["name"],
+                quality=str(quality),  # type: ignore
+                translation_type=MediaTranslationType(translation_type),
+                mp4=True,
             )
+            for quality in AVAILABLE_VIDEO_QUALITY
+            if quality <= info["quality"]
         ],
         episode_title=episode.title,
     )

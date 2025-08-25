@@ -12,6 +12,7 @@ from .constants import (
     MAX_TIMEOUT,
     REPLACEMENT_WORDS,
     TOKEN_REGEX,
+    VIDEO_INFO_REGEX,
 )
 from .mappers import (
     map_to_anime_result,
@@ -141,29 +142,31 @@ class AnimeUnity(BaseAnimeProvider):
                 return episode
 
     @debug_provider
-    def episode_streams(self, params):
-        episode = self._get_episode_info(params)
-        if not episode:
+    def episode_streams(self, params: EpisodeStreamsParams):
+        if not (episode := self._get_episode_info(params)):
             logger.error(
                 f"Episode {params.episode} doesn't exist for anime {params.anime_id}"
             )
             return
-
+        # Get the Server url
         response = self.client.get(
-            url=f"{ANIMEUNITY_BASE}/embed-url/{episode.id}",
-            timeout=MAX_TIMEOUT,
+            url=f"{ANIMEUNITY_BASE}/embed-url/{episode.id}", timeout=MAX_TIMEOUT
         )
         response.raise_for_status()
-        # The embed URL is returned as plain text
-        iframe_src = response.text.strip()
-        # Fetch the video page
-        video_response = self.client.get(iframe_src, timeout=MAX_TIMEOUT)
+
+        # Fetch the Server page
+        video_response = self.client.get(url=response.text.strip(), timeout=MAX_TIMEOUT)
         video_response.raise_for_status()
 
+        video_info = VIDEO_INFO_REGEX.search(video_response.text)
         download_url_match = DOWNLOAD_URL_REGEX.search(video_response.text)
-        if download_url_match:
-            yield map_to_server(episode, download_url_match.group(1))
-        return None
+        if not (download_url_match and video_info):
+            logger.error(f"Failed to extract video info for episode {episode.id}")
+            return None
+
+        info = eval(video_info.group(1).replace("null", "None"))
+        info["link"] = download_url_match.group(1)
+        yield map_to_server(episode, info, params.translation_type)
 
 
 if __name__ == "__main__":
