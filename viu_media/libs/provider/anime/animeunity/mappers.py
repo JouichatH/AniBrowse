@@ -36,7 +36,7 @@ def map_to_search_result(
         return None
     return SearchResult(
         id=str(data["id"]),
-        title=get_real_title(data),
+        title=get_titles(data)[0] if get_titles(data) else "Unknown",
         episodes=AnimeEpisodes(
             sub=(
                 list(map(str, range(1, get_episodes_count(data) + 1)))
@@ -49,6 +49,7 @@ def map_to_search_result(
                 else []
             ),
         ),
+        other_titles=get_titles(data),
         score=data["score"],
         poster=data["imageurl"],
         year=data["date"],
@@ -105,16 +106,18 @@ def map_to_server(
     )
 
 
-def get_real_title(record: dict) -> str:
+def get_titles(data: dict) -> list[str]:
     """
     Return the most appropriate title from the record.
     """
-    if record.get("title_eng"):
-        return record["title_eng"]
-    elif record.get("title"):
-        return record["title"]
-    else:
-        return record.get("title_it", "")
+    titles = []
+    if data.get("title_eng"):
+        titles.append(data["title_eng"])
+    if data.get("title"):
+        titles.append(data["title"])
+    if data.get("title_it"):
+        titles.append(data["title_it"])
+    return titles
 
 
 def get_episodes_count(record: dict) -> int:
