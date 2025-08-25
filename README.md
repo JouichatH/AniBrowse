@@ -94,10 +94,10 @@ uv tool install "viu-media[notifications]" # For desktop notifications
   Use an AUR helper like `yay` or `paru`.
   ```bash
   # Stable version (recommended)
-  yay -S viu
+  yay -S viu-media
 
   # Git version (latest commit)
-  yay -S viu-git
+  yay -S viu-media-git
   ```
 
   #### Using pipx (for isolated environments)
