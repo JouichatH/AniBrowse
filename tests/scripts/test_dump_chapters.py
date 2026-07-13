@@ -53,13 +53,15 @@ def test_parse_ffprobe_chapters_empty_or_bad():
         ("Opening", "op"),
         ("OP", "op"),
         ("NCOP", "op"),
+        ("Intro", "op"),
         ("Ending", "ed"),
         ("ED", "ed"),
         ("Credits", "ed"),
         ("Outro", "ed"),
-        ("Intro", None),
+        ("Episode", None),
         ("Part A", None),
         ("Preview", None),
+        ("Chapter 01", None),
         ("", None),
     ],
 )
@@ -72,9 +74,9 @@ def test_summarize_counts_and_classifies():
         ("1", 0.0, 90.0, "Opening"),
         ("2", 0.0, 90.0, "Opening"),
         ("1", 1300.0, 1380.0, "Ending"),
-        ("2", 0.0, 60.0, "Intro"),
+        ("2", 0.0, 60.0, "Episode"),
     ]
     summary = dc.summarize(rows)
     assert summary[0] == ("Opening", 2, "op")
     assert ("Ending", 1, "ed") in summary
-    assert ("Intro", 1, None) in summary
+    assert ("Episode", 1, None) in summary

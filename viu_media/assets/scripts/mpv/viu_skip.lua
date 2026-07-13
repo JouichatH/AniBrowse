@@ -87,8 +87,11 @@ local function chapter_kind_by_title(title)
         return nil
     end
     title = title:lower()
-    if title:find("opening") or title:find("ncop") or title:match("^op[%s%p]?")
-        or title == "op" then
+    -- "intro" is the opening in the common Intro/Episode/Credits chapter scheme
+    -- (allanime encodes). "episode"/"part"/"chapter" are main content and must
+    -- NOT match - the shape heuristic handles generic "Chapter NN" instead.
+    if title:find("opening") or title:find("ncop") or title:find("intro")
+        or title:match("^op[%s%p]?") or title == "op" then
         return "op"
     end
     if title:find("ending") or title:find("credit") or title:find("outro")

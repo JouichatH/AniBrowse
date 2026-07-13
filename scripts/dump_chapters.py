@@ -70,7 +70,14 @@ def classify_title(title: str) -> Optional[str]:
     if not title:
         return None
     t = title.lower()
-    if "opening" in t or "ncop" in t or t == "op" or t.startswith("op ") or t.startswith("op-"):
+    if (
+        "opening" in t
+        or "ncop" in t
+        or "intro" in t
+        or t == "op"
+        or t.startswith("op ")
+        or t.startswith("op-")
+    ):
         return "op"
     if (
         "ending" in t
