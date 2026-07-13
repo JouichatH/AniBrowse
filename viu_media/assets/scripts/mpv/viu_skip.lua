@@ -58,6 +58,7 @@ local function do_skip(kind, target)
     skipped[kind] = true
     mp.commandv("seek", target, "absolute+exact")
     mp.osd_message(kind == "op" and "Skipped opening" or "Skipped ending", 1)
+    print(string.format("[viu-skip] %s -> %.1f", kind, target))
 end
 
 -- AniSkip interval-based skipping: seek out of a segment on entering it.
@@ -75,10 +76,13 @@ mp.observe_property("time-pos", "number", function(_, t)
     end
 end)
 
--- Chapter-title-based skipping: when AniSkip has no data, many releases still
--- name their OP/ED chapters. Seek to the end of such a chapter the first time
--- we enter it (to the next chapter's start, so a post-ending scene still plays).
-local function chapter_kind(title)
+-- Chapter-based skipping. Two ways to recognise an OP/ED chapter:
+--   1. by title - releases that name them "Opening"/"Ending"/etc.;
+--   2. by shape - a ~90s chapter near the start (opening) or the end (ending).
+--      Many releases (e.g. allanime's mp4s) ship generic "Chapter NN" titles,
+--      so the title tells us nothing and the tell-tale 90s span + position is
+--      the only signal. Gated on the opening_skip/ending_skip toggles.
+local function chapter_kind_by_title(title)
     if not title then
         return nil
     end
@@ -94,27 +98,48 @@ local function chapter_kind(title)
     return nil
 end
 
+-- Returns (kind, seek_target) for the chapter at index idx, or (nil, nil).
+local function classify_chapter(chapters, idx, total)
+    local current = chapters[idx + 1] -- Lua tables are 1-based
+    if not current then
+        return nil, nil
+    end
+    local next_chapter = chapters[idx + 2]
+    local seek_target = next_chapter and next_chapter.time or total
+    local by_title = chapter_kind_by_title(current.title)
+    if by_title then
+        return by_title, seek_target
+    end
+    -- Shape heuristic: a ~90s (TV OP/ED length) chapter at an OP/ED position.
+    if not (total and total > 0 and seek_target) then
+        return nil, nil
+    end
+    local span = seek_target - current.time
+    if span >= 80 and span <= 105 then
+        if current.time < 0.35 * total then
+            return "op", seek_target
+        end
+        if current.time > 0.75 * total then
+            return "ed", seek_target
+        end
+    end
+    return nil, nil
+end
+
 mp.observe_property("chapter", "number", function(_, idx)
     if idx == nil or idx < 0 then
         return
     end
     local chapters = mp.get_property_native("chapter-list") or {}
-    local current = chapters[idx + 1] -- Lua tables are 1-based
-    if not current then
-        return
-    end
-    local kind = chapter_kind(current.title)
-    if kind == nil then
-        return
-    end
+    local total = mp.get_property_native("duration")
+    local kind, seek_target = classify_chapter(chapters, idx, total)
     if kind == "op" and (not options.op_enabled or skipped.op) then
         return
     end
     if kind == "ed" and (not options.ed_enabled or skipped.ed) then
         return
     end
-    local next_chapter = chapters[idx + 2]
-    if next_chapter and next_chapter.time then
-        do_skip(kind, next_chapter.time)
+    if kind and seek_target then
+        do_skip(kind, seek_target)
     end
 end)

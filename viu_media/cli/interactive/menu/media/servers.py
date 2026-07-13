@@ -69,6 +69,11 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
         if media_item.streaming_episodes.get(episode_number)
         else f"{media_item.title.english}; Episode {episode_number}"
     )
+
+    # State the source/connection clearly so it can be reviewed before playing.
+    feedback.info(
+        f"[bold cyan]Source:[/] {_source_summary(ctx, selected_server, stream_link_obj.link)}"
+    )
     feedback.info(f"[bold green]Launching player for:[/] {final_title}")
 
     if not state.media_api.media_item or not state.provider.anime:
@@ -127,6 +132,30 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
                 "reached_end_": reached_end,
             }
         ),
+    )
+
+
+def _stream_host(url: str) -> str:
+    """Host of a stream URL (or "torrent" for a magnet) - the connection endpoint."""
+    if url.startswith("magnet:") or url.endswith(".torrent"):
+        return "torrent/webtorrent"
+    from urllib.parse import urlparse
+
+    try:
+        return urlparse(url).hostname or "?"
+    except ValueError:
+        return "?"
+
+
+def _source_summary(ctx, server, url: str) -> str:
+    """One-line source description: provider, server, quality/type, host."""
+    config = ctx.config
+    is_nyaa = server.name.startswith("nyaa:")
+    provider = "nyaa (torrent)" if is_nyaa else config.general.provider.value
+    return (
+        f"{provider} · server '{server.name}' · "
+        f"{config.stream.quality}p {config.stream.translation_type} · "
+        f"{_stream_host(url)}"
     )
 
 

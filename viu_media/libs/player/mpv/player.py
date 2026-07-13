@@ -90,6 +90,14 @@ def _log_mpv_chapters(stdout: str | None, stderr: str | None) -> None:
             "mpv chapters: %s",
             ", ".join(f"{t:.0f}s={title!r}" for t, title in chapters),
         )
+    # Also surface any skips the viu_skip Lua performed, for diagnosing coverage.
+    for stream in (stdout, stderr):
+        if not stream:
+            continue
+        for line in stream.splitlines():
+            i = line.find("[viu-skip]")
+            if i != -1:
+                logger.info("viu_skip %s", line[i + len("[viu-skip]"):].strip())
 
 
 def parse_playback_time(
