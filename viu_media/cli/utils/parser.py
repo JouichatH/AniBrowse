@@ -2,6 +2,30 @@
 
 from typing import Iterator
 
+from ...core.exceptions import InvalidEpisodeRangeError
+
+
+def _index(value: str, range_str: str, label: str) -> int:
+    """Parse one slice index, rejecting negatives.
+
+    The values are 0-based indices into the episode list, never Python's
+    negative wrap-around indices: a stray "-2:" would silently download the
+    last two episodes instead of erroring, so treat any negative as invalid.
+    """
+    try:
+        idx = int(value)
+    except ValueError as e:
+        raise InvalidEpisodeRangeError(
+            f"Invalid episode range format: '{range_str}'. "
+            f"{label} must be a valid integer."
+        ) from e
+    if idx < 0:
+        raise InvalidEpisodeRangeError(
+            f"Invalid episode range format: '{range_str}'. "
+            f"{label} must not be negative."
+        )
+    return idx
+
 
 def parse_episode_range(
     episode_range_str: str | None, available_episodes: list[str]
@@ -59,22 +83,15 @@ def parse_episode_range(
                     "When using 3 parts (start:end:step), all parts must be non-empty."
                 )
 
-            try:
-                start_idx = int(start_str)
-                end_idx = int(end_str)
-                step = int(step_str)
-
-                if step <= 0:
-                    raise ValueError("Step value must be positive")
-
-                return iter(episodes[start_idx:end_idx:step])
-            except ValueError as e:
-                if "invalid literal" in str(e):
-                    raise ValueError(
-                        f"Invalid episode range format: '{episode_range_str}'. "
-                        "All parts must be valid integers."
-                    ) from e
-                raise
+            start_idx = _index(start_str, episode_range_str, "Start")
+            end_idx = _index(end_str, episode_range_str, "End")
+            step = _index(step_str, episode_range_str, "Step")
+            if step <= 0:
+                raise InvalidEpisodeRangeError(
+                    f"Invalid episode range format: '{episode_range_str}'. "
+                    "Step value must be positive."
+                )
+            return iter(episodes[start_idx:end_idx:step])
 
         elif len(parts) == 2:
             # Format: start:end or start: or :end
@@ -82,37 +99,19 @@ def parse_episode_range(
 
             if start_str and end_str:
                 # Both start and end specified: start:end
-                try:
-                    start_idx = int(start_str)
-                    end_idx = int(end_str)
-                    return iter(episodes[start_idx:end_idx])
-                except ValueError as e:
-                    raise ValueError(
-                        f"Invalid episode range format: '{episode_range_str}'. "
-                        "Start and end must be valid integers."
-                    ) from e
+                start_idx = _index(start_str, episode_range_str, "Start")
+                end_idx = _index(end_str, episode_range_str, "End")
+                return iter(episodes[start_idx:end_idx])
 
             elif start_str and not end_str:
                 # Only start specified: start:
-                try:
-                    start_idx = int(start_str)
-                    return iter(episodes[start_idx:])
-                except ValueError as e:
-                    raise ValueError(
-                        f"Invalid episode range format: '{episode_range_str}'. "
-                        "Start must be a valid integer."
-                    ) from e
+                start_idx = _index(start_str, episode_range_str, "Start")
+                return iter(episodes[start_idx:])
 
             elif not start_str and end_str:
                 # Only end specified: :end
-                try:
-                    end_idx = int(end_str)
-                    return iter(episodes[:end_idx])
-                except ValueError as e:
-                    raise ValueError(
-                        f"Invalid episode range format: '{episode_range_str}'. "
-                        "End must be a valid integer."
-                    ) from e
+                end_idx = _index(end_str, episode_range_str, "End")
+                return iter(episodes[:end_idx])
 
             else:
                 # Both empty: ":"
@@ -124,11 +123,5 @@ def parse_episode_range(
             )
     else:
         # Single number: start from that index onwards
-        try:
-            start_idx = int(episode_range_str)
-            return iter(episodes[start_idx:])
-        except ValueError as e:
-            raise ValueError(
-                f"Invalid episode range format: '{episode_range_str}'. "
-                "Must be a valid integer."
-            ) from e
+        start_idx = _index(episode_range_str, episode_range_str, "Value")
+        return iter(episodes[start_idx:])
