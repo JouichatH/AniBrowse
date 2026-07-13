@@ -33,6 +33,18 @@ from .base import BaseIPCPlayer
 logger = logging.getLogger(__name__)
 
 
+def _numeric_next(episode: str) -> Optional[str]:
+    """The next whole episode number as a string, or None if not numeric.
+
+    Used to advance past the provider's last known episode when a newer one has
+    aired and is only available via the nyaa fallback.
+    """
+    try:
+        return str(int(float(episode)) + 1)
+    except (TypeError, ValueError):
+        return None
+
+
 class MPVIPCError(ViuError):
     """Exception raised for MPV IPC communication errors."""
 
@@ -316,6 +328,11 @@ class MpvIPCPlayer(BaseIPCPlayer):
         self.socket_path: Optional[str] = None
         self._fetch_thread: Optional[threading.Thread] = None
         self._fetch_result_queue: Queue = Queue()
+        # Opening/ending skip intervals for the current episode (from AniSkip).
+        self._skips: List[Any] = []
+        self._skips_applied: set = set()
+        self._skip_fetch_started = False
+        self._skip_thread: Optional[threading.Thread] = None
 
     def play(
         self,
@@ -418,6 +435,14 @@ class MpvIPCPlayer(BaseIPCPlayer):
                 "script-message viu-toggle-auto-next",
                 "Toggle Auto-Next",
             ),
+            "shift+o": (
+                "script-message viu-toggle-opening-skip",
+                "Toggle Opening Skip",
+            ),
+            "shift+e": (
+                "script-message viu-toggle-ending-skip",
+                "Toggle Ending Skip",
+            ),
             "shift+t": (
                 "script-message viu-toggle-translation",
                 "Toggle Translation",
@@ -427,7 +452,11 @@ class MpvIPCPlayer(BaseIPCPlayer):
         for key, (command, description) in key_bindings.items():
             self._bind_key(key, command, description)
 
-        self._show_text("Viu IPC: Shift+N=Next, Shift+P=Prev, Shift+R=Reload", 3000)
+        self._show_text(
+            "Viu IPC: Shift+N=Next, Shift+P=Prev, Shift+R=Reload, "
+            "Shift+O=Skip OP, Shift+E=Skip ED, Shift+A=Auto-Next",
+            4000,
+        )
 
     def _setup_message_handlers(self):
         self.message_handlers.update(
@@ -436,6 +465,8 @@ class MpvIPCPlayer(BaseIPCPlayer):
                 "viu-previous-episode": self._previous_episode,
                 "viu-reload-episode": self._reload_episode,
                 "viu-toggle-auto-next": self._toggle_auto_next,
+                "viu-toggle-opening-skip": self._toggle_opening_skip,
+                "viu-toggle-ending-skip": self._toggle_ending_skip,
                 "viu-toggle-translation": self._toggle_translation_type,
                 "select-episode": self._handle_select_episode,
                 "select-server": self._handle_select_server,
@@ -488,6 +519,13 @@ class MpvIPCPlayer(BaseIPCPlayer):
         elif event == "file-loaded":
             time.sleep(0.1)
             self._configure_player()
+        elif event == "end-file":
+            # Only a genuine end-of-file counts. "stop" fires when we replace the
+            # file for next/reload, "quit" on user exit, "error" on failure - none
+            # of those should auto-advance. mpv runs with --idle=yes, so at eof it
+            # goes idle (window stays) instead of quitting, letting us load next.
+            if message.get("reason") == "eof" and not self.player_fetching:
+                self._auto_next_episode()
         elif event:
             logger.debug(f"MPV event: {event}")
 
@@ -496,15 +534,16 @@ class MpvIPCPlayer(BaseIPCPlayer):
         data = message.get("data")
         if name == "time-pos" and isinstance(data, (int, float)):
             self.player_state.stop_time_secs = data
+            self._maybe_skip(float(data))
         elif name == "duration" and isinstance(data, (int, float)):
             self.player_state.total_time_secs = data
-        elif name == "percent-pos" and isinstance(data, (int, float)):
-            if (
-                self.stream_config.auto_next
-                and data >= self.stream_config.episode_complete_at
-                and not self.player_fetching
-            ):
-                self._auto_next_episode()
+            # Duration is known right after a file loads; use it to fetch the
+            # opening/ending intervals for this episode (once, best-effort).
+            if data > 0 and not self._skip_fetch_started:
+                self._start_skip_fetch(float(data))
+        # NOTE: auto-next is intentionally NOT driven by percent-pos here. It fires
+        # only on the real end of the video (the mpv "end-file"/eof event), so any
+        # post-ending scene still plays and ending-skip never advances by itself.
 
     def _handle_client_message(self, message: Dict[str, Any]):
         args = message.get("args", [])
@@ -567,23 +606,36 @@ class MpvIPCPlayer(BaseIPCPlayer):
                         f"No {self.stream_config.translation_type} episodes available."
                     )
 
-                current_index = available_episodes.index(self.player_state.episode)
+                # The current episode may not be in the provider's list (e.g. one
+                # merged in from nyaa), so resolve the index defensively.
+                current_index = (
+                    available_episodes.index(self.player_state.episode)
+                    if self.player_state.episode in available_episodes
+                    else None
+                )
 
                 if episode_type == "next":
-                    if current_index >= len(available_episodes) - 1:
-                        raise ValueError("Already at the last episode.")
-                    target_episode = available_episodes[current_index + 1]
+                    if (
+                        current_index is not None
+                        and current_index < len(available_episodes) - 1
+                    ):
+                        target_episode = available_episodes[current_index + 1]
+                    else:
+                        # Past the provider's last episode - a newer episode may
+                        # have aired and only exist on nyaa (lagging simulcast).
+                        # Compute the numeric next; the nyaa fallback below serves it.
+                        target_episode = _numeric_next(self.player_state.episode)
+                        if target_episode is None:
+                            raise ValueError("Already at the last episode.")
                 elif episode_type == "previous":
-                    if current_index <= 0:
+                    if current_index is None or current_index <= 0:
                         raise ValueError("Already at first episode")
                     target_episode = available_episodes[current_index - 1]
                 elif episode_type == "reload":
                     target_episode = self.player_state.episode
                 elif episode_type == "custom":
-                    if not ep_no or ep_no not in available_episodes:
-                        raise ValueError(
-                            f"Invalid episode. Available: {', '.join(available_episodes)}"
-                        )
+                    if not ep_no:
+                        raise ValueError("No episode specified")
                     target_episode = ep_no
                 else:
                     return
@@ -595,16 +647,27 @@ class MpvIPCPlayer(BaseIPCPlayer):
                     translation_type=self.stream_config.translation_type,
                 )
                 # This is the blocking network call, now safely in a thread
-                episode_streams = list(
-                    self.provider.episode_streams(stream_params) or []
-                )
-                if not episode_streams:
+                try:
+                    episode_streams = list(
+                        self.provider.episode_streams(stream_params) or []
+                    )
+                except Exception as e:  # noqa: BLE001 - provider hiccup -> try nyaa
+                    logger.debug("primary provider stream fetch failed: %s", e)
+                    episode_streams = []
+
+                servers = {ProviderServer(s.name): s for s in episode_streams}
+                if not servers:
+                    # Primary source lacks this episode (lagging simulcast or
+                    # extraction failure). Fall back to nyaa torrents, exactly like
+                    # the interactive servers menu does.
+                    servers = self._nyaa_servers_for(target_episode)
+                if not servers:
                     raise ValueError(f"No streams found for episode {target_episode}")
 
                 result = {
                     "type": "success",
                     "target_episode": target_episode,
-                    "servers": {ProviderServer(s.name): s for s in episode_streams},
+                    "servers": servers,
                 }
                 self._fetch_result_queue.put(result)
             elif self.registry and self.media_item:
@@ -645,6 +708,7 @@ class MpvIPCPlayer(BaseIPCPlayer):
 
                 self.player_state.reset()
                 self.player_state.episode = target_episode
+                self._reset_skips()
                 self.ipc_client.send_command(["loadfile", str(file_path)])
                 # time.sleep(1)
                 # self.ipc_client.send_command(["seek", 0, "absolute"])
@@ -665,6 +729,7 @@ class MpvIPCPlayer(BaseIPCPlayer):
             self.player_state.episode = result["target_episode"]
             self.player_state.servers = result["servers"]
             self.player_state.reset()
+            self._reset_skips()
             self._show_text(f"Fetched {self.player_state.episode_title}")
             self._load_current_stream()
         else:
@@ -682,6 +747,87 @@ class MpvIPCPlayer(BaseIPCPlayer):
     def _auto_next_episode(self):
         if self.stream_config.auto_next:
             self._next_episode()
+
+    def _nyaa_servers_for(self, episode: str) -> Dict[ProviderServer, Server]:
+        """nyaa torrent servers for one episode as a server map, or {} if none.
+
+        Mirrors the interactive servers menu's fallback so in-player next/auto-next
+        can advance to episodes the primary source lags on. Best-effort.
+        """
+        if type(self.provider).__name__ == "Nyaa":
+            return {}
+        if not getattr(self.stream_config, "nyaa_fallback", True):
+            return {}
+        try:
+            from ....interactive.menu.media._source_fallback import nyaa_servers
+
+            servers = nyaa_servers(
+                self.player_state.query,
+                episode,
+                self.stream_config.translation_type,
+                self.stream_config.quality,
+            )
+            if servers:
+                self._show_text("Streaming from nyaa (torrent)")
+            return {ProviderServer(s.name): s for s in servers}
+        except Exception as e:  # noqa: BLE001 - fallback must never raise
+            logger.debug("in-player nyaa fallback failed for ep %s: %s", episode, e)
+            return {}
+
+    # ---- opening/ending skip ------------------------------------------------
+    def _reset_skips(self):
+        """Forget skip intervals; call whenever a new episode is loaded."""
+        self._skips = []
+        self._skips_applied = set()
+        self._skip_fetch_started = False
+
+    def _start_skip_fetch(self, episode_length: float):
+        """Fetch AniSkip intervals for the current episode in the background."""
+        self._skip_fetch_started = True
+        if not (self.stream_config.opening_skip or self.stream_config.ending_skip):
+            return  # nothing to skip; don't hit the network
+        mal_id = self.media_item.id_mal if self.media_item else None
+        if not mal_id:
+            return
+        episode = self.player_state.episode
+
+        def _task():
+            from ..aniskip import fetch_skip_times
+
+            intervals = fetch_skip_times(mal_id, episode, episode_length)
+            # Only adopt results if we're still on the same episode.
+            if intervals and self.player_state.episode == episode:
+                self._skips = intervals
+                logger.info(
+                    "aniskip: %d interval(s) for ep %s", len(intervals), episode
+                )
+
+        self._skip_thread = threading.Thread(target=_task, daemon=True)
+        self._skip_thread.start()
+
+    def _maybe_skip(self, position: float):
+        """Seek past the opening/ending if enabled and we've entered one."""
+        if not self._skips:
+            return
+        for interval in self._skips:
+            if id(interval) in self._skips_applied:
+                continue
+            enabled = (
+                self.stream_config.opening_skip
+                if interval.kind == "op"
+                else self.stream_config.ending_skip
+            )
+            if not enabled or not interval.contains(position):
+                continue
+            self._skips_applied.add(id(interval))
+            # Seek to the end of the segment. If that lands at the true end of the
+            # video (ending is the final segment), mpv fires end-file/eof next,
+            # which is what triggers auto-next - the skip itself never does.
+            self.ipc_client.send_command(["seek", interval.end, "absolute"])
+            self._show_text(
+                "Skipping opening" if interval.kind == "op" else "Skipping ending"
+            )
+            return
 
     def _load_current_stream(self):
         if self.ipc_client and self.player_state and self.player_state.stream_url:
@@ -716,6 +862,25 @@ class MpvIPCPlayer(BaseIPCPlayer):
         self._show_text(
             f"Auto-next {'enabled' if self.stream_config.auto_next else 'disabled'}"
         )
+
+    def _toggle_opening_skip(self):
+        self.stream_config.opening_skip = not self.stream_config.opening_skip
+        state = "enabled" if self.stream_config.opening_skip else "disabled"
+        self._show_text(f"Opening skip {state}")
+        # Turned on mid-episode with no intervals yet? Fetch them now.
+        if self.stream_config.opening_skip and not self._skips:
+            self._skip_fetch_started = False
+            if self.player_state.total_time_secs > 0:
+                self._start_skip_fetch(self.player_state.total_time_secs)
+
+    def _toggle_ending_skip(self):
+        self.stream_config.ending_skip = not self.stream_config.ending_skip
+        state = "enabled" if self.stream_config.ending_skip else "disabled"
+        self._show_text(f"Ending skip {state}")
+        if self.stream_config.ending_skip and not self._skips:
+            self._skip_fetch_started = False
+            if self.player_state.total_time_secs > 0:
+                self._start_skip_fetch(self.player_state.total_time_secs)
 
     def _toggle_translation_type(self):
         new_type = "sub" if self.stream_config.translation_type == "dub" else "dub"

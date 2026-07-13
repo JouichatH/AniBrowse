@@ -119,10 +119,11 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
     if media_item and episode_number:
         ctx.watch_history.track(media_item, player_result)
 
-    # Did the user actually finish the episode? Only then should auto-next fire.
+    # Did the video actually reach its end? Only then should auto-next fire.
     # A manual quit partway through (or a corrupt stream that exits instantly)
-    # must NOT auto-advance. Compare stop_time/total_time to episode_complete_at.
-    completed = _playback_completed(player_result, config.stream.episode_complete_at)
+    # must NOT auto-advance. This is deliberately stricter than the watch-history
+    # "complete" threshold: auto-next happens at the end of the video, not at 80%.
+    reached_end = _reached_video_end(player_result)
 
     return State(
         menu_name=MenuName.PLAYER_CONTROLS,
@@ -131,7 +132,7 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
             update={
                 "servers_": server_map,
                 "server_name_": selected_server.name,
-                "completed_": completed,
+                "reached_end_": reached_end,
             }
         ),
     )
@@ -151,15 +152,19 @@ def _hms_to_seconds(t: str | None) -> float:
     return seconds
 
 
-def _playback_completed(player_result, complete_at_percent: int) -> bool:
-    """True if playback reached the completion threshold (default 80%)."""
+def _reached_video_end(player_result, end_threshold_percent: float = 98.0) -> bool:
+    """True if playback reached (essentially) the end of the video.
+
+    Used to gate auto-next so it fires only at the true end of the episode - after
+    any post-ending scenes - rather than at the watch-history completion threshold.
+    """
     if not player_result:
         return False
     total = _hms_to_seconds(getattr(player_result, "total_time", None))
     stop = _hms_to_seconds(getattr(player_result, "stop_time", None))
     if total <= 0:
         return False
-    return (stop / total) * 100 >= complete_at_percent
+    return (stop / total) * 100 >= end_threshold_percent
 
 
 def _filter_by_quality(links, quality):

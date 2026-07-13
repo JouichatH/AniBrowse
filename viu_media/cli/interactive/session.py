@@ -9,6 +9,7 @@ import click
 
 from ...core.config import AppConfig
 from ...core.constants import APP_DIR, USER_CONFIG
+from ...core.exceptions import NavigationAbort
 from ...core.utils.concurrency import thread_manager
 from .state import InternalDirective, MenuName, State
 
@@ -257,6 +258,10 @@ class Session:
 
         try:
             self._run_main_loop()
+        except (KeyboardInterrupt, NavigationAbort):
+            # Backstop for a Ctrl-C / abort that escapes the loop: exit cleanly
+            # (the session is still saved below) instead of dumping a traceback.
+            logger.info("Interactive session interrupted; exiting.")
         except Exception:
             self._context.session.create_crash_backup(self._history)
             raise
@@ -281,9 +286,16 @@ class Session:
         while self._history:
             current_state = self._history[-1]
 
-            next_step = self._menus[current_state.menu_name].execute(
-                self._context, current_state
-            )
+            try:
+                next_step = self._menus[current_state.menu_name].execute(
+                    self._context, current_state
+                )
+            except NavigationAbort:
+                # A selector was aborted (Esc / no selection): go back one level.
+                next_step = InternalDirective.BACK
+            except KeyboardInterrupt:
+                # Ctrl-C anywhere: exit the app cleanly (session still saved).
+                break
 
             if isinstance(next_step, InternalDirective):
                 if next_step == InternalDirective.MAIN:
@@ -293,8 +305,9 @@ class Session:
                 elif next_step == InternalDirective.CONFIG_EDIT:
                     self._edit_config()
                 elif next_step == InternalDirective.BACK:
-                    if len(self._history) > 1:
-                        self._history.pop()
+                    # Always pop; popping the root empties the stack and the while
+                    # loop exits - so Back/Esc at the main menu quits (no dead end).
+                    self._history.pop()
                 elif next_step == InternalDirective.BACKX2:
                     if len(self._history) > 2:
                         self._history.pop()

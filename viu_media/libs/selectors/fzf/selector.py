@@ -8,7 +8,7 @@ from rich.prompt import Prompt
 from viu_media.core.utils import detect
 
 from ....core.config import FzfConfig
-from ....core.exceptions import ViuError
+from ....core.exceptions import NavigationAbort, ViuError
 from ..base import BaseSelector
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,14 @@ class FzfSelector(BaseSelector):
             encoding="utf-8",
             env=detect.get_clean_env(),
         )
+        if result.returncode == 130:
+            # fzf aborted by Esc / Ctrl-C / Ctrl-G -> the user wants OUT of this
+            # menu. Signal the session loop to go back a level (exit at the root)
+            # instead of the caller silently reloading the same menu (a dead end).
+            raise NavigationAbort()
         if result.returncode != 0:
+            # No match (e.g. Enter on an unmatched query) or a benign error: no
+            # selection, but stay on the current menu.
             return None
         return result.stdout.strip()
 
@@ -81,6 +88,8 @@ class FzfSelector(BaseSelector):
             encoding="utf-8",
             env=detect.get_clean_env(),
         )
+        if result.returncode == 130:
+            raise NavigationAbort()
         if result.returncode != 0:
             return []
 

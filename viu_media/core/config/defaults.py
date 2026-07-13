@@ -20,7 +20,9 @@ GENERAL_ICONS = True
 
 
 def GENERAL_PREVIEW():
-    return "full" if detect.is_running_kitty_terminal() else "none"
+    if detect.is_running_kitty_terminal() or detect.is_sixel_capable_terminal():
+        return "full"
+    return "none"
 
 
 GENERAL_SCALE_PREVIEW = True
@@ -28,7 +30,15 @@ GENERAL_SCALE_PREVIEW = False
 
 
 def GENERAL_IMAGE_RENDERER():
-    return "icat" if detect.is_running_kitty_terminal() else "chafa"
+    # On sixel-capable terminals default to "system-sixels": on Windows Terminal
+    # the preview scripts draw real images via a console overlay (fzf can't relay
+    # sixel through its pane), and on Unix sixel terminals sixel-to-stdout works.
+    # Set image_renderer = "chafa" to force plain symbol art instead.
+    if detect.is_running_kitty_terminal():
+        return "icat"
+    if detect.is_sixel_capable_terminal():
+        return "system-sixels"
+    return "chafa"
 
 
 GENERAL_MANGA_VIEWER = "feh"
@@ -49,7 +59,8 @@ STREAM_SERVER = "TOP"
 STREAM_AUTO_NEXT = False
 STREAM_CONTINUE_FROM_WATCH_HISTORY = True
 STREAM_PREFERRED_WATCH_HISTORY = "local"
-STREAM_AUTO_SKIP = False
+STREAM_OPENING_SKIP = False
+STREAM_ENDING_SKIP = False
 STREAM_EPISODE_COMPLETE_AT = 80
 STREAM_YTDLP_FORMAT = "best[height<=1080]/bestvideo[height<=1080]+bestaudio/best"
 STREAM_FORCE_FORWARD_TRACKING = True

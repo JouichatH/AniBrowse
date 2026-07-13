@@ -54,6 +54,19 @@ def is_running_kitty_terminal() -> bool:
     return True if os.environ.get("KITTY_WINDOW_ID") else False
 
 
+def is_sixel_capable_terminal() -> bool:
+    """Best-effort check for terminals that render sixel graphics.
+
+    Windows Terminal (>=1.22, sets WT_SESSION) and mintty render sixel natively, as
+    do a handful of Unix terminals. This gates whether image previews default to
+    real (sixel) images versus blocky symbol art.
+    """
+    if os.environ.get("WT_SESSION") or os.environ.get("TERM_PROGRAM") == "mintty":
+        return True
+    term = os.environ.get("TERM", "")
+    return any(t in term for t in ("foot", "contour", "mlterm", "yaft", "sixel"))
+
+
 def has_fzf() -> bool:
     return True if shutil.which("fzf") else False
 

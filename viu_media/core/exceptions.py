@@ -9,6 +9,19 @@ class ViuError(Exception):
     pass
 
 
+class NavigationAbort(BaseException):
+    """
+    Raised by a selector when the user aborts a selection (Esc / no choice).
+
+    It is a control-flow SIGNAL, not an error: the interactive session loop
+    catches it and goes back one menu level (exiting at the root). It derives from
+    BaseException (like KeyboardInterrupt) so ordinary ``except Exception`` handlers
+    in menu code don't accidentally swallow it - the signal must reach the loop.
+    """
+
+    pass
+
+
 # ==============================================================================
 # Configuration and Initialization Errors
 # ==============================================================================

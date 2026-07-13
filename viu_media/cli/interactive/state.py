@@ -102,9 +102,10 @@ class ProviderState(StateModel):
     servers_: Optional[Dict[str, Server]] = Field(default=None, alias="servers")
     server_name_: Optional[str] = Field(default=None, alias="server_name")
     start_time_: Optional[str] = Field(default=None, alias="start_time")
-    # Whether the just-finished playback reached the completion threshold
-    # (used to decide auto-next; None = unknown, e.g. before any playback).
-    completed_: Optional[bool] = Field(default=None, alias="completed")
+    # Whether the just-finished playback reached the END of the video (used to
+    # decide auto-next; None = unknown, e.g. before any playback). This is distinct
+    # from the watch-history "completion" threshold: auto-next fires only at the end.
+    reached_end_: Optional[bool] = Field(default=None, alias="reached_end")
 
     @property
     def search_results(self) -> SearchResults:

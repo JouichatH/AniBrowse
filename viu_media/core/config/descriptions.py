@@ -46,14 +46,27 @@ STREAM_TRANSLATION_TYPE = "Preferred audio/subtitle language type."
 STREAM_SERVER = (
     "The default server to use from a provider. 'top' uses the first available."
 )
-STREAM_AUTO_NEXT = "Automatically play the next episode when the current one finishes."
+STREAM_AUTO_NEXT = (
+    "Automatically play the next episode when the current one reaches its end. "
+    "Fires only at the true end of the video (after any post-ending scenes), never "
+    "mid-episode. Independent of opening/ending skip."
+)
 STREAM_CONTINUE_FROM_WATCH_HISTORY = (
     "Automatically resume playback from the last known episode and position."
 )
 STREAM_PREFERRED_WATCH_HISTORY = (
     "Which watch history to prioritize: local file or remote AniList progress."
 )
-STREAM_AUTO_SKIP = "Automatically skip openings/endings if skip data is available."
+STREAM_OPENING_SKIP = (
+    "Automatically skip the opening when skip data is available (requires MPV + IPC). "
+    "Skips only the opening segment; does not affect auto-next."
+)
+STREAM_ENDING_SKIP = (
+    "Automatically skip the ending when skip data is available (requires MPV + IPC). "
+    "Skips only the ending segment and never triggers auto-next by itself, so any "
+    "post-ending scenes still play. If the ending is the final segment, skipping it "
+    "reaches the end of the video, which is what triggers auto-next."
+)
 STREAM_EPISODE_COMPLETE_AT = (
     "Percentage of an episode to watch before it's marked as complete."
 )

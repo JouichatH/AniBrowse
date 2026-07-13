@@ -257,9 +257,13 @@ class StreamConfig(BaseModel):
         default=defaults.STREAM_PREFERRED_WATCH_HISTORY,
         description=desc.STREAM_PREFERRED_WATCH_HISTORY,
     )
-    auto_skip: bool = Field(
-        default=defaults.STREAM_AUTO_SKIP,
-        description=desc.STREAM_AUTO_SKIP,
+    opening_skip: bool = Field(
+        default=defaults.STREAM_OPENING_SKIP,
+        description=desc.STREAM_OPENING_SKIP,
+    )
+    ending_skip: bool = Field(
+        default=defaults.STREAM_ENDING_SKIP,
+        description=desc.STREAM_ENDING_SKIP,
     )
     episode_complete_at: int = Field(
         default=defaults.STREAM_EPISODE_COMPLETE_AT,

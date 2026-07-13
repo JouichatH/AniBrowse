@@ -41,12 +41,13 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
         else None
     )
 
-    # Auto-advance ONLY when the episode was actually watched to completion — not
-    # on a manual quit partway through, and not when a stream failed instantly
-    # (which previously caused a rapid next/prev retry loop).
+    # Auto-advance ONLY when the video actually reached its end — not on a manual
+    # quit partway through, and not when a stream failed instantly (which previously
+    # caused a rapid next/prev retry loop). "Reached the end" is stricter than the
+    # watch-history completion threshold: post-ending scenes must have played out.
     if (
         config.stream.auto_next
-        and state.provider.completed_
+        and state.provider.reached_end_
         and current_index is not None
         and current_index < len(available_episodes) - 1
     ):
@@ -78,6 +79,12 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
             f"{'🎞️ ' if icons else ''}Episode List": _episodes_list(ctx, state),
             f"{'🔘 ' if icons else ''}Toggle Auto Next Episode (Current: {ctx.config.stream.auto_next})": _toggle_config_state(
                 ctx, state, "AUTO_EPISODE"
+            ),
+            f"{'⏩ ' if icons else ''}Toggle Opening Skip (Current: {ctx.config.stream.opening_skip})": _toggle_config_state(
+                ctx, state, "OPENING_SKIP"
+            ),
+            f"{'⏩ ' if icons else ''}Toggle Ending Skip (Current: {ctx.config.stream.ending_skip})": _toggle_config_state(
+                ctx, state, "ENDING_SKIP"
             ),
             f"{'🔘 ' if icons else ''}Toggle Translation Type  (Current: {ctx.config.stream.translation_type.upper()})": _toggle_config_state(
                 ctx, state, "TRANSLATION_TYPE"
@@ -194,7 +201,12 @@ def _toggle_config_state(
     ctx: Context,
     state: State,
     config_state: Literal[
-        "AUTO_ANIME", "AUTO_EPISODE", "CONTINUE_FROM_HISTORY", "TRANSLATION_TYPE"
+        "AUTO_ANIME",
+        "AUTO_EPISODE",
+        "OPENING_SKIP",
+        "ENDING_SKIP",
+        "CONTINUE_FROM_HISTORY",
+        "TRANSLATION_TYPE",
     ],
 ) -> MenuAction:
     def action():
@@ -205,6 +217,10 @@ def _toggle_config_state(
                 )
             case "AUTO_EPISODE":
                 ctx.config.stream.auto_next = not ctx.config.stream.auto_next
+            case "OPENING_SKIP":
+                ctx.config.stream.opening_skip = not ctx.config.stream.opening_skip
+            case "ENDING_SKIP":
+                ctx.config.stream.ending_skip = not ctx.config.stream.ending_skip
             case "CONTINUE_FROM_HISTORY":
                 ctx.config.stream.continue_from_watch_history = (
                     not ctx.config.stream.continue_from_watch_history
