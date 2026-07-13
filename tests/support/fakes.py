@@ -325,6 +325,21 @@ class FakePlayerService:
         )
 
 
+class FakeWatchHistory:
+    """WatchHistoryService stand-in: no persistence, records tracked results."""
+
+    def __init__(self, resume: tuple = (None, None)):
+        self._resume = resume
+        self.tracked: List[tuple] = []
+
+    def get_episode(self, media_item):
+        # (episode, start_time) to resume from; (None, None) = start fresh.
+        return self._resume
+
+    def track(self, media_item, player_result):
+        self.tracked.append((media_item, player_result))
+
+
 # ---------------------------------------------------------------------------
 # Feedback
 # ---------------------------------------------------------------------------
