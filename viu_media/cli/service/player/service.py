@@ -48,7 +48,43 @@ class PlayerService:
                 logger.warning(
                     f"Ipc player won't be used since Anime Object has not been given for url={params.url}"
                 )
-        return self.player.play(params)
+        # Clean (non-IPC) path: bake AniSkip intervals into the launch so
+        # opening/ending skip still works without a persistent IPC connection.
+        return self.player.play(self._with_skip(params, media_item))
+
+    def _with_skip(
+        self, params: PlayerParams, media_item: Optional[MediaItem]
+    ) -> PlayerParams:
+        """Attach opening/ending skip intervals to ``params`` when enabled.
+
+        Best-effort: any failure (no MAL id, network hiccup, disabled) just
+        returns the params unchanged so playback is never blocked.
+        """
+        import dataclasses
+
+        cfg = self.app_config.stream
+        if not (cfg.opening_skip or cfg.ending_skip):
+            return params
+        mal_id = getattr(media_item, "id_mal", None) if media_item else None
+        if not mal_id:
+            return params
+        try:
+            from .aniskip import fetch_skip_times
+
+            intervals = fetch_skip_times(mal_id, params.episode)
+        except Exception as e:  # noqa: BLE001 - skip is best-effort
+            logger.debug("skip fetch failed for ep %s: %s", params.episode, e)
+            return params
+
+        skip_op = skip_ed = None
+        for interval in intervals:
+            if interval.kind == "op" and cfg.opening_skip:
+                skip_op = (interval.start, interval.end)
+            elif interval.kind == "ed" and cfg.ending_skip:
+                skip_ed = (interval.start, interval.end)
+        if skip_op is None and skip_ed is None:
+            return params
+        return dataclasses.replace(params, skip_op=skip_op, skip_ed=skip_ed)
 
     def _play_with_ipc(
         self,

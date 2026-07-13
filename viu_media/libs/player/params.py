@@ -33,3 +33,7 @@ class PlayerParams:
     subtitles: list[str] | None = None
     headers: dict[str, str] | None = None
     start_time: str | None = None
+    # AniSkip opening/ending intervals in seconds, (start, end), for the clean
+    # (non-IPC) path to bake into mpv at launch via the viu_skip Lua script.
+    skip_op: tuple[float, float] | None = None
+    skip_ed: tuple[float, float] | None = None

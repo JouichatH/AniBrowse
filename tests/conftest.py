@@ -166,7 +166,10 @@ def ipc_client_factory():
 @pytest.fixture(autouse=True)
 def _reset_session_state():
     """session._history is class-level state: keep tests independent."""
+    from viu_media.cli.interactive.menu.media import _prefetch
     from viu_media.cli.interactive.session import Session
 
+    _prefetch.clear()
     yield
     Session._history = []
+    _prefetch.clear()

@@ -1,10 +1,10 @@
-from typing import Dict, List
+from typing import Dict
 
 from .....libs.player.params import PlayerParams
-from .....libs.provider.anime.params import EpisodeStreamsParams
-from .....libs.provider.anime.types import ProviderServer, Server
+from .....libs.provider.anime.types import Server
 from ...session import Context, session
 from ...state import InternalDirective, MenuName, State
+from ._prefetch import get_servers, prefetch_neighbours
 
 
 @session.menu
@@ -25,47 +25,20 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
         feedback.error("Anime or episode details are missing")
         return InternalDirective.BACK
 
+    # Resolve this episode's servers - instant if a prefetch worker already
+    # warmed the cache while the previous episode played, otherwise a live fetch
+    # (primary provider, then the nyaa torrent fallback for lagging simulcasts).
     with feedback.progress("Fetching Servers"):
-        server_iterator = provider.episode_streams(
-            EpisodeStreamsParams(
-                anime_id=provider_anime.id,
-                query=anime_title,
-                episode=episode_number,
-                translation_type=config.stream.translation_type,
-            )
+        all_servers = get_servers(
+            provider, config, provider_anime.id, anime_title, episode_number
         )
-        # Consume the iterator to get a list of all servers
-        if config.stream.server == ProviderServer.TOP and server_iterator:
-            try:
-                all_servers = [next(server_iterator)]
-            except Exception:
-                all_servers = []
-        else:
-            all_servers: List[Server] = list(server_iterator) if server_iterator else []
-
-    # Fallback: the active source has no stream for this episode (it lags behind
-    # the broadcast, or extraction failed). Try nyaa torrents, which carry the
-    # fastest English releases and stream via webtorrent -> mpv.
-    if (
-        not all_servers
-        and getattr(config.stream, "nyaa_fallback", True)
-        and type(provider).__name__ != "Nyaa"
-    ):
-        from ._source_fallback import nyaa_servers
-
-        with feedback.progress(f"Source lacks episode {episode_number} — trying nyaa"):
-            all_servers = nyaa_servers(
-                anime_title,
-                episode_number,
-                config.stream.translation_type,
-                config.stream.quality,
-            )
-        if all_servers:
-            feedback.info("Streaming from nyaa (torrent). Requires webtorrent-cli.")
 
     if not all_servers:
         feedback.error(f"No streaming servers found for episode {episode_number}")
         return InternalDirective.BACKX3
+
+    if all_servers[0].name.startswith("nyaa:"):
+        feedback.info("Streaming from nyaa (torrent). Requires webtorrent-cli.")
 
     server_map: Dict[str, Server] = {s.name: s for s in all_servers}
     selected_server: Server | None = None
@@ -100,6 +73,11 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
 
     if not state.media_api.media_item or not state.provider.anime:
         return InternalDirective.BACKX3
+
+    # Warm the next/previous episode's servers in the background while this
+    # episode plays, so advancing is instant instead of re-fetching each time.
+    prefetch_neighbours(provider, config, provider_anime, anime_title, episode_number)
+
     player_result = ctx.player.play(
         PlayerParams(
             url=stream_link_obj.link,

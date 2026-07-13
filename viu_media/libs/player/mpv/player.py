@@ -10,6 +10,7 @@ import shutil
 import subprocess
 
 from ....core.config import MpvConfig
+from ....core.constants import SCRIPTS_DIR
 from ....core.exceptions import ViuError
 from ....core.patterns import TORRENT_REGEX, YOUTUBE_REGEX
 from ....core.utils import detect
@@ -19,7 +20,46 @@ from ..types import PlayerResult
 
 logger = logging.getLogger(__name__)
 
-MPV_AV_TIME_PATTERN = re.compile(r"AV: ([0-9:]*) / ([0-9:]*) \(([0-9]*)%\)")
+VIU_SKIP_LUA = SCRIPTS_DIR / "mpv" / "viu_skip.lua"
+
+MPV_AV_TIME_PATTERN = re.compile(r"[AV]+: ([0-9:]+) / ([0-9:]+) \(([0-9]+)%\)")
+
+
+def _skip_script_args(params: PlayerParams) -> list[str]:
+    """mpv args that load the viu_skip Lua with this episode's op/ed intervals.
+
+    Returns ``[]`` when there's nothing to skip or the script is missing, so a
+    normal launch is unaffected.
+    """
+    if not (params.skip_op or params.skip_ed) or not VIU_SKIP_LUA.exists():
+        return []
+    op = params.skip_op or (-1.0, -1.0)
+    ed = params.skip_ed or (-1.0, -1.0)
+    opts = (
+        f"viu_skip-op_start={op[0]},viu_skip-op_end={op[1]},"
+        f"viu_skip-ed_start={ed[0]},viu_skip-ed_end={ed[1]}"
+    )
+    return [f"--script={VIU_SKIP_LUA}", f"--script-opts={opts}"]
+
+
+def parse_playback_time(
+    stdout: str | None, stderr: str | None
+) -> tuple[str | None, str | None]:
+    """Extract the final ``(stop_time, total_time)`` from captured mpv output.
+
+    mpv rewrites its ``AV: 00:10 / 24:00 (41%)`` status line in place using
+    carriage returns, and depending on build/OS emits it on stdout or stderr, so
+    we scan BOTH and split on \\r and \\n. Scanning in reverse yields the LAST
+    reported position - i.e. where playback actually stopped - which is what auto
+    -next needs to tell "watched to the end" from "quit early". Returns
+    ``(None, None)`` if no status line was captured.
+    """
+    combined = f"{stdout or ''}\n{stderr or ''}"
+    for line in reversed(re.split(r"[\r\n]+", combined)):
+        match = MPV_AV_TIME_PATTERN.search(line.strip())
+        if match:
+            return match.group(1), match.group(2)
+    return None, None
 
 
 class MpvPlayer(BasePlayer):
@@ -134,11 +174,11 @@ class MpvPlayer(BasePlayer):
         mpv_args = [self.executable, params.url]
 
         mpv_args.extend(self._create_mpv_cli_options(params))
+        # Auto opening/ending skip for this single fresh mpv (the IPC path does
+        # its own skipping, so this only applies to the clean subprocess path).
+        mpv_args.extend(_skip_script_args(params))
 
         pre_args = self.config.pre_args.split(",") if self.config.pre_args else []
-
-        stop_time = None
-        total_time = None
 
         proc = subprocess.run(
             pre_args + mpv_args,
@@ -148,13 +188,7 @@ class MpvPlayer(BasePlayer):
             check=False,
             env=detect.get_clean_env(),
         )
-        if proc.stdout:
-            for line in reversed(proc.stdout.split("\n")):
-                match = MPV_AV_TIME_PATTERN.search(line.strip())
-                if match:
-                    stop_time = match.group(1)
-                    total_time = match.group(2)
-                    break
+        stop_time, total_time = parse_playback_time(proc.stdout, proc.stderr)
         return PlayerResult(
             episode=params.episode, total_time=total_time, stop_time=stop_time
         )
