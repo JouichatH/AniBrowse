@@ -1,3 +1,4 @@
+from .....core.exceptions import NavigationAbort
 from ...session import Context, session
 from ...state import InternalDirective, MenuName, State
 
@@ -36,9 +37,10 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
         ctx.provider
     ).__name__ != "Nyaa":
         last_aired = None
-        if getattr(media_item, "next_airing", None):
-            last_aired = media_item.next_airing.episode - 1
-        elif getattr(media_item, "episodes", None):
+        next_airing = media_item.next_airing
+        if next_airing:
+            last_aired = next_airing.episode - 1
+        elif media_item.episodes:
             last_aired = media_item.episodes
         if last_aired:
             max_available = max(
@@ -69,36 +71,38 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
     if not chosen_episode or ctx.switch.show_episodes_menu:
         choices = [*available_episodes, "Back"]
 
-        preview_command = None
-        if ctx.config.general.preview != "none":
-            from ....utils.preview import create_preview_context
+        # Esc (NavigationAbort) must back out the same way the explicit "Back"
+        # choice does: this menu's parent is the pass-through provider-search
+        # menu, so a single BACK would just re-run that search and land right
+        # back here. BACKX2 skips it and returns to the media-actions menu.
+        try:
+            preview_command = None
+            if ctx.config.general.preview != "none":
+                from ....utils.preview import create_preview_context
 
-            with create_preview_context() as preview_ctx:
-                preview_command = preview_ctx.get_episode_preview(
-                    available_episodes, media_item, ctx.config
-                )
+                with create_preview_context() as preview_ctx:
+                    preview_command = preview_ctx.get_episode_preview(
+                        available_episodes, media_item, ctx.config
+                    )
 
+                    chosen_episode_str = ctx.selector.choose(
+                        prompt="Select Episode",
+                        choices=choices,
+                        preview=preview_command,
+                    )
+                    # Workers are automatically cleaned up when exiting the context
+            else:
+                # No preview mode
                 chosen_episode_str = ctx.selector.choose(
-                    prompt="Select Episode", choices=choices, preview=preview_command
+                    prompt="Select Episode", choices=choices, preview=None
                 )
+        except NavigationAbort:
+            return InternalDirective.BACKX2
 
-                if not chosen_episode_str or chosen_episode_str == "Back":
-                    # TODO: should improve the back logic for menus that can be pass through
-                    return InternalDirective.BACKX2
+        if not chosen_episode_str or chosen_episode_str == "Back":
+            return InternalDirective.BACKX2
 
-                chosen_episode = chosen_episode_str
-                # Workers are automatically cleaned up when exiting the context
-        else:
-            # No preview mode
-            chosen_episode_str = ctx.selector.choose(
-                prompt="Select Episode", choices=choices, preview=None
-            )
-
-            if not chosen_episode_str or chosen_episode_str == "Back":
-                # TODO: should improve the back logic for menus that can be pass through
-                return InternalDirective.BACKX2
-
-            chosen_episode = chosen_episode_str
+        chosen_episode = chosen_episode_str
 
     return State(
         menu_name=MenuName.SERVERS,

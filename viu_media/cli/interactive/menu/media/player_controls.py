@@ -1,5 +1,6 @@
 from typing import Callable, Dict, Literal, Union
 
+from .....core.exceptions import NavigationAbort
 from ...session import Context, session
 from ...state import InternalDirective, MenuName, State
 
@@ -95,7 +96,15 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
         }
     )
 
-    choice = selector.choose(prompt="What's next?", choices=list(options.keys()))
+    try:
+        choice = selector.choose(prompt="What's next?", choices=list(options.keys()))
+    except NavigationAbort:
+        # Esc here: a plain BACK would pop to the servers menu, which is a
+        # pass-through that silently replays the episode. Instead behave like the
+        # "Episode List" action - skip the servers menu and surface the episode
+        # list so Esc actually backs out instead of restarting playback.
+        ctx.switch.force_episodes_menu()
+        return InternalDirective.BACKX2
 
     if choice and choice in options:
         return options[choice]()

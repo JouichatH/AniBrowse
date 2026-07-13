@@ -162,7 +162,30 @@ def test_esc_backs_out_of_episodes(stream_config, no_network_nyaa):
     assert final == []
 
 
-def test_esc_backs_out_of_player_controls(stream_config):
+def test_esc_at_player_controls_backs_out_without_replaying(
+    stream_config, no_network_nyaa
+):
+    """Esc at "What's next?" must NOT bounce into servers and replay the episode.
+
+    It backs out past the pass-through servers menu to the (forced) episode list,
+    and a further Esc there continues out past provider-search to media-actions,
+    all the way to exit - never replaying.
+    """
+    selector = FakeSelector([pick("Test Anime"), pick("Stream"), pick("1")])
+    player = FakePlayerService()
+    ctx, media = _media_ctx(stream_config, selector, player)
+
+    final = drive(ctx, [make_state("main"), _results_state(media)])
+
+    # Played exactly once: Esc did not replay via the servers menu.
+    assert len(player.play_calls) == 1
+    assert final == []
+    # The episode list was shown again after Esc (backed out to it, not replayed).
+    prompts = [c[1] for c in selector.calls]
+    assert prompts.count("Select Episode") >= 2
+
+
+def test_esc_backs_out_of_player_controls(stream_config, no_network_nyaa):
     selector = FakeSelector([])
     ctx, media = _media_ctx(stream_config, selector)
     provider_anime = make_anime(id="anime-1", title="Test Anime", episodes=["1", "2", "3"])
