@@ -37,6 +37,15 @@ pipx ensurepath >/dev/null 2>&1 || true
 pipx install --force "$REPO_DIR"
 pipx inject viu-media thefuzz lxml >/dev/null 2>&1 || warn "optional extras skipped"
 
+# Fetch the provider scrapers (not vendored here; see scripts/fetch_providers.py)
+info "Fetching provider scrapers from the viu-media wheel..."
+APP_PY="$(pipx environment --value PIPX_LOCAL_VENVS 2>/dev/null)/viu-media/bin/python"
+if [ -x "$APP_PY" ]; then
+    "$APP_PY" "$REPO_DIR/scripts/fetch_providers.py" || warn "provider fetch failed — run scripts/fetch_providers.py manually"
+else
+    warn "couldn't locate app python; after install run: python $REPO_DIR/scripts/fetch_providers.py"
+fi
+
 # 3. webtorrent-cli (same workaround as Windows: a dep's preinstall forces
 #    pnpm and native binaries need a rebuild after --ignore-scripts) ---------
 if command -v webtorrent >/dev/null 2>&1; then

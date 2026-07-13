@@ -52,6 +52,17 @@ pipx install --force "$repo"
 Say "Adding optional extras (thefuzz, lxml)..."
 try { pipx inject viu-media thefuzz lxml *> $null } catch { Write-Host "  (extras skipped: $_)" -ForegroundColor Yellow }
 
+# 4b. Fetch the provider scrapers (not vendored in this repo; see
+#     scripts/fetch_providers.py) into the isolated app environment.
+Say "Fetching provider scrapers from the viu-media wheel..."
+$appPy = Join-Path (pipx environment --value PIPX_LOCAL_VENVS) 'viu-media\Scripts\python.exe'
+if (Test-Path $appPy) {
+    & $appPy (Join-Path $repo 'scripts\fetch_providers.py')
+} else {
+    Write-Host "  [!] Could not locate the app's Python; after install run:" -ForegroundColor Yellow
+    Write-Host "      python $repo\scripts\fetch_providers.py" -ForegroundColor Yellow
+}
+
 # 5. webtorrent-cli (for torrent/nyaa streaming) ----------------------------
 & (Join-Path $repo 'scripts\install-webtorrent.ps1')
 

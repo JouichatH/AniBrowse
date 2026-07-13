@@ -212,3 +212,11 @@ result
 .direnv
 
 *.stackdump
+
+# Provider scrapers are NOT vendored here (matches upstream viu-media's posture).
+# They are fetched from the PyPI wheel at install time by scripts/fetch_providers.py.
+/viu_media/libs/provider/anime/allanime/
+/viu_media/libs/provider/anime/animepahe/
+/viu_media/libs/provider/anime/animeunity/
+/viu_media/libs/provider/anime/hianime/
+/viu_media/libs/provider/anime/yugen/
