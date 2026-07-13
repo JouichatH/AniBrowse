@@ -210,3 +210,5 @@ repomix-output.xml
 .project/
 result
 .direnv
+
+*.stackdump
