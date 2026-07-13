@@ -61,8 +61,66 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
             provider=state.provider.model_copy(update={"episode_": next_episode_num}),
         )
 
-    # --- Menu Options ---
+    # In-place loop: toggles and change-server/quality flip config and re-show
+    # this same menu (they return RELOAD). Keeping the loop here - instead of
+    # returning RELOAD to the session loop - lets us preserve the fzf cursor
+    # position via start_index, so the user can flip several options in a row
+    # without the cursor jumping back to "Next Episode" each time.
+    cursor_index: Union[int, None] = None
+    while True:
+        # Recompute each render: a translation-type toggle switches sub<->dub and
+        # changes which episodes (and hence Next/Previous) are available.
+        available_episodes = getattr(
+            provider_anime.episodes, config.stream.translation_type, []
+        )
+        options = _build_options(ctx, state, current_episode_num, available_episodes)
+        choices = list(options.keys())
+
+        try:
+            choice = selector.choose(
+                prompt="What's next?", choices=choices, start_index=cursor_index
+            )
+        except NavigationAbort:
+            # Esc here: a plain BACK would pop to the servers menu, which is a
+            # pass-through that silently replays the episode. Instead behave like
+            # the "Episode List" action - skip the servers menu and surface the
+            # episode list so Esc backs out instead of restarting playback.
+            ctx.switch.force_episodes_menu()
+            return InternalDirective.BACKX2
+
+        if not choice or choice not in options:
+            # No selection (e.g. Enter on an unmatched query): re-show in place.
+            cursor_index = None
+            continue
+
+        result = options[choice]()
+        if result == InternalDirective.RELOAD:
+            # An in-place action (toggle / change server / change quality): keep
+            # the cursor on the row the user just acted on and re-render.
+            cursor_index = choices.index(choice)
+            continue
+        return result
+
+
+def _build_options(
+    ctx: Context,
+    state: State,
+    current_episode_num: str,
+    available_episodes: list,
+) -> Dict[str, "MenuAction"]:
+    """Build the "What's next?" options for the current episode/config.
+
+    Rebuilt on every render so the Toggle labels reflect the live config values
+    and Next/Previous availability tracks the (possibly re-resolved) episode list.
+    """
+    config = ctx.config
     icons = config.general.icons
+    current_index = (
+        available_episodes.index(current_episode_num)
+        if current_episode_num in available_episodes
+        else None
+    )
+
     options: Dict[str, Callable[[], Union[State, InternalDirective]]] = {}
 
     if current_index is not None and current_index < len(available_episodes) - 1:
@@ -78,16 +136,16 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
             f"{'💽 ' if icons else ''}Change Server": _change_server(ctx, state),
             f"{'📀 ' if icons else ''}Change Quality": _change_quality(ctx, state),
             f"{'🎞️ ' if icons else ''}Episode List": _episodes_list(ctx, state),
-            f"{'🔘 ' if icons else ''}Toggle Auto Next Episode (Current: {ctx.config.stream.auto_next})": _toggle_config_state(
+            f"{'🔘 ' if icons else ''}Toggle Auto Next Episode (Current: {config.stream.auto_next})": _toggle_config_state(
                 ctx, state, "AUTO_EPISODE"
             ),
-            f"{'⏩ ' if icons else ''}Toggle Opening Skip (Current: {ctx.config.stream.opening_skip})": _toggle_config_state(
+            f"{'⏩ ' if icons else ''}Toggle Opening Skip (Current: {config.stream.opening_skip})": _toggle_config_state(
                 ctx, state, "OPENING_SKIP"
             ),
-            f"{'⏩ ' if icons else ''}Toggle Ending Skip (Current: {ctx.config.stream.ending_skip})": _toggle_config_state(
+            f"{'⏩ ' if icons else ''}Toggle Ending Skip (Current: {config.stream.ending_skip})": _toggle_config_state(
                 ctx, state, "ENDING_SKIP"
             ),
-            f"{'🔘 ' if icons else ''}Toggle Translation Type  (Current: {ctx.config.stream.translation_type.upper()})": _toggle_config_state(
+            f"{'🔘 ' if icons else ''}Toggle Translation Type  (Current: {config.stream.translation_type.upper()})": _toggle_config_state(
                 ctx, state, "TRANSLATION_TYPE"
             ),
             f"{'🎥 ' if icons else ''}Media Actions Menu": lambda: InternalDirective.BACKX4,
@@ -95,21 +153,7 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
             f"{'❌ ' if icons else ''}Exit": lambda: InternalDirective.EXIT,
         }
     )
-
-    try:
-        choice = selector.choose(prompt="What's next?", choices=list(options.keys()))
-    except NavigationAbort:
-        # Esc here: a plain BACK would pop to the servers menu, which is a
-        # pass-through that silently replays the episode. Instead behave like the
-        # "Episode List" action - skip the servers menu and surface the episode
-        # list so Esc actually backs out instead of restarting playback.
-        ctx.switch.force_episodes_menu()
-        return InternalDirective.BACKX2
-
-    if choice and choice in options:
-        return options[choice]()
-    else:
-        return InternalDirective.RELOAD
+    return options
 
 
 def _next_episode(ctx: Context, state: State) -> MenuAction:

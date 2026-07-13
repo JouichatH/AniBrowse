@@ -122,6 +122,8 @@ class FakeSelector(BaseSelector):
     def __init__(self, script: Optional[Iterable[Any]] = None):
         self.script: deque = deque(script or [])
         self.calls: List[tuple] = []
+        # Records the start_index passed to each choose() call (cursor position).
+        self.start_indices: List[Optional[int]] = []
 
     def _next(self, kind: str, prompt: str, choices: Optional[List[str]] = None):
         self.calls.append((kind, prompt, choices))
@@ -134,7 +136,8 @@ class FakeSelector(BaseSelector):
             return choices[entry]
         return entry
 
-    def choose(self, prompt, choices, *, preview=None, header=None):
+    def choose(self, prompt, choices, *, preview=None, header=None, start_index=None):
+        self.start_indices.append(start_index)
         answer = self._next("choose", prompt, choices)
         if answer is not None and answer not in choices:
             raise AssertionError(

@@ -31,7 +31,7 @@ class FzfSelector(BaseSelector):
             ]
         )
 
-    def choose(self, prompt, choices, *, preview=None, header=None):
+    def choose(self, prompt, choices, *, preview=None, header=None, start_index=None):
         fzf_input = "\n".join(choices)
 
         commands = [
@@ -42,6 +42,14 @@ class FzfSelector(BaseSelector):
             self.header,
             "--header-first",
         ]
+        if start_index is not None and 0 <= start_index < len(choices):
+            # Place the cursor on a specific row when the menu first renders, so
+            # re-showing it (e.g. after an in-place toggle) doesn't jump back to
+            # the top. fzf's pos() is 1-based; --sync ensures the list is loaded
+            # before the position is applied.
+            commands.extend(
+                ["--sync", "--bind", f"start:pos({start_index + 1})"]
+            )
         if preview:
             commands.extend(["--preview", preview])
 

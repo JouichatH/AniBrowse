@@ -211,6 +211,64 @@ def test_esc_backs_out_of_player_controls(stream_config, no_network_nyaa):
     assert final == []
 
 
+def test_toggles_preserve_cursor_and_stay_in_place(stream_config):
+    """Toggling options keeps the menu open with the cursor on the toggled row."""
+    media = make_media_item(id=1, title="Test Anime", episodes=3)
+    provider_anime = make_anime(id="anime-1", title="Test Anime", episodes=["1", "2", "3"])
+    from tests.support.fakes import make_server
+
+    server = make_server(name="TOP", episode="1")
+
+    # Toggle ending skip, then opening skip, then exit - all without leaving the
+    # menu. Each pick targets a specific row; the cursor must return to it.
+    selector = FakeSelector(
+        [pick("Toggle Ending Skip"), pick("Toggle Opening Skip"), pick("Exit")]
+    )
+    ctx = make_context(
+        config=stream_config,
+        selector=selector,
+        media_api=FakeApiClient(),
+        provider=FakeAnimeProvider(anime=provider_anime),
+        player=FakePlayerService(),
+        feedback=FakeFeedback(),
+        watch_history=FakeWatchHistory(),
+    )
+    pc_state = make_state(
+        "player_controls",
+        media_api={
+            "search_result": {media.id: media},
+            "media_id": media.id,
+            "search_params": MediaSearchParams(query="test"),
+        },
+        provider={
+            "anime": provider_anime,
+            "episode": "1",
+            "servers": {"TOP": server},
+            "server_name": "TOP",
+            "reached_end": False,
+        },
+    )
+    ctx.config.stream.opening_skip = False
+    ctx.config.stream.ending_skip = False
+
+    drive(ctx, [make_state("main"), pc_state])
+
+    # Both toggles happened in-place (config flipped) without leaving the menu.
+    assert ctx.config.stream.ending_skip is True
+    assert ctx.config.stream.opening_skip is True
+
+    # The menu was re-rendered in place (3 prompts on the same player_controls
+    # menu), and after the first toggle the cursor was positioned (not None).
+    pc_prompts = [c for c in selector.calls if c[1] == "What's next?"]
+    assert len(pc_prompts) == 3
+    # First render has no forced position; the re-renders after a toggle do.
+    assert selector.start_indices[0] is None
+    assert selector.start_indices[1] is not None
+    # The preserved index really points at the row that was toggled first.
+    first_choices = pc_prompts[1][2]
+    assert "Ending Skip" in first_choices[selector.start_indices[1]]
+
+
 def test_back_at_root_exits(stream_config):
     """Esc at the main menu (root) empties the stack - the app quits."""
     selector = FakeSelector([])

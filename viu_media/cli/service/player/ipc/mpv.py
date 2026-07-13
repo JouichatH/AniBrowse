@@ -25,7 +25,8 @@ from .....libs.player.params import PlayerParams
 from .....libs.player.types import PlayerResult
 from .....libs.provider.anime.base import BaseAnimeProvider
 from .....libs.provider.anime.params import EpisodeStreamsParams
-from .....libs.provider.anime.types import Anime, ProviderServer, Server
+from .....core.patterns import TORRENT_REGEX
+from .....libs.provider.anime.types import Anime, Server
 from ....service.registry.models import DownloadStatus
 from ...registry import MediaRegistryService
 from .base import BaseIPCPlayer
@@ -230,8 +231,13 @@ class PlayerState:
     stream_config: StreamConfig
     query: str
     episode: str
-    servers: Dict[ProviderServer, Server] = field(default_factory=dict)
-    server_name: Optional[ProviderServer] = None
+    # Keyed by the provider's raw server name (e.g. "gogoanime", "Luf-mp4", or
+    # "nyaa:SubsPlease (12 seeders)") - NOT the ProviderServer enum. Forcing names
+    # into the enum raised ValueError for every non-enum name (all nyaa names and
+    # many provider names), which silently killed in-player next/auto-next. This
+    # mirrors how the servers menu keys its own map.
+    servers: Dict[str, Server] = field(default_factory=dict)
+    server_name: Optional[str] = None
     media_item: Optional[MediaItem] = None
     stop_time_secs: float = 0
     total_time_secs: float = 0
@@ -258,13 +264,19 @@ class PlayerState:
             logger.warning("Attempt to access server when servers are unavailable.")
             return None
 
-        server_name = self.stream_config.server
-        if server_name not in self.servers:
-            if self.server_name and self.server_name in self.servers:
-                server_name = self.server_name
-            else:
-                server_name = list(self.servers.keys())[0]
-                self.server_name = server_name
+        # stream_config.server is a ProviderServer enum; compare its string value
+        # against the raw server-name keys. "TOP" (the default) never matches a
+        # real name, so we fall through to the first server - same as the menu.
+        preferred = str(
+            getattr(self.stream_config.server, "value", self.stream_config.server)
+        )
+        if preferred in self.servers:
+            server_name = preferred
+        elif self.server_name and self.server_name in self.servers:
+            server_name = self.server_name
+        else:
+            server_name = next(iter(self.servers))
+            self.server_name = server_name
 
         return self.servers.get(server_name)
 
@@ -338,6 +350,13 @@ class MpvIPCPlayer(BaseIPCPlayer):
         self.mpv_process = None
         self._fetch_thread: Optional[threading.Thread] = None
         self._fetch_result_queue: Queue = Queue()
+        # Prefetched servers for neighbour episodes, keyed by episode number, so
+        # next/previous/auto-next fire instantly. Populated by background workers
+        # during playback; consumed (popped) by the fetch task.
+        self._prefetch: Dict[str, Dict[str, Server]] = {}
+        self._prefetch_lock = threading.Lock()
+        self._prefetch_inflight: set = set()
+        self._prefetch_threads: List[threading.Thread] = []
         # Opening/ending skip intervals for the current episode (from AniSkip).
         self._skips: List[Any] = []
         self._skips_applied: set = set()
@@ -541,6 +560,9 @@ class MpvIPCPlayer(BaseIPCPlayer):
         elif event == "file-loaded":
             time.sleep(0.1)
             self._configure_player()
+            # Warm the neighbour cache for the episode now playing (incl. the
+            # very first one, which is loaded at launch, not via the fetch task).
+            self._start_prefetch()
         elif event == "end-file":
             # Only a genuine end-of-file counts. "stop" fires when we replace the
             # file for next/reload, "quit" on user exit, "error" on failure - none
@@ -662,36 +684,22 @@ class MpvIPCPlayer(BaseIPCPlayer):
                 else:
                     return
 
-                stream_params = EpisodeStreamsParams(
-                    anime_id=self.anime.id,
-                    query=self.player_state.query,
-                    episode=target_episode,
-                    translation_type=self.stream_config.translation_type,
-                )
-                # This is the blocking network call, now safely in a thread
-                try:
-                    episode_streams = list(
-                        self.provider.episode_streams(stream_params) or []
-                    )
-                except Exception as e:  # noqa: BLE001 - provider hiccup -> try nyaa
-                    logger.debug("primary provider stream fetch failed: %s", e)
-                    episode_streams = []
-
-                servers = {ProviderServer(s.name): s for s in episode_streams}
+                # Use a prefetched result if one is ready (instant next/prev);
+                # otherwise resolve now (primary provider, then nyaa fallback).
+                with self._prefetch_lock:
+                    servers = self._prefetch.pop(target_episode, None)
                 if not servers:
-                    # Primary source lacks this episode (lagging simulcast or
-                    # extraction failure). Fall back to nyaa torrents, exactly like
-                    # the interactive servers menu does.
-                    servers = self._nyaa_servers_for(target_episode)
+                    servers = self._resolve_servers(target_episode)
                 if not servers:
                     raise ValueError(f"No streams found for episode {target_episode}")
 
-                result = {
-                    "type": "success",
-                    "target_episode": target_episode,
-                    "servers": servers,
-                }
-                self._fetch_result_queue.put(result)
+                self._fetch_result_queue.put(
+                    {
+                        "type": "success",
+                        "target_episode": target_episode,
+                        "servers": servers,
+                    }
+                )
             elif self.registry and self.media_item:
                 record = self.registry.get_media_record(self.media_item.id)
                 if not record or not record.media_episodes:
@@ -759,6 +767,8 @@ class MpvIPCPlayer(BaseIPCPlayer):
             self.player_state.servers = result["servers"]
             self._show_text(f"Fetched {self.player_state.episode_title}")
             self._load_current_stream()
+            # Warm the cache for the new episode's neighbours.
+            self._start_prefetch()
         else:
             # Locally downloaded episode: load the file path directly.
             file_path = result["file_path"]
@@ -784,11 +794,12 @@ class MpvIPCPlayer(BaseIPCPlayer):
         if self.stream_config.auto_next:
             self._next_episode()
 
-    def _nyaa_servers_for(self, episode: str) -> Dict[ProviderServer, Server]:
+    def _nyaa_servers_for(self, episode: str) -> Dict[str, Server]:
         """nyaa torrent servers for one episode as a server map, or {} if none.
 
         Mirrors the interactive servers menu's fallback so in-player next/auto-next
-        can advance to episodes the primary source lags on. Best-effort.
+        can advance to episodes the primary source lags on. Best-effort. No IPC
+        writes here - this runs from fetch/prefetch background threads.
         """
         if type(self.provider).__name__ == "Nyaa":
             return {}
@@ -803,12 +814,94 @@ class MpvIPCPlayer(BaseIPCPlayer):
                 self.stream_config.translation_type,
                 self.stream_config.quality,
             )
-            if servers:
-                self._show_text("Streaming from nyaa (torrent)")
-            return {ProviderServer(s.name): s for s in servers}
+            return {s.name: s for s in servers}
         except Exception as e:  # noqa: BLE001 - fallback must never raise
             logger.debug("in-player nyaa fallback failed for ep %s: %s", episode, e)
             return {}
+
+    # ---- stream resolution + prefetch --------------------------------------
+    def _resolve_servers(self, target_episode: str) -> Dict[str, Server]:
+        """Server map for one episode: primary provider, then nyaa. {} if none.
+
+        Runs from background threads only (fetch task / prefetch workers) - no IPC.
+        """
+        if not (self.anime and self.provider):
+            return {}
+        stream_params = EpisodeStreamsParams(
+            anime_id=self.anime.id,
+            query=self.player_state.query,
+            episode=target_episode,
+            translation_type=self.stream_config.translation_type,
+        )
+        try:
+            episode_streams = list(self.provider.episode_streams(stream_params) or [])
+        except Exception as e:  # noqa: BLE001 - provider hiccup -> try nyaa
+            logger.debug("primary stream fetch failed for ep %s: %s", target_episode, e)
+            episode_streams = []
+        servers = {s.name: s for s in episode_streams}
+        if not servers:
+            servers = self._nyaa_servers_for(target_episode)
+        return servers
+
+    def _neighbour_episodes(self) -> List[str]:
+        """The next and previous episode numbers to prefetch for the current one."""
+        if not self.anime:
+            return []
+        available = (
+            getattr(self.anime.episodes, self.stream_config.translation_type, []) or []
+        )
+        current = self.player_state.episode
+        targets: List[str] = []
+        if current in available:
+            idx = available.index(current)
+            if idx < len(available) - 1:
+                targets.append(available[idx + 1])
+            else:
+                nxt = _numeric_next(current)
+                if nxt:
+                    targets.append(nxt)
+            if idx > 0:
+                targets.append(available[idx - 1])
+        else:
+            nxt = _numeric_next(current)
+            if nxt:
+                targets.append(nxt)
+        return targets
+
+    def _start_prefetch(self):
+        """Kick off background fetches for the current episode's neighbours.
+
+        Only for streaming (not the local/registry path). Deduplicates against
+        both the ready cache and in-flight fetches; results land in ``_prefetch``
+        for the fetch task to consume instantly.
+        """
+        if not (self.anime and self.provider):
+            return
+        for target in self._neighbour_episodes():
+            with self._prefetch_lock:
+                if target in self._prefetch or target in self._prefetch_inflight:
+                    continue
+                self._prefetch_inflight.add(target)
+            thread = threading.Thread(
+                target=self._prefetch_worker, args=(target,), daemon=True
+            )
+            self._prefetch_threads.append(thread)
+            thread.start()
+
+    def _prefetch_worker(self, target: str):
+        try:
+            servers = self._resolve_servers(target)
+            if servers:
+                with self._prefetch_lock:
+                    self._prefetch[target] = servers
+                logger.debug(
+                    "prefetched %d server(s) for episode %s", len(servers), target
+                )
+        except Exception as e:  # noqa: BLE001 - prefetch must never raise
+            logger.debug("prefetch failed for episode %s: %s", target, e)
+        finally:
+            with self._prefetch_lock:
+                self._prefetch_inflight.discard(target)
 
     # ---- opening/ending skip ------------------------------------------------
     def _reset_skips(self):
@@ -871,16 +964,39 @@ class MpvIPCPlayer(BaseIPCPlayer):
             return
 
     def _load_current_stream(self):
-        if self.ipc_client and self.player_state and self.player_state.stream_url:
-            try:
+        if not (self.ipc_client and self.player_state):
+            return
+        url = self.player_state.stream_url
+        if not url:
+            return
+        if TORRENT_REGEX.search(url):
+            # mpv can't load a magnet directly - torrents stream via a separate
+            # `webtorrent --mpv` process, which we can't inject into the running
+            # IPC player. Tell the user instead of silently sitting idle.
+            logger.warning("In-player advance to a torrent is unsupported: %s", url)
+            self._show_text(
+                "Next episode is a torrent - open it from the menu to stream it.",
+                4000,
+            )
+            return
+        try:
+            # Re-apply this server's HTTP headers before loading; the next
+            # episode's host may differ from the one mpv launched with.
+            headers = self.player_state.stream_headers
+            if headers:
                 self.ipc_client.send_command(
-                    ["loadfile", self.player_state.stream_url]
+                    [
+                        "set_property",
+                        "http-header-fields",
+                        [f"{k}: {v}" for k, v in headers.items()],
+                    ]
                 )
-            except MPVIPCError as e:
-                # Loading the next stream is the one write we don't want to lose,
-                # but a transient timeout here still must not collapse the player.
-                # The eof/next machinery can retry; log loudly and continue.
-                logger.warning("Failed to load stream (transient IPC error): %s", e)
+            self.ipc_client.send_command(["loadfile", url])
+        except MPVIPCError as e:
+            # Loading the next stream is the one write we don't want to lose,
+            # but a transient timeout here still must not collapse the player.
+            # The eof/next machinery can retry; log loudly and continue.
+            logger.warning("Failed to load stream (transient IPC error): %s", e)
 
     def _show_text(self, text: str, duration: int = 2000):
         if self.ipc_client:
@@ -957,19 +1073,13 @@ class MpvIPCPlayer(BaseIPCPlayer):
     def _handle_select_server(self, server: Optional[str] = None):
         if not server or not self.player_state:
             return
-        try:
-            provider_server = ProviderServer(server)
-            if provider_server in self.player_state.servers:
-                self.player_state.server_name = provider_server
-                self._reload_episode()
-            else:
-                self._show_text(f"Server '{server}' not available.")
-        except ValueError:
-            available_servers = ", ".join(
-                [s.value for s in self.player_state.servers.keys()]
-            )
+        if server in self.player_state.servers:
+            self.player_state.server_name = server
+            self._reload_episode()
+        else:
+            available_servers = ", ".join(self.player_state.servers.keys())
             self._show_text(
-                f"Invalid server name: {server}. Available: {available_servers}"
+                f"Server '{server}' not available. Available: {available_servers}"
             )
 
     def _handle_select_quality(self, quality: Optional[str] = None):

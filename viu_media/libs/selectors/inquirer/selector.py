@@ -5,7 +5,7 @@ from ..base import BaseSelector
 
 
 class InquirerSelector(BaseSelector):
-    def choose(self, prompt, choices, *, preview=None, header=None):
+    def choose(self, prompt, choices, *, preview=None, header=None, start_index=None):
         if header:
             print(f"[bold cyan]{header}[/bold cyan]")
         return FuzzyPrompt(

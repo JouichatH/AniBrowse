@@ -16,6 +16,7 @@ class BaseSelector(ABC):
         *,
         preview: Optional[str] = None,
         header: Optional[str] = None,
+        start_index: Optional[int] = None,
     ) -> str | None:
         """
         Prompts the user to choose one item from a list.
@@ -25,6 +26,10 @@ class BaseSelector(ABC):
             choices: A list of strings for the user to choose from.
             preview: An optional command or string for a preview window.
             header: An optional header to display above the choices.
+            start_index: An optional 0-based index to place the cursor on
+                initially (used to keep the cursor in place across re-renders,
+                e.g. after an in-place toggle). Selectors that can't honour it
+                ignore it.
 
         Returns:
             The string of the chosen item.

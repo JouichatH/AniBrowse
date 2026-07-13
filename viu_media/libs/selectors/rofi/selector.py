@@ -18,7 +18,7 @@ class RofiSelector(BaseSelector):
         if not self.executable:
             raise FileNotFoundError("rofi executable not found in PATH.")
 
-    def choose(self, prompt, choices, *, preview=None, header=None):
+    def choose(self, prompt, choices, *, preview=None, header=None, start_index=None):
         if preview and detect.is_bash_script(preview):
             preview = None
         rofi_input = preview if preview else "\n".join(choices)

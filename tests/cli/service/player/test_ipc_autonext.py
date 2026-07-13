@@ -99,10 +99,42 @@ def test_non_eof_end_file_never_advances(ipc_client_factory):
     assert client.commands_named("loadfile") == []
 
 
+def test_auto_next_advances_with_non_enum_server_name(ipc_client_factory):
+    """Regression: a real provider server name (not a ProviderServer enum value)
+
+    used to raise ValueError inside the fetch, silently killing auto-next. The
+    server map is now keyed by the raw name, so a name like "Luf-mp4" loads fine.
+    """
+    provider = FakeAnimeProvider(
+        anime=make_anime(episodes=["1", "2", "3"]),
+        servers={"2": [make_server(name="Luf-mp4", link="https://cdn/ep2.m3u8")]},
+    )
+    client = ipc_client_factory(
+        events=[{"event": "end-file", "reason": "eof"}],
+        shutdown_when=lambda c: bool(c.commands_named("loadfile")),
+    )
+    player, base_player, _ = _play(client, provider)
+
+    assert base_player.play_calls == []
+    loadfiles = client.commands_named("loadfile")
+    assert loadfiles and loadfiles[-1][1] == "https://cdn/ep2.m3u8"
+    assert player.player_state.episode == "2"
+
+
+_REAL_MAGNET = (
+    "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=Show+-+02"
+)
+
+
 def test_auto_next_falls_back_to_nyaa_past_last_episode(
     ipc_client_factory, monkeypatch
 ):
-    """Past the provider's last episode, auto-next uses the nyaa fallback."""
+    """Past the provider's last episode, auto-next consults the nyaa fallback.
+
+    The fallback returns a real magnet, which mpv cannot loadfile - so the
+    episode advances and the user is told to open it from the menu, rather than
+    the player silently sitting idle on an unplayable magnet.
+    """
     provider = FakeAnimeProvider(
         anime=make_anime(episodes=["1"]),  # only episode 1 known to provider
         servers={},  # provider has no streams for anything
@@ -112,7 +144,7 @@ def test_auto_next_falls_back_to_nyaa_past_last_episode(
 
     def fake_nyaa_servers(query, episode, translation_type, quality):
         nyaa_calls.append((query, episode, translation_type, quality))
-        return [make_server(name="TOP", link=f"magnet:ep{episode}")]
+        return [make_server(name=f"nyaa:SubsPlease ({episode})", link=_REAL_MAGNET)]
 
     monkeypatch.setattr(
         "viu_media.cli.interactive.menu.media._source_fallback.nyaa_servers",
@@ -121,13 +153,21 @@ def test_auto_next_falls_back_to_nyaa_past_last_episode(
 
     client = ipc_client_factory(
         events=[{"event": "end-file", "reason": "eof"}],
-        shutdown_when=lambda c: bool(c.commands_named("loadfile")),
+        # No loadfile is ever issued for a magnet; end once the torrent notice
+        # has been shown (which happens after the episode advanced to 2).
+        shutdown_when=lambda c: any(
+            "torrent" in str(cmd).lower() for cmd in c.commands
+        ),
     )
     player, base_player, _ = _play(client, provider)
 
     assert base_player.play_calls == []
-    assert nyaa_calls, "should have consulted the nyaa fallback for episode 2"
-    assert nyaa_calls[-1][1] == "2"
-    loadfiles = client.commands_named("loadfile")
-    assert loadfiles and loadfiles[-1][1] == "magnet:ep2"
+    # The nyaa fallback was consulted for episode 2 (a non-enum server name that
+    # previously crashed the fetch); the episode advanced.
+    assert "2" in [c[1] for c in nyaa_calls]
     assert player.player_state.episode == "2"
+    # A magnet is not loadfile-able in the running mpv; none was issued.
+    assert client.commands_named("loadfile") == []
+    # The user was told to use the menu instead of being left on a black screen.
+    shown = " ".join(str(c) for c in client.commands_named("show-text"))
+    assert "torrent" in shown.lower()
