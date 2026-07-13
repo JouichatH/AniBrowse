@@ -93,6 +93,17 @@ def app_config() -> AppConfig:
     return cfg
 
 
+@pytest.fixture
+def ipc_client_factory():
+    """Factory for FakeIPCClient (records commands, serves scripted events)."""
+    from tests.support.fakes import FakeIPCClient
+
+    def _make(**kwargs):
+        return FakeIPCClient(**kwargs)
+
+    return _make
+
+
 @pytest.fixture(autouse=True)
 def _reset_session_state():
     """session._history is class-level state: keep tests independent."""

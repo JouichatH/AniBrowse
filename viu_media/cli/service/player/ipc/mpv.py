@@ -323,9 +323,19 @@ class MpvIPCPlayer(BaseIPCPlayer):
 
     registry: Optional[MediaRegistryService] = None
 
-    def __init__(self, stream_config: StreamConfig):
+    def __init__(
+        self,
+        stream_config: StreamConfig,
+        ipc_client: Optional["MPVIPCClient"] = None,
+    ):
         super().__init__(stream_config)
         self.socket_path: Optional[str] = None
+        # An injected client (tests) bypasses _start_mpv_process/_connect_ipc so
+        # the player can be exercised with no real mpv subprocess or socket.
+        self._injected_ipc_client = ipc_client
+        # None until a real mpv is launched; the injected-client path leaves it
+        # unset, so the poll()/terminate() sites must tolerate None.
+        self.mpv_process: Optional[subprocess.Popen] = None
         self._fetch_thread: Optional[threading.Thread] = None
         self._fetch_result_queue: Queue = Queue()
         # Opening/ending skip intervals for the current episode (from AniSkip).
@@ -359,8 +369,13 @@ class MpvIPCPlayer(BaseIPCPlayer):
     def _play_with_ipc(self, player: BasePlayer, params: PlayerParams) -> PlayerResult:
         """Play media using MPV IPC."""
         try:
-            self._start_mpv_process(player, params)
-            self._connect_ipc()
+            if self._injected_ipc_client is not None:
+                # Test seam: a client was supplied, so skip spawning mpv and
+                # connecting a real socket.
+                self.ipc_client = self._injected_ipc_client
+            else:
+                self._start_mpv_process(player, params)
+                self._connect_ipc()
             self._setup_event_handling()
             self._setup_key_bindings()
             self._setup_message_handlers()
@@ -486,22 +501,29 @@ class MpvIPCPlayer(BaseIPCPlayer):
                     logger.info("MPV process has exited.")
                     break
 
-                while True:
-                    message = self.ipc_client.get_event(block=False)
-                    if message is None:
-                        break
-
-                    if message.get("event") == "shutdown":
-                        should_stop = True
-                        break
-
-                    self._handle_mpv_message(message)
-
                 try:
-                    fetch_result = self._fetch_result_queue.get(block=False)
-                    self._handle_fetch_result(fetch_result)
-                except Empty:
-                    pass
+                    while True:
+                        message = self.ipc_client.get_event(block=False)
+                        if message is None:
+                            break
+
+                        if message.get("event") == "shutdown":
+                            should_stop = True
+                            break
+
+                        self._handle_mpv_message(message)
+
+                    try:
+                        fetch_result = self._fetch_result_queue.get(block=False)
+                        self._handle_fetch_result(fetch_result)
+                    except Empty:
+                        pass
+                except MPVIPCError as e:
+                    # A transient IPC hiccup during event/fetch handling (mpv
+                    # briefly unresponsive around eof->idle) must NOT tear down
+                    # the whole IPC player. Log and keep looping; the eof-driven
+                    # auto-next and the fetch queue continue to work.
+                    logger.debug("Transient IPC error in playback loop: %s", e)
 
                 if should_stop:
                     break
@@ -706,17 +728,17 @@ class MpvIPCPlayer(BaseIPCPlayer):
                     return
                 file_path = downloaded_episodes[target_episode]
 
-                self.player_state.reset()
-                self.player_state.episode = target_episode
-                self._reset_skips()
-                self.ipc_client.send_command(["loadfile", str(file_path)])
-                # time.sleep(1)
-                # self.ipc_client.send_command(["seek", 0, "absolute"])
-                # self.ipc_client.send_command(
-                #     ["set_property", "title", self.player_state.episode_title]
-                # )
-                self._show_text(f"Fetched {file_path}")
-                self.player_fetching = False
+                # Marshal the load back to the main loop via the queue (exactly
+                # like the streaming path) instead of writing IPC from this fetch
+                # thread - keeps all mpv writes on one thread and lets a transient
+                # timeout be handled uniformly by _handle_fetch_result.
+                self._fetch_result_queue.put(
+                    {
+                        "type": "success",
+                        "target_episode": target_episode,
+                        "file_path": str(file_path),
+                    }
+                )
 
         except Exception as e:
             logger.error(f"Episode fetch task failed: {e}")
@@ -725,15 +747,29 @@ class MpvIPCPlayer(BaseIPCPlayer):
     def _handle_fetch_result(self, result: Dict[str, Any]):
         """Handles the result from the background fetch thread in the main thread."""
         self.player_fetching = False
-        if result["type"] == "success":
-            self.player_state.episode = result["target_episode"]
+        if result["type"] != "success":
+            self._show_text(f"Error: {result['message']}")
+            return
+
+        self.player_state.episode = result["target_episode"]
+        self.player_state.reset()
+        self._reset_skips()
+        if "servers" in result:
+            # Streamed episode: load via the resolved server's stream URL.
             self.player_state.servers = result["servers"]
-            self.player_state.reset()
-            self._reset_skips()
             self._show_text(f"Fetched {self.player_state.episode_title}")
             self._load_current_stream()
         else:
-            self._show_text(f"Error: {result['message']}")
+            # Locally downloaded episode: load the file path directly.
+            file_path = result["file_path"]
+            self._show_text(f"Fetched {file_path}")
+            if self.ipc_client:
+                try:
+                    self.ipc_client.send_command(["loadfile", file_path])
+                except MPVIPCError as e:
+                    logger.warning(
+                        "Failed to load downloaded file (transient IPC error): %s", e
+                    )
 
     def _next_episode(self):
         self._get_episode("next")
@@ -823,7 +859,12 @@ class MpvIPCPlayer(BaseIPCPlayer):
             # Seek to the end of the segment. If that lands at the true end of the
             # video (ending is the final segment), mpv fires end-file/eof next,
             # which is what triggers auto-next - the skip itself never does.
-            self.ipc_client.send_command(["seek", interval.end, "absolute"])
+            try:
+                self.ipc_client.send_command(["seek", interval.end, "absolute"])
+            except MPVIPCError as e:
+                # A missed skip is cosmetic; never let it collapse the player.
+                logger.debug("skip seek failed (ignored): %s", e)
+                return
             self._show_text(
                 "Skipping opening" if interval.kind == "op" else "Skipping ending"
             )
@@ -831,21 +872,39 @@ class MpvIPCPlayer(BaseIPCPlayer):
 
     def _load_current_stream(self):
         if self.ipc_client and self.player_state and self.player_state.stream_url:
-            self.ipc_client.send_command(["loadfile", self.player_state.stream_url])
+            try:
+                self.ipc_client.send_command(
+                    ["loadfile", self.player_state.stream_url]
+                )
+            except MPVIPCError as e:
+                # Loading the next stream is the one write we don't want to lose,
+                # but a transient timeout here still must not collapse the player.
+                # The eof/next machinery can retry; log loudly and continue.
+                logger.warning("Failed to load stream (transient IPC error): %s", e)
 
     def _show_text(self, text: str, duration: int = 2000):
         if self.ipc_client:
-            self.ipc_client.send_command(["show-text", text, str(duration)])
+            try:
+                self.ipc_client.send_command(["show-text", text, str(duration)])
+            except MPVIPCError as e:
+                # A cosmetic on-screen toast must NEVER kill playback. During the
+                # eof->idle transition mpv can be briefly unresponsive and this
+                # blocking write times out; swallow it (this was the root cause of
+                # auto-next silently collapsing to the non-IPC fallback).
+                logger.debug("show-text failed (ignored): %s", e)
 
     def _configure_player(self):
         if not self.ipc_client or self.player_first_run:
             self.player_first_run = False
             return
 
-        self.ipc_client.send_command(["seek", 0, "absolute"])
-        self.ipc_client.send_command(
-            ["set_property", "title", self.player_state.episode_title]
-        )
+        try:
+            self.ipc_client.send_command(["seek", 0, "absolute"])
+            self.ipc_client.send_command(
+                ["set_property", "title", self.player_state.episode_title]
+            )
+        except MPVIPCError as e:
+            logger.debug("configure_player IPC write failed (ignored): %s", e)
         self._add_episode_subtitles()
 
     def _add_episode_subtitles(self):
@@ -855,7 +914,10 @@ class MpvIPCPlayer(BaseIPCPlayer):
         time.sleep(0.5)
         for i, sub_url in enumerate(self.player_state.stream_subtitles):
             flag = "select" if i == 0 else "auto"
-            self.ipc_client.send_command(["sub-add", sub_url, flag])
+            try:
+                self.ipc_client.send_command(["sub-add", sub_url, flag])
+            except MPVIPCError as e:
+                logger.debug("sub-add failed (ignored): %s", e)
 
     def _toggle_auto_next(self):
         self.stream_config.auto_next = not self.stream_config.auto_next
