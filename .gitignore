@@ -220,3 +220,8 @@ result
 /viu_media/libs/provider/anime/animeunity/
 /viu_media/libs/provider/anime/hianime/
 /viu_media/libs/provider/anime/yugen/
+
+# webtorrent/ffprobe survey downloads (dump_chapters.py, ad-hoc probing)
+*.mkv
+*.mp4
+*.torrent
