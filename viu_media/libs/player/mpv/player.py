@@ -58,6 +58,40 @@ def _action_for_exit_code(code: int | None) -> str | None:
     return None
 
 
+_CHAPTER_LINE = re.compile(
+    r"\[viu-chapters\] #(\d+) t=(-?[0-9.]+) title=(.*)"
+)
+
+
+def parse_mpv_chapters(
+    stdout: str | None, stderr: str | None
+) -> list[tuple[float, str]]:
+    """Extract the ``(time, title)`` chapters that viu_skip.lua logged.
+
+    The embedded chapter list comes from the media container the source served;
+    capturing the real titles lets us see the OP/ED naming variations and tune
+    the Lua's chapter matcher against actual data.
+    """
+    chapters: list[tuple[float, str]] = []
+    for stream in (stdout, stderr):
+        if not stream:
+            continue
+        for line in stream.splitlines():
+            m = _CHAPTER_LINE.search(line)
+            if m:
+                chapters.append((float(m.group(2)), m.group(3).strip()))
+    return chapters
+
+
+def _log_mpv_chapters(stdout: str | None, stderr: str | None) -> None:
+    chapters = parse_mpv_chapters(stdout, stderr)
+    if chapters:
+        logger.info(
+            "mpv chapters: %s",
+            ", ".join(f"{t:.0f}s={title!r}" for t, title in chapters),
+        )
+
+
 def parse_playback_time(
     stdout: str | None, stderr: str | None
 ) -> tuple[str | None, str | None]:
@@ -205,6 +239,9 @@ class MpvPlayer(BasePlayer):
             env=detect.get_clean_env(),
         )
         stop_time, total_time = parse_playback_time(proc.stdout, proc.stderr)
+        # Record the episode's embedded chapters (from viu_skip.lua) so real
+        # OP/ED title variations land in the log for tuning the skip matcher.
+        _log_mpv_chapters(proc.stdout, proc.stderr)
         return PlayerResult(
             episode=params.episode,
             total_time=total_time,

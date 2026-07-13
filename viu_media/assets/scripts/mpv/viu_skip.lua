@@ -36,6 +36,21 @@ if options.nav_keys then
     end)
 end
 
+-- ---- chapter logging ----------------------------------------------------
+-- Dump the embedded chapter list once the file loads. ani-browse captures mpv's
+-- output and records these lines, so real OP/ED chapter-title variations can be
+-- collected and the matcher below tuned against them.
+mp.register_event("file-loaded", function()
+    local chapters = mp.get_property_native("chapter-list") or {}
+    print(string.format("[viu-chapters] count=%d", #chapters))
+    for i, ch in ipairs(chapters) do
+        print(string.format(
+            "[viu-chapters] #%d t=%.3f title=%s",
+            i, ch.time or -1, ch.title or ""
+        ))
+    end
+end)
+
 -- ---- opening/ending skip ------------------------------------------------
 local skipped = { op = false, ed = false }
 
