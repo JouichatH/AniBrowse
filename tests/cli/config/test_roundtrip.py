@@ -6,7 +6,6 @@ Pydantic loader - against escaping / None / path-quoting regressions.
 
 import tomllib
 
-import pytest
 
 from viu_media.cli.config.generate import generate_config_toml_from_app_model
 from viu_media.cli.config.loader import ConfigLoader

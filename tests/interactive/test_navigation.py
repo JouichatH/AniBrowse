@@ -23,7 +23,6 @@ from tests.support.fakes import (
     make_media_search_result,
     pick,
 )
-from viu_media.cli.interactive.state import MediaApiState, ProviderState
 from viu_media.libs.media_api.params import MediaSearchParams
 
 

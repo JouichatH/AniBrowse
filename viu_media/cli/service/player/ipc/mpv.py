@@ -308,7 +308,7 @@ class MpvIPCPlayer(BaseIPCPlayer):
     """MPV Player implementation using IPC for advanced features."""
 
     stream_config: StreamConfig
-    mpv_process: subprocess.Popen
+    mpv_process: Optional[subprocess.Popen]
     ipc_client: MPVIPCClient
     player_state: PlayerState
     player_fetching: bool = False
@@ -335,7 +335,7 @@ class MpvIPCPlayer(BaseIPCPlayer):
         self._injected_ipc_client = ipc_client
         # None until a real mpv is launched; the injected-client path leaves it
         # unset, so the poll()/terminate() sites must tolerate None.
-        self.mpv_process: Optional[subprocess.Popen] = None
+        self.mpv_process = None
         self._fetch_thread: Optional[threading.Thread] = None
         self._fetch_result_queue: Queue = Queue()
         # Opening/ending skip intervals for the current episode (from AniSkip).

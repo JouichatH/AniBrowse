@@ -376,7 +376,7 @@ def get_episode_preview(
         "HEADER_COLOR": ",".join(HEADER_COLOR),
         "SEPARATOR_COLOR": ",".join(SEPARATOR_COLOR),
         "PREFIX": "episode",
-        "KEY": f"{media_item.title.english.replace(formatter.DOUBLE_QUOTE, formatter.SINGLE_QUOTE)}",
+        "KEY": formatter.sanitize_cache_key(media_item.title.english),
         "SCALE_UP": str(config.general.preview_scale_up),
     }
 

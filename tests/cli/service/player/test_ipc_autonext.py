@@ -9,7 +9,6 @@ drive the player headlessly with a FakeIPCClient and assert that a failing
 ``loadfile`` for the next episode.
 """
 
-import pytest
 
 from tests.support.fakes import (
     FakeAnimeProvider,

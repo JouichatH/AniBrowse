@@ -313,8 +313,10 @@ class EpisodeCacheWorker(ManagedBackgroundWorker):
         streaming_episodes = media_item.streaming_episodes
 
         for episode_str in episodes:
+            # Must match the template's KEY sanitization (preview.py) so the
+            # generated script and this cache writer hash to the same id.
             hash_id = self._get_cache_hash(
-                f"{media_item.title.english.replace(formatter.DOUBLE_QUOTE, formatter.SINGLE_QUOTE)}-{episode_str}"
+                f"{formatter.sanitize_cache_key(media_item.title.english)}-{episode_str}"
             )
 
             # Find episode data

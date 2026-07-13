@@ -182,6 +182,24 @@ def format_score(score: Optional[float]) -> str:
     return f"{score / 10.0:.1f} / 10"
 
 
+def sanitize_cache_key(text: Optional[str]) -> str:
+    """Make a media title safe to embed in a generated preview .py cache script.
+
+    The preview template inserts this value inside a ``\"\"\"{KEY}\"\"\"`` literal
+    that is written to a script and then executed. A raw title could break out of
+    that literal (a trailing backslash, an embedded quote, a newline) or re-trigger
+    the ``{...}`` placeholder substitution - a code-injection vector, since titles
+    can come from nyaa uploads and provider responses, not only AniList. The value
+    is used solely as a sha256 cache-key input, so collapsing every unsafe
+    character to '_' is harmless as long as it stays stable per title. Both the
+    template substitution and the background cache writer must call this so their
+    hashes agree.
+    """
+    if not text:
+        return ""
+    return re.sub(r"[^0-9A-Za-z ._-]", "_", text)
+
+
 def shell_safe(text: Optional[str]) -> str:
     """
     Escapes a string for safe inclusion in a Python script string literal.

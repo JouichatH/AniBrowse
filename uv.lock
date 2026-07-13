@@ -3924,7 +3924,7 @@ dev = [
     { name = "pyright", specifier = ">=1.1.384" },
     { name = "pytest", specifier = ">=8.3.3" },
     { name = "pytest-httpx", specifier = ">=0.35.0" },
-    { name = "ruff", specifier = ">=0.6.9" },
+    { name = "ruff", specifier = ">=0.14.2" },
     { name = "types-lxml", specifier = ">=2026.2.16" },
 ]
 
