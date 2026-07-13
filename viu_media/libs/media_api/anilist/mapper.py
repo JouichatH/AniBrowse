@@ -156,14 +156,23 @@ def _to_generic_studios(anilist_studios: AnilistStudioNodes) -> List[Studio]:
 
 
 def _to_generic_tags(anilist_tags: list[AnilistMediaTag]) -> List[MediaTagItem]:
-    """Maps a list of AniList tags to generic MediaTag objects."""
+    """Maps a list of AniList tags to generic MediaTag objects.
+
+    AniList adds new tags over time; our MediaTag enum is generated and can lag
+    behind. An unknown tag must not fail the whole request, so we skip tags that
+    aren't in the enum rather than raising.
+    """
     if not anilist_tags:
         return []
-    return [
-        MediaTagItem(name=MediaTag(t["name"]), rank=t.get("rank"))
-        for t in anilist_tags
-        if t and t.get("name")
-    ]
+    items: List[MediaTagItem] = []
+    for t in anilist_tags:
+        if not t or not t.get("name"):
+            continue
+        try:
+            items.append(MediaTagItem(name=MediaTag(t["name"]), rank=t.get("rank")))
+        except ValueError:
+            logger.debug("Skipping unknown AniList tag: %r", t.get("name"))
+    return items
 
 
 def _to_generic_streaming_episodes(
@@ -244,7 +253,11 @@ def _to_generic_media_item(
         description=data.get("description"),
         episodes=data.get("episodes"),
         duration=data.get("duration"),
-        genres=[MediaGenre(genre) for genre in data["genres"]],
+        genres=[
+            MediaGenre(g)
+            for g in (data.get("genres") or [])
+            if g in MediaGenre._value2member_map_
+        ],
         tags=_to_generic_tags(data.get("tags")),
         studios=_to_generic_studios(data.get("studios")),
         synonymns=data.get("synonyms", []),
