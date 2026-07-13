@@ -43,8 +43,28 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
         else:
             all_servers: List[Server] = list(server_iterator) if server_iterator else []
 
+    # Fallback: the active source has no stream for this episode (it lags behind
+    # the broadcast, or extraction failed). Try nyaa torrents, which carry the
+    # fastest English releases and stream via webtorrent -> mpv.
+    if (
+        not all_servers
+        and getattr(config.stream, "nyaa_fallback", True)
+        and type(provider).__name__ != "Nyaa"
+    ):
+        from ._source_fallback import nyaa_servers
+
+        with feedback.progress(f"Source lacks episode {episode_number} — trying nyaa"):
+            all_servers = nyaa_servers(
+                anime_title,
+                episode_number,
+                config.stream.translation_type,
+                config.stream.quality,
+            )
+        if all_servers:
+            feedback.info("Streaming from nyaa (torrent). Requires webtorrent-cli.")
+
     if not all_servers:
-        feedback.error(f"o streaming servers found for episode {episode_number}")
+        feedback.error(f"No streaming servers found for episode {episode_number}")
         return InternalDirective.BACKX3
 
     server_map: Dict[str, Server] = {s.name: s for s in all_servers}

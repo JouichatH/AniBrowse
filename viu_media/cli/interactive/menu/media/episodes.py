@@ -28,6 +28,38 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
         )
         return InternalDirective.BACKX2
 
+    # If the active source lags behind the broadcast (a simulcast episode has
+    # aired but this provider hasn't uploaded it yet), merge in the missing
+    # episodes from nyaa torrents so they stay selectable. Streaming those is
+    # handled by the nyaa fallback in the servers menu.
+    if getattr(config.stream, "nyaa_fallback", True) and type(
+        ctx.provider
+    ).__name__ != "Nyaa":
+        last_aired = None
+        if getattr(media_item, "next_airing", None):
+            last_aired = media_item.next_airing.episode - 1
+        elif getattr(media_item, "episodes", None):
+            last_aired = media_item.episodes
+        if last_aired:
+            max_available = max(
+                (float(e) for e in available_episodes if e.replace(".", "", 1).isdigit()),
+                default=0.0,
+            )
+            if last_aired > max_available:
+                from ._source_fallback import merge_episodes, nyaa_extra_episodes
+
+                anime_title = media_item.title.romaji or media_item.title.english
+                with feedback.progress("Source is behind — checking nyaa for newer episodes"):
+                    extras = nyaa_extra_episodes(
+                        anime_title, list(available_episodes), int(last_aired)
+                    )
+                if extras:
+                    available_episodes = merge_episodes(list(available_episodes), extras)
+                    feedback.info(
+                        f"Added {len(extras)} newer episode(s) from nyaa: "
+                        f"{', '.join(extras)}"
+                    )
+
     chosen_episode: str | None = None
     start_time: str | None = None
 
