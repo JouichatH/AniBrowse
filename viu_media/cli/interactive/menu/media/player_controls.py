@@ -33,9 +33,23 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
     available_episodes = getattr(
         provider_anime.episodes, config.stream.translation_type, []
     )
-    current_index = available_episodes.index(current_episode_num)
+    # The current episode may not be in the provider's own list (e.g. an episode
+    # merged in from nyaa), so resolve the index defensively instead of .index().
+    current_index = (
+        available_episodes.index(current_episode_num)
+        if current_episode_num in available_episodes
+        else None
+    )
 
-    if config.stream.auto_next and current_index < len(available_episodes) - 1:
+    # Auto-advance ONLY when the episode was actually watched to completion — not
+    # on a manual quit partway through, and not when a stream failed instantly
+    # (which previously caused a rapid next/prev retry loop).
+    if (
+        config.stream.auto_next
+        and state.provider.completed_
+        and current_index is not None
+        and current_index < len(available_episodes) - 1
+    ):
         feedback.info("Auto-playing next episode...")
         next_episode_num = available_episodes[current_index + 1]
 
@@ -49,7 +63,7 @@ def player_controls(ctx: Context, state: State) -> Union[State, InternalDirectiv
     icons = config.general.icons
     options: Dict[str, Callable[[], Union[State, InternalDirective]]] = {}
 
-    if current_index < len(available_episodes) - 1:
+    if current_index is not None and current_index < len(available_episodes) - 1:
         options[f"{'⏭️ ' if icons else ''}Next Episode"] = _next_episode(ctx, state)
     if current_index:
         options[f"{'⏪ ' if icons else ''}Previous Episode"] = _previous_episode(
@@ -107,6 +121,11 @@ def _next_episode(ctx: Context, state: State) -> MenuAction:
         available_episodes = getattr(
             provider_anime.episodes, config.stream.translation_type, []
         )
+        if current_episode_num not in available_episodes:
+            feedback.warning(
+                "Current episode isn't in this provider's list; can't navigate."
+            )
+            return InternalDirective.RELOAD
         current_index = available_episodes.index(current_episode_num)
 
         if current_index < len(available_episodes) - 1:
@@ -141,6 +160,11 @@ def _previous_episode(ctx: Context, state: State) -> MenuAction:
         available_episodes = getattr(
             provider_anime.episodes, config.stream.translation_type, []
         )
+        if current_episode_num not in available_episodes:
+            feedback.warning(
+                "Current episode isn't in this provider's list; can't navigate."
+            )
+            return InternalDirective.RELOAD
         current_index = available_episodes.index(current_episode_num)
 
         if current_index:

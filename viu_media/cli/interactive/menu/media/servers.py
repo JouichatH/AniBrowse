@@ -119,6 +119,11 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
     if media_item and episode_number:
         ctx.watch_history.track(media_item, player_result)
 
+    # Did the user actually finish the episode? Only then should auto-next fire.
+    # A manual quit partway through (or a corrupt stream that exits instantly)
+    # must NOT auto-advance. Compare stop_time/total_time to episode_complete_at.
+    completed = _playback_completed(player_result, config.stream.episode_complete_at)
+
     return State(
         menu_name=MenuName.PLAYER_CONTROLS,
         media_api=state.media_api,
@@ -126,9 +131,35 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
             update={
                 "servers_": server_map,
                 "server_name_": selected_server.name,
+                "completed_": completed,
             }
         ),
     )
+
+
+def _hms_to_seconds(t: str | None) -> float:
+    """Parse an "HH:MM:SS" (or "MM:SS") timestamp into seconds; 0.0 if unparseable."""
+    if not t:
+        return 0.0
+    try:
+        parts = [float(p) for p in t.strip().split(":")]
+    except ValueError:
+        return 0.0
+    seconds = 0.0
+    for p in parts:
+        seconds = seconds * 60 + p
+    return seconds
+
+
+def _playback_completed(player_result, complete_at_percent: int) -> bool:
+    """True if playback reached the completion threshold (default 80%)."""
+    if not player_result:
+        return False
+    total = _hms_to_seconds(getattr(player_result, "total_time", None))
+    stop = _hms_to_seconds(getattr(player_result, "stop_time", None))
+    if total <= 0:
+        return False
+    return (stop / total) * 100 >= complete_at_percent
 
 
 def _filter_by_quality(links, quality):

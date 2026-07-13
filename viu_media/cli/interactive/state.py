@@ -102,6 +102,9 @@ class ProviderState(StateModel):
     servers_: Optional[Dict[str, Server]] = Field(default=None, alias="servers")
     server_name_: Optional[str] = Field(default=None, alias="server_name")
     start_time_: Optional[str] = Field(default=None, alias="start_time")
+    # Whether the just-finished playback reached the completion threshold
+    # (used to decide auto-next; None = unknown, e.g. before any playback).
+    completed_: Optional[bool] = Field(default=None, alias="completed")
 
     @property
     def search_results(self) -> SearchResults:
