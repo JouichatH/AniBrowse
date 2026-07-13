@@ -1,3 +1,38 @@
+<h1 align="center">ani-browse</h1>
+<p align="center"><sup>A terminal anime browser/streamer — multi-source, with automatic fallback to fast torrent releases.</sup></p>
+
+> **ani-browse** is a fork of [**viu-media/viu**](https://github.com/viu-media/viu) (public domain / Unlicense) with added sources and features — most notably a **nyaa torrent provider** and **automatic fallback to nyaa when the primary source lags a simulcast**, so newly-aired episodes are watchable even before AllAnime uploads them. Full credit to the viu-media authors for the excellent base.
+
+## Install
+
+### Windows (one command)
+
+Open **PowerShell** and run:
+
+```powershell
+irm https://raw.githubusercontent.com/JouichatH/ani-browse/master/install.ps1 | iex
+```
+
+This installs everything reproducibly: [Scoop](https://scoop.sh) (no admin), the runtime tools (`python`, `node`, `mpv`, `fzf`, `chafa`), the `ani-browse` app (isolated via pipx), and **webtorrent-cli** for torrent streaming — including the Windows-specific webtorrent workaround (a dependency's `only-allow pnpm` guard + a native-binary rebuild) and the PATH fix so `webtorrent` is found. Then open a **new terminal** and run `ani-browse`.
+
+### Linux / macOS
+
+```bash
+git clone https://github.com/JouichatH/ani-browse.git
+cd ani-browse
+./install.sh
+```
+
+### Requirements at a glance
+`python ≥ 3.11`, `node` (for webtorrent), `mpv`, `fzf`, `chafa` (cover images), and `webtorrent-cli` (torrent streaming). The installers handle all of these.
+
+> **Torrent note:** streaming from nyaa uses BitTorrent, so you briefly seed (upload) while watching. A VPN is advisable. Torrent playback needs `webtorrent-cli` (installed automatically).
+
+---
+
+<details>
+<summary>Upstream Viu documentation (this fork is based on Viu)</summary>
+
 <p align="center">
   <h1 align="center">Viu</h1>
 </p>
@@ -500,3 +535,5 @@ You can run the background worker as a systemd service for persistence.
 ## Contributing
 
 Contributions are welcome! Whether it's reporting a bug, proposing a feature, or writing code, your help is appreciated. Please read our [**Contributing Guidelines**](CONTRIBUTIONS.md) to get started.
+
+</details>
