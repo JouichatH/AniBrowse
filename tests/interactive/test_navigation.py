@@ -211,6 +211,44 @@ def test_esc_backs_out_of_player_controls(stream_config, no_network_nyaa):
     assert final == []
 
 
+def test_in_player_next_key_advances_episode(stream_config, no_network_nyaa):
+    """Shift+N in mpv (PlayerResult.action='next') jumps to the next episode.
+
+    The player-controls menu is skipped: servers replays directly for episode 2.
+    """
+    from viu_media.libs.player.types import PlayerResult
+
+    # Episode 1's mpv exits with action='next'; episode 2 then plays (a partial
+    # watch, so no auto-next), and we leave via the menu's Exit.
+    player = FakePlayerService(
+        results=[
+            PlayerResult(episode="1", action="next"),
+            PlayerResult(episode="2", stop_time="00:01:00", total_time="00:23:00"),
+        ]
+    )
+    selector = FakeSelector(
+        [pick("Test Anime"), pick("Stream"), pick("1"), pick("Exit")]
+    )
+    media = make_media_item(id=1, title="Test Anime", episodes=3)
+    api = FakeApiClient(search_result=make_media_search_result(media))
+    provider = FakeAnimeProvider(
+        anime=make_anime(id="anime-1", title="Test Anime", episodes=["1", "2", "3"])
+    )
+    ctx = make_context(
+        config=stream_config,
+        selector=selector,
+        media_api=api,
+        provider=provider,
+        player=player,
+        feedback=FakeFeedback(),
+        watch_history=FakeWatchHistory(),
+    )
+    drive(ctx, [make_state("main"), _results_state(media)])
+
+    played = [c[0].episode for c in player.play_calls]
+    assert played == ["1", "2"], "Shift+N should have advanced 1 -> 2 without a menu"
+
+
 def test_toggles_preserve_cursor_and_stay_in_place(stream_config):
     """Toggling options keeps the menu open with the cursor on the toggled row."""
     media = make_media_item(id=1, title="Test Anime", episodes=3)

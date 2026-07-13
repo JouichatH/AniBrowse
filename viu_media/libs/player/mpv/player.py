@@ -25,21 +25,37 @@ VIU_SKIP_LUA = SCRIPTS_DIR / "mpv" / "viu_skip.lua"
 MPV_AV_TIME_PATTERN = re.compile(r"[AV]+: ([0-9:]+) / ([0-9:]+) \(([0-9]+)%\)")
 
 
-def _skip_script_args(params: PlayerParams) -> list[str]:
-    """mpv args that load the viu_skip Lua with this episode's op/ed intervals.
+#: mpv exit codes emitted by viu_skip.lua's Shift+N / Shift+P bindings.
+NEXT_EPISODE_EXIT_CODE = 100
+PREVIOUS_EPISODE_EXIT_CODE = 101
 
-    Returns ``[]`` when there's nothing to skip or the script is missing, so a
-    normal launch is unaffected.
+
+def _viu_lua_args(params: PlayerParams) -> list[str]:
+    """mpv args that load viu_skip.lua for in-player nav keys + op/ed skipping.
+
+    Always loaded on the clean path (the nav keys need it); the skip options are
+    passed through from ``params``. Returns ``[]`` only if the script is missing.
     """
-    if not (params.skip_op or params.skip_ed) or not VIU_SKIP_LUA.exists():
+    if not VIU_SKIP_LUA.exists():
         return []
     op = params.skip_op or (-1.0, -1.0)
     ed = params.skip_ed or (-1.0, -1.0)
     opts = (
+        "viu_skip-nav_keys=yes,"
+        f"viu_skip-op_enabled={'yes' if params.skip_op_enabled else 'no'},"
+        f"viu_skip-ed_enabled={'yes' if params.skip_ed_enabled else 'no'},"
         f"viu_skip-op_start={op[0]},viu_skip-op_end={op[1]},"
         f"viu_skip-ed_start={ed[0]},viu_skip-ed_end={ed[1]}"
     )
     return [f"--script={VIU_SKIP_LUA}", f"--script-opts={opts}"]
+
+
+def _action_for_exit_code(code: int | None) -> str | None:
+    if code == NEXT_EPISODE_EXIT_CODE:
+        return "next"
+    if code == PREVIOUS_EPISODE_EXIT_CODE:
+        return "previous"
+    return None
 
 
 def parse_playback_time(
@@ -174,9 +190,9 @@ class MpvPlayer(BasePlayer):
         mpv_args = [self.executable, params.url]
 
         mpv_args.extend(self._create_mpv_cli_options(params))
-        # Auto opening/ending skip for this single fresh mpv (the IPC path does
-        # its own skipping, so this only applies to the clean subprocess path).
-        mpv_args.extend(_skip_script_args(params))
+        # Load the viu_skip Lua for in-player next/prev keys and opening/ending
+        # skip (the IPC path does its own thing, so this is clean-path only).
+        mpv_args.extend(_viu_lua_args(params))
 
         pre_args = self.config.pre_args.split(",") if self.config.pre_args else []
 
@@ -190,7 +206,10 @@ class MpvPlayer(BasePlayer):
         )
         stop_time, total_time = parse_playback_time(proc.stdout, proc.stderr)
         return PlayerResult(
-            episode=params.episode, total_time=total_time, stop_time=stop_time
+            episode=params.episode,
+            total_time=total_time,
+            stop_time=stop_time,
+            action=_action_for_exit_code(proc.returncode),
         )
 
     def play_with_ipc(self, params: PlayerParams, socket_path: str) -> subprocess.Popen:

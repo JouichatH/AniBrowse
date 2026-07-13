@@ -97,6 +97,20 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
     if media_item and episode_number:
         ctx.watch_history.track(media_item, player_result)
 
+    # In-player Shift+N / Shift+P (clean path): jump straight to the neighbour
+    # episode's servers instead of showing the post-playback menu.
+    if player_result.action in ("next", "previous"):
+        target = _neighbour_episode(
+            provider_anime, config.stream.translation_type, episode_number,
+            player_result.action,
+        )
+        if target:
+            return State(
+                menu_name=MenuName.SERVERS,
+                media_api=state.media_api,
+                provider=state.provider.model_copy(update={"episode_": target}),
+            )
+
     # Did the video actually reach its end? Only then should auto-next fire.
     # A manual quit partway through (or a corrupt stream that exits instantly)
     # must NOT auto-advance. This is deliberately stricter than the watch-history
@@ -114,6 +128,31 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
             }
         ),
     )
+
+
+def _neighbour_episode(
+    provider_anime, translation_type: str, current: str, direction: str
+) -> str | None:
+    """The next/previous episode number, or None if there isn't one.
+
+    Mirrors the fetch task's logic: step within the provider's list, and for
+    "next" past the last known episode fall through to the numeric next (the
+    nyaa fallback then serves it).
+    """
+    available = list(getattr(provider_anime.episodes, translation_type, []) or [])
+    if current in available:
+        idx = available.index(current)
+        if direction == "next":
+            if idx < len(available) - 1:
+                return available[idx + 1]
+        elif idx > 0:
+            return available[idx - 1]
+    if direction == "next":
+        try:
+            return str(int(float(current)) + 1)
+        except (TypeError, ValueError):
+            return None
+    return None
 
 
 def _hms_to_seconds(t: str | None) -> float:

@@ -65,26 +65,31 @@ class PlayerService:
         cfg = self.app_config.stream
         if not (cfg.opening_skip or cfg.ending_skip):
             return params
-        mal_id = getattr(media_item, "id_mal", None) if media_item else None
-        if not mal_id:
-            return params
-        try:
-            from .aniskip import fetch_skip_times
 
-            intervals = fetch_skip_times(mal_id, params.episode)
-        except Exception as e:  # noqa: BLE001 - skip is best-effort
-            logger.debug("skip fetch failed for ep %s: %s", params.episode, e)
-            return params
-
+        # Try AniSkip for precise intervals; even without them, still mark skip
+        # as enabled so the Lua's chapter-title fallback can act on releases that
+        # ship named OP/ED chapters.
         skip_op = skip_ed = None
-        for interval in intervals:
-            if interval.kind == "op" and cfg.opening_skip:
-                skip_op = (interval.start, interval.end)
-            elif interval.kind == "ed" and cfg.ending_skip:
-                skip_ed = (interval.start, interval.end)
-        if skip_op is None and skip_ed is None:
-            return params
-        return dataclasses.replace(params, skip_op=skip_op, skip_ed=skip_ed)
+        mal_id = getattr(media_item, "id_mal", None) if media_item else None
+        if mal_id:
+            try:
+                from .aniskip import fetch_skip_times
+
+                for interval in fetch_skip_times(mal_id, params.episode):
+                    if interval.kind == "op" and cfg.opening_skip:
+                        skip_op = (interval.start, interval.end)
+                    elif interval.kind == "ed" and cfg.ending_skip:
+                        skip_ed = (interval.start, interval.end)
+            except Exception as e:  # noqa: BLE001 - skip is best-effort
+                logger.debug("skip fetch failed for ep %s: %s", params.episode, e)
+
+        return dataclasses.replace(
+            params,
+            skip_op=skip_op,
+            skip_ed=skip_ed,
+            skip_op_enabled=cfg.opening_skip,
+            skip_ed_enabled=cfg.ending_skip,
+        )
 
     def _play_with_ipc(
         self,

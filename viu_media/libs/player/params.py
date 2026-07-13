@@ -37,3 +37,7 @@ class PlayerParams:
     # (non-IPC) path to bake into mpv at launch via the viu_skip Lua script.
     skip_op: tuple[float, float] | None = None
     skip_ed: tuple[float, float] | None = None
+    # Whether opening/ending skip is enabled (drives interval AND chapter-based
+    # skipping in the Lua, independently of whether AniSkip returned intervals).
+    skip_op_enabled: bool = False
+    skip_ed_enabled: bool = False
