@@ -142,27 +142,58 @@ def _ffprobe(url: str, headers: Dict[str, str], ffprobe: str) -> str:
 
 
 def _ffprobe_torrent(magnet: str, ffprobe: str, webtorrent: str, port: int) -> str:
-    """Serve a magnet over HTTP with webtorrent just long enough to ffprobe it."""
-    proc = subprocess.Popen(
-        [webtorrent, "download", magnet, "--port", str(port), "--quiet"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+    """Serve a magnet over HTTP with webtorrent just long enough to ffprobe it.
+
+    webtorrent only starts its HTTP server in streaming mode (no ``download``
+    subcommand) and serves at ``/webtorrent/<infohash>/<file>`` - not ``/0`` -
+    so we read the actual "Server running at:" URL from its output.
+    """
+    import tempfile
+
+    # Redirect webtorrent output to a file and poll it - node block-buffers a
+    # pipe (and its \r progress line never yields a newline to a reader thread),
+    # but a file redirect flushes the "Server running at:" line promptly. Run via
+    # the shell so a Windows .cmd wrapper + redirection propagate to the node
+    # child (a bare Popen of the .cmd doesn't pass the handle through cleanly).
+    log = tempfile.NamedTemporaryFile(
+        mode="w+", suffix=".wt.log", delete=False, encoding="utf-8"
     )
+    log.close()
+    cmd = f'"{webtorrent}" "{magnet}" --port {port} > "{log.name}" 2>&1'
+    proc = subprocess.Popen(cmd, shell=True)
     try:
-        url = f"http://localhost:{port}/0"
-        # Give webtorrent a moment to fetch metadata and start serving.
-        for _ in range(30):
-            out = _ffprobe(url, {}, ffprobe)
-            if out.strip():
-                return out
+        server_url = None
+        deadline = time.monotonic() + 45
+        while time.monotonic() < deadline and server_url is None:
+            with open(log.name, encoding="utf-8", errors="replace") as fh:
+                for line in fh:
+                    if "Server running at:" in line:
+                        server_url = line.split("Server running at:", 1)[1].strip()
+                        break
             time.sleep(1)
-        return ""
+        if not server_url:
+            print("  webtorrent server did not start in time", file=sys.stderr)
+            return ""
+        # Retry: the container header (with chapters) needs a few pieces first.
+        out = ""
+        for _ in range(20):
+            out = _ffprobe(server_url, {}, ffprobe)
+            if '"chapters"' in out:
+                return out
+            time.sleep(2)
+        return out
     finally:
         proc.terminate()
         try:
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             proc.kill()
+        try:
+            import os
+
+            os.unlink(log.name)
+        except OSError:
+            pass
 
 
 def main(argv: Optional[List[str]] = None) -> int:
