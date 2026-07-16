@@ -73,13 +73,21 @@ class PlayerService:
         mal_id = getattr(media_item, "id_mal", None) if media_item else None
         if mal_id:
             try:
+                import time
+
                 from .aniskip import fetch_skip_times
 
+                _t0 = time.perf_counter()
                 for interval in fetch_skip_times(mal_id, params.episode):
                     if interval.kind == "op" and cfg.opening_skip:
                         skip_op = (interval.start, interval.end)
                     elif interval.kind == "ed" and cfg.ending_skip:
                         skip_ed = (interval.start, interval.end)
+                logger.info(
+                    "[viu-timing] aniskip ep=%s took=%.2fs (BLOCKS launch)",
+                    params.episode,
+                    time.perf_counter() - _t0,
+                )
             except Exception as e:  # noqa: BLE001 - skip is best-effort
                 logger.debug("skip fetch failed for ep %s: %s", params.episode, e)
 

@@ -78,6 +78,9 @@ def resolve_servers(
     Safe to call from a background thread - it does no UI/IPC, only network.
     """
     try:
+        import time
+
+        _t0 = time.perf_counter()
         iterator = provider.episode_streams(
             EpisodeStreamsParams(
                 anime_id=anime_id,
@@ -87,6 +90,13 @@ def resolve_servers(
             )
         )
         servers = list(iterator) if iterator else []
+        logger.info(
+            "[viu-timing] resolve_servers ep=%s provider=%s n=%d took=%.2fs",
+            episode,
+            type(provider).__name__,
+            len(servers),
+            time.perf_counter() - _t0,
+        )
     except Exception as e:  # noqa: BLE001 - provider hiccup -> try nyaa
         logger.debug("primary server fetch failed for ep %s: %s", episode, e)
         servers = []
