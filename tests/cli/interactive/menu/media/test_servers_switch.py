@@ -3,6 +3,7 @@
 import json
 
 from viu_media.cli.interactive.menu.media.servers import (
+    _filter_by_quality,
     _server_switch_entries,
     _write_servers_json,
 )
@@ -71,6 +72,21 @@ def test_write_servers_json_atomic_and_parseable(tmp_path):
     assert data[0]["current"] is True
     # No leftover temp file from the atomic replace.
     assert not (tmp_path / "servers.json.tmp").exists()
+
+
+def test_filter_by_quality_picks_requested_or_falls_back():
+    links = [
+        EpisodeStream(link="a", quality="720"),
+        EpisodeStream(link="b", quality="1080"),
+    ]
+    # Exact requested quality wins regardless of order.
+    assert _filter_by_quality(links, "1080").link == "b"
+    assert _filter_by_quality(links, "720").link == "a"
+    # Requested quality absent -> first link (providers yield links best-first, so
+    # this is the best available, e.g. animepahe sorts its links high->low).
+    assert _filter_by_quality(links, "480").link == "a"
+    # Empty -> None (servers.py surfaces a "no stream of quality" error).
+    assert _filter_by_quality([], "1080") is None
 
 
 def test_write_servers_json_never_raises_on_bad_path():
