@@ -8,6 +8,7 @@ import logging
 import re
 import shutil
 import subprocess
+import sys
 
 from ....core.config import MpvConfig
 from ....core.constants import SCRIPTS_DIR
@@ -48,6 +49,49 @@ def _viu_lua_args(params: PlayerParams) -> list[str]:
         f"viu_skip-ed_start={ed[0]},viu_skip-ed_end={ed[1]}"
     )
     return [f"--script={VIU_SKIP_LUA}", f"--script-opts={opts}"]
+
+
+def _run_mpv_teed(args: list[str], env: dict) -> tuple[str, int | None]:
+    """Run mpv, streaming its ``[viu-...]`` diagnostic lines to the terminal
+    live while capturing the full output for post-playback parsing.
+
+    Replaces a plain ``subprocess.run(capture_output=True)``: that hid mpv's
+    output until after exit, so the opening/ending detection log was only ever
+    visible in app.log. Here we still capture everything (for
+    ``parse_playback_time`` and ``_log_mpv_chapters``) but echo the skip/chapter
+    diagnostic lines as they arrive, so detection is watchable in action.
+
+    stderr is merged into stdout so the single stream carries both mpv's log
+    messages (where the Lua's ``print`` lands) and the status line.
+    """
+    proc = subprocess.Popen(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        bufsize=1,
+        env=env,
+    )
+    captured: list[str] = []
+    assert proc.stdout is not None
+    for chunk in iter(proc.stdout.readline, ""):
+        captured.append(chunk)
+        # mpv rewrites its status line in place with \r; split on it too so our
+        # \n-terminated diagnostic lines are not hidden behind the status line.
+        for piece in chunk.replace("\r", "\n").split("\n"):
+            if "[viu-skip]" in piece or "[viu-chapters]" in piece:
+                try:
+                    sys.stderr.write(piece.strip() + "\n")
+                    sys.stderr.flush()
+                except (UnicodeError, OSError):
+                    # Never let a terminal encoding/pipe hiccup kill playback;
+                    # the line is still captured for app.log regardless.
+                    pass
+    proc.stdout.close()
+    returncode = proc.wait()
+    return "".join(captured), returncode
 
 
 def _action_for_exit_code(code: int | None) -> str | None:
@@ -238,23 +282,18 @@ class MpvPlayer(BasePlayer):
 
         pre_args = self.config.pre_args.split(",") if self.config.pre_args else []
 
-        proc = subprocess.run(
-            pre_args + mpv_args,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            check=False,
-            env=detect.get_clean_env(),
+        output, returncode = _run_mpv_teed(
+            pre_args + mpv_args, detect.get_clean_env()
         )
-        stop_time, total_time = parse_playback_time(proc.stdout, proc.stderr)
+        stop_time, total_time = parse_playback_time(output, None)
         # Record the episode's embedded chapters (from viu_skip.lua) so real
         # OP/ED title variations land in the log for tuning the skip matcher.
-        _log_mpv_chapters(proc.stdout, proc.stderr)
+        _log_mpv_chapters(output, None)
         return PlayerResult(
             episode=params.episode,
             total_time=total_time,
             stop_time=stop_time,
-            action=_action_for_exit_code(proc.returncode),
+            action=_action_for_exit_code(returncode),
         )
 
     def play_with_ipc(self, params: PlayerParams, socket_path: str) -> subprocess.Popen:

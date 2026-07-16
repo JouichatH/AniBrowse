@@ -51,45 +51,26 @@ mp.register_event("file-loaded", function()
     end
 end)
 
--- ---- opening/ending skip ------------------------------------------------
-local skipped = { op = false, ed = false }
+-- ---- opening/ending skip: reconcile two sources in one place ------------
+-- This script is the ONLY spot that sees both skip sources at once: AniSkip
+-- intervals arrive as script-opts, and the embedded chapters come from mpv's
+-- own chapter-list. So reconciliation happens here, with a fixed precedence:
+--
+--     chapter-title  >  aniskip  >  (shape = log only, never skips)
+--
+-- A chapter named Intro/Credits/Opening/Ending is both semantic AND taken from
+-- the exact encode being watched, so it beats AniSkip's external (per-show)
+-- timing. A generic "Chapter NN" recognised only by its ~90s shape is a guess
+-- that could cut real content, so it is logged as low-confidence and NEVER
+-- auto-skipped.
 
-local function do_skip(kind, target)
-    skipped[kind] = true
-    mp.commandv("seek", target, "absolute+exact")
-    mp.osd_message(kind == "op" and "Skipped opening" or "Skipped ending", 1)
-    print(string.format("[viu-skip] %s -> %.1f", kind, target))
-end
-
--- AniSkip interval-based skipping: seek out of a segment on entering it.
-mp.observe_property("time-pos", "number", function(_, t)
-    if t == nil then
-        return
-    end
-    if options.op_enabled and not skipped.op and options.op_end > options.op_start
-        and t >= options.op_start and t < options.op_end then
-        do_skip("op", options.op_end)
-    end
-    if options.ed_enabled and not skipped.ed and options.ed_end > options.ed_start
-        and t >= options.ed_start and t < options.ed_end then
-        do_skip("ed", options.ed_end)
-    end
-end)
-
--- Chapter-based skipping. Two ways to recognise an OP/ED chapter:
---   1. by title - releases that name them "Opening"/"Ending"/etc.;
---   2. by shape - a ~90s chapter near the start (opening) or the end (ending).
---      Many releases (e.g. allanime's mp4s) ship generic "Chapter NN" titles,
---      so the title tells us nothing and the tell-tale 90s span + position is
---      the only signal. Gated on the opening_skip/ending_skip toggles.
-local function chapter_kind_by_title(title)
+-- Semantic title -> "op"/"ed"/nil. Generic titles (episode/part/chapter) return
+-- nil on purpose, so they fall through to the (non-skipping) shape check.
+local function title_kind(title)
     if not title then
         return nil
     end
     title = title:lower()
-    -- "intro" is the opening in the common Intro/Episode/Credits chapter scheme
-    -- (allanime encodes). "episode"/"part"/"chapter" are main content and must
-    -- NOT match - the shape heuristic handles generic "Chapter NN" instead.
     if title:find("opening") or title:find("ncop") or title:find("intro")
         or title:match("^op[%s%p]?") or title == "op" then
         return "op"
@@ -101,48 +82,132 @@ local function chapter_kind_by_title(title)
     return nil
 end
 
--- Returns (kind, seek_target) for the chapter at index idx, or (nil, nil).
-local function classify_chapter(chapters, idx, total)
-    local current = chapters[idx + 1] -- Lua tables are 1-based
-    if not current then
-        return nil, nil
+-- Shape -> "op"/"ed"/nil: a ~90s (TV OP/ED length) chapter early (opening) or
+-- late (ending) in the episode. Recognition only - used for LOGGING, never skip.
+local function shape_kind(start_t, stop_t, total)
+    if not (total and total > 0 and stop_t) then
+        return nil
     end
-    local next_chapter = chapters[idx + 2]
-    local seek_target = next_chapter and next_chapter.time or total
-    local by_title = chapter_kind_by_title(current.title)
-    if by_title then
-        return by_title, seek_target
-    end
-    -- Shape heuristic: a ~90s (TV OP/ED length) chapter at an OP/ED position.
-    if not (total and total > 0 and seek_target) then
-        return nil, nil
-    end
-    local span = seek_target - current.time
+    local span = stop_t - start_t
     if span >= 80 and span <= 105 then
-        if current.time < 0.35 * total then
-            return "op", seek_target
+        if start_t < 0.35 * total then
+            return "op"
         end
-        if current.time > 0.75 * total then
-            return "ed", seek_target
+        if start_t > 0.75 * total then
+            return "ed"
         end
     end
-    return nil, nil
+    return nil
 end
 
-mp.observe_property("chapter", "number", function(_, idx)
-    if idx == nil or idx < 0 then
-        return
+-- Resolved skip intervals (filled at file-loaded): resolved[kind] = {start, stop, source}.
+local resolved = { op = nil, ed = nil }
+local skipped = { op = false, ed = false }
+
+local function fmt_iv(iv)
+    if not iv then
+        return "none"
     end
+    return string.format("%.1f..%.1f(%s)", iv.start, iv.stop, iv.source)
+end
+
+-- Merge the sources into one interval per kind and log the full decision trail.
+local function resolve_skips()
     local chapters = mp.get_property_native("chapter-list") or {}
-    local total = mp.get_property_native("duration")
-    local kind, seek_target = classify_chapter(chapters, idx, total)
-    if kind == "op" and (not options.op_enabled or skipped.op) then
+    local total = mp.get_property_native("duration") or 0
+
+    print(string.format(
+        "[viu-skip] options op_enabled=%s ed_enabled=%s aniskip_op=%.1f..%.1f aniskip_ed=%.1f..%.1f",
+        tostring(options.op_enabled), tostring(options.ed_enabled),
+        options.op_start, options.op_end, options.ed_start, options.ed_end
+    ))
+    print(string.format("[viu-skip] detect count=%d duration=%.1f", #chapters, total))
+
+    -- Gather chapter candidates per source, logging each chapter's read.
+    local title_cand, shape_cand = {}, {}
+    for i = 1, #chapters do
+        local ch = chapters[i]
+        local nxt = chapters[i + 1]
+        local start_t = ch.time or 0
+        local stop_t = (nxt and nxt.time) or total
+        local tk = title_kind(ch.title)
+        local sk = shape_kind(start_t, stop_t, total)
+        if tk and not title_cand[tk] then
+            title_cand[tk] = { start = start_t, stop = stop_t, source = "chapter-title" }
+        end
+        if sk and not shape_cand[sk] then
+            shape_cand[sk] = { start = start_t, stop = stop_t, source = "chapter-shape" }
+        end
+        print(string.format(
+            "[viu-skip] detect #%d t=%.1f span=%.1f title=%q title_kind=%s shape_kind=%s",
+            i - 1, start_t, stop_t - start_t, ch.title or "",
+            tk or "none", sk or "none"
+        ))
+    end
+
+    -- AniSkip candidates come straight from the passed-in options.
+    local aniskip = {}
+    if options.op_end > options.op_start then
+        aniskip.op = { start = options.op_start, stop = options.op_end, source = "aniskip" }
+    end
+    if options.ed_end > options.ed_start then
+        aniskip.ed = { start = options.ed_start, stop = options.ed_end, source = "aniskip" }
+    end
+
+    for _, kind in ipairs({ "op", "ed" }) do
+        -- Precedence: chapter-title first, then aniskip. Shape never wins.
+        local chosen = title_cand[kind] or aniskip[kind]
+        resolved[kind] = chosen
+
+        -- Cross-validate when title and aniskip both exist (title still wins).
+        if title_cand[kind] and aniskip[kind] then
+            local dt = math.abs(title_cand[kind].start - aniskip[kind].start)
+            print(string.format(
+                "[viu-skip] resolve %s: chapter-title %s vs aniskip %s -> %s (chapter-title wins, dstart=%.1fs)",
+                kind, fmt_iv(title_cand[kind]), fmt_iv(aniskip[kind]),
+                dt <= 10 and "AGREE" or "CONFLICT", dt
+            ))
+        end
+
+        -- Shape-only (no trustworthy source): recognised but deliberately not skipped.
+        if not chosen and shape_cand[kind] then
+            print(string.format(
+                "[viu-skip] resolve %s: shape-only candidate %s -> NOT skipping (low confidence)",
+                kind, fmt_iv(shape_cand[kind])
+            ))
+        end
+
+        print(string.format("[viu-skip] resolved %s = %s", kind, fmt_iv(chosen)))
+    end
+end
+
+mp.register_event("file-loaded", function()
+    skipped.op, skipped.ed = false, false
+    resolved.op, resolved.ed = nil, nil
+    resolve_skips()
+end)
+
+-- Single skip path: when playback enters a resolved interval (and the matching
+-- toggle is on), seek to its end. Identical handling for chapter-title and
+-- aniskip since both are normalised to {start, stop}. Seeking an ending whose
+-- stop is the file end lands at eof, which is what drives auto-next; a stop that
+-- is a later chapter's start preserves any post-ending scene.
+mp.observe_property("time-pos", "number", function(_, t)
+    if t == nil then
         return
     end
-    if kind == "ed" and (not options.ed_enabled or skipped.ed) then
-        return
-    end
-    if kind and seek_target then
-        do_skip(kind, seek_target)
+    for _, kind in ipairs({ "op", "ed" }) do
+        local iv = resolved[kind]
+        local enabled = (kind == "op" and options.op_enabled)
+            or (kind == "ed" and options.ed_enabled)
+        if iv and enabled and not skipped[kind]
+            and t >= iv.start and t < iv.stop then
+            skipped[kind] = true
+            mp.commandv("seek", iv.stop, "absolute+exact")
+            mp.osd_message(kind == "op" and "Skipped opening" or "Skipped ending", 1)
+            print(string.format(
+                "[viu-skip] skipped %s -> %.1f via %s", kind, iv.stop, iv.source
+            ))
+        end
     end
 end)
