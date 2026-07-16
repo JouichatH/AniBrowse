@@ -8,12 +8,20 @@ While the current episode plays (a blocking mpv subprocess), we prefetch the
 next/previous episode's servers into a small in-process cache; the servers menu
 then consumes that cache instantly. Everything is best-effort - a prefetch miss
 just means a normal fetch.
+
+The cache is read by *peeking*, not popping: re-entering the servers menu for the
+SAME episode (Replay, or Change-Server-then-Replay) reuses the already-resolved
+list instead of re-fetching it (~1.7s each time). Entries carry a timestamp and
+expire after ``_TTL`` so a stale stream URL is eventually re-resolved; the TTL is
+comfortably longer than a typical episode so a neighbour prefetched at play-start
+is still valid when the episode ends and you advance.
 """
 
 from __future__ import annotations
 
 import logging
 import threading
+import time
 from typing import Dict, List, Optional, Tuple
 
 from .....libs.provider.anime.params import EpisodeStreamsParams
@@ -21,14 +29,43 @@ from .....libs.provider.anime.types import Server
 
 logger = logging.getLogger(__name__)
 
-_CACHE: Dict[Tuple, List[Server]] = {}
+# key -> (monotonic timestamp, servers). Timestamped so entries can expire.
+_CACHE: Dict[Tuple, Tuple[float, List[Server]]] = {}
 _INFLIGHT: set = set()
 _LOCK = threading.Lock()
 _MAX_CACHE = 8
+# How long a resolved server list stays reusable. Longer than a typical episode
+# (so play-start neighbour prefetches survive until you advance), but bounded so
+# an expired stream URL is eventually refetched rather than replayed dead.
+_TTL = 1800.0  # 30 minutes
 
 
 def _key(anime_id: str, episode: str, translation_type: str) -> Tuple:
     return (anime_id, episode, translation_type)
+
+
+def _cache_get(key: Tuple) -> Optional[List[Server]]:
+    """Return cached servers for ``key`` without removing them, or None if absent
+    or expired. Expired entries are pruned."""
+    with _LOCK:
+        entry = _CACHE.get(key)
+        if entry is None:
+            return None
+        ts, servers = entry
+        if time.monotonic() - ts > _TTL:
+            del _CACHE[key]
+            return None
+        return servers
+
+
+def _cache_put(key: Tuple, servers: List[Server]) -> None:
+    """Store ``servers`` for ``key`` with the current timestamp, evicting the
+    oldest entry when the cache is full."""
+    with _LOCK:
+        if key not in _CACHE and len(_CACHE) >= _MAX_CACHE:
+            oldest = min(_CACHE, key=lambda k: _CACHE[k][0])
+            del _CACHE[oldest]
+        _CACHE[key] = (time.monotonic(), servers)
 
 
 def _numeric_next(episode: str) -> Optional[str]:
@@ -92,8 +129,6 @@ def resolve_servers(
     Safe to call from a background thread - it does no UI/IPC, only network.
     """
     try:
-        import time
-
         _t0 = time.perf_counter()
         iterator = provider.episode_streams(
             EpisodeStreamsParams(
@@ -157,15 +192,12 @@ def resolve_first(
     nothing. A cache hit is returned whole (already resolved, no laziness).
     """
     key = _key(anime_id, episode, config.stream.translation_type)
-    with _LOCK:
-        cached = _CACHE.pop(key, None)
+    cached = _cache_get(key)
     if cached is not None:
-        logger.debug("using prefetched servers for episode %s", episode)
+        logger.debug("using cached servers for episode %s", episode)
         pending = PendingServers(cached[0] if cached else None, servers=cached)
         pending._done.set()
         return pending
-
-    import time
 
     _t0 = time.perf_counter()
     iterator = None
@@ -200,8 +232,7 @@ def resolve_first(
         )
         pending = PendingServers(servers[0] if servers else None, servers=servers)
         if servers:
-            with _LOCK:
-                _CACHE[key] = list(servers)
+            _cache_put(key, list(servers))
         pending._done.set()
         return pending
 
@@ -223,8 +254,7 @@ def resolve_first(
         finally:
             pending._servers = [first] + rest
             pending._done.set()
-            with _LOCK:
-                _CACHE[key] = list(pending._servers)
+            _cache_put(key, list(pending._servers))
 
     threading.Thread(target=_drain, daemon=True).start()
     return pending
@@ -233,14 +263,21 @@ def resolve_first(
 def get_servers(
     provider, config, anime_id: str, title: str, episode: str
 ) -> List[Server]:
-    """Server list for one episode, consuming a prefetched result if ready."""
+    """Server list for one episode, reusing a cached result if still fresh.
+
+    Caches its own resolve too, so a same-episode re-entry (e.g. Change-Server
+    then Replay, which takes this non-TOP path) reuses the list instead of
+    re-fetching it.
+    """
     key = _key(anime_id, episode, config.stream.translation_type)
-    with _LOCK:
-        cached = _CACHE.pop(key, None)
+    cached = _cache_get(key)
     if cached is not None:
-        logger.debug("using prefetched servers for episode %s", episode)
+        logger.debug("using cached servers for episode %s", episode)
         return cached
-    return resolve_servers(provider, config, anime_id, title, episode)
+    servers = resolve_servers(provider, config, anime_id, title, episode)
+    if servers:
+        _cache_put(key, servers)
+    return servers
 
 
 def prefetch_neighbours(provider, config, anime, title: str, current: str) -> None:
@@ -255,8 +292,10 @@ def _prefetch_one(
     provider, config, anime_id: str, title: str, episode: str
 ) -> None:
     key = _key(anime_id, episode, config.stream.translation_type)
+    if _cache_get(key) is not None:
+        return  # already have a fresh list for this episode
     with _LOCK:
-        if key in _CACHE or key in _INFLIGHT or len(_CACHE) >= _MAX_CACHE:
+        if key in _INFLIGHT:
             return
         _INFLIGHT.add(key)
 
@@ -264,8 +303,7 @@ def _prefetch_one(
         try:
             servers = resolve_servers(provider, config, anime_id, title, episode)
             if servers:
-                with _LOCK:
-                    _CACHE[key] = servers
+                _cache_put(key, servers)
                 logger.debug("prefetched %d server(s) for ep %s", len(servers), episode)
         except Exception as e:  # noqa: BLE001 - prefetch must never raise
             logger.debug("prefetch failed for ep %s: %s", episode, e)

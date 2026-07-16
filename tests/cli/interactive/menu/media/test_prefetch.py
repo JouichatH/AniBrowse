@@ -35,7 +35,7 @@ def test_resolve_servers_uses_provider_then_nyaa(monkeypatch):
     assert got == nyaa
 
 
-def test_get_servers_consumes_prefetched_cache():
+def test_get_servers_reuses_cache_without_popping():
     provider = FakeAnimeProvider(
         servers={"2": [make_server(name="Luf-mp4", link="LIVE")]}
     )
@@ -43,15 +43,47 @@ def test_get_servers_consumes_prefetched_cache():
     # Seed the cache as if a prefetch worker finished for episode 2.
     cached = [make_server(name="Luf-mp4", link="CACHED")]
     key = pf._key("anime-1", "2", cfg.stream.translation_type)
-    pf._CACHE[key] = cached
+    pf._cache_put(key, cached)
     provider.calls.clear()
 
     got = pf.get_servers(provider, cfg, "anime-1", "Show", "2")
-
     assert got == cached  # served from cache
     assert provider.calls == []  # provider was not queried
-    # The entry was consumed (one-shot).
-    assert key not in pf._CACHE
+
+    # Peek, not pop: a second re-entry (e.g. Replay) still hits the cache and
+    # never re-queries the provider.
+    again = pf.get_servers(provider, cfg, "anime-1", "Show", "2")
+    assert again == cached
+    assert provider.calls == []
+
+
+def test_cache_get_expires_after_ttl():
+    cfg = _config()
+    key = pf._key("anime-1", "2", cfg.stream.translation_type)
+    servers = [make_server(name="Luf-mp4", link="u")]
+    pf._cache_put(key, servers)
+    assert pf._cache_get(key) == servers  # fresh
+
+    # Backdate the entry beyond the TTL -> treated as absent and pruned.
+    _ts, srv = pf._CACHE[key]
+    pf._CACHE[key] = (_ts - pf._TTL - 1.0, srv)
+    assert pf._cache_get(key) is None
+    assert key not in pf._CACHE  # pruned on expiry
+
+
+def test_get_servers_caches_its_own_resolve():
+    # A cold resolve (no prefetch) is cached so a same-episode Replay reuses it.
+    provider = FakeAnimeProvider(
+        servers={"2": [make_server(name="Luf-mp4", link="u2")]}
+    )
+    cfg = _config()
+    got = pf.get_servers(provider, cfg, "anime-1", "Show", "2")
+    assert [s.links[0].link for s in got] == ["u2"]
+    assert len(provider.calls) == 1
+
+    again = pf.get_servers(provider, cfg, "anime-1", "Show", "2")
+    assert again == got
+    assert len(provider.calls) == 1  # reused, not re-resolved
 
 
 def _wait_done(pending, timeout=2.0):
@@ -85,7 +117,7 @@ def test_resolve_first_returns_first_then_full(monkeypatch):
 
     # And the full list is cached for the post-playback / next-visit path.
     key = pf._key("anime-1", "2", _config().stream.translation_type)
-    assert [s.name for s in pf._CACHE[key]] == ["Yt-mp4", "Mp4"]
+    assert [s.name for s in pf._cache_get(key)] == ["Yt-mp4", "Mp4"]
 
 
 def test_resolve_first_is_lazy(monkeypatch):
@@ -133,7 +165,7 @@ def test_resolve_first_uses_prefetched_cache():
     cfg = _config()
     cached = [make_server(name="Luf-mp4", link="CACHED")]
     key = pf._key("anime-1", "2", cfg.stream.translation_type)
-    pf._CACHE[key] = cached
+    pf._cache_put(key, cached)
 
     provider = FakeAnimeProvider(servers={"2": [make_server(name="LIVE", link="u")]})
     provider.calls.clear()
@@ -143,7 +175,11 @@ def test_resolve_first_uses_prefetched_cache():
     assert pending.first.name == "Luf-mp4"
     assert pending.result(timeout=0.01) == cached  # already done, no blocking
     assert provider.calls == []  # provider not queried
-    assert key not in pf._CACHE  # cache consumed one-shot
+    # Peek, not pop: a replay of the same episode still finds the cache.
+    assert pf._cache_get(key) == cached
+    again = pf.resolve_first(provider, cfg, "anime-1", "Show", "2")
+    assert again.result(timeout=0.01) == cached
+    assert provider.calls == []
 
 
 def test_prefetch_neighbours_populates_cache():
