@@ -115,7 +115,12 @@ class WatchHistoryService:
         # TODO: check if start time is mostly complete and increment the episode
         if episode == "0":
             episode = "1"
-        return episode, start_time
+        # ani-browse policy: always start every episode from the beginning, even
+        # one that was left partway. The saved position is still used ABOVE to
+        # decide whether the episode counts as finished (and thus to advance to
+        # the next one); it is simply never used as a resume point. Episode
+        # continuation is preserved; mid-episode --start seeks are not.
+        return episode, None
 
     def update(
         self,
