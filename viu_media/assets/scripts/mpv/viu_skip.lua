@@ -41,12 +41,14 @@ end
 
 -- ---- in-player server switch (no IPC) ----------------------------------
 -- The launcher writes the resolved server list (name/url/headers/quality) to a
--- JSON file and passes its path as `servers_json`. Shift+S opens a numbered menu
+-- JSON file and passes its path as `servers_json`. Ctrl+S opens a numbered menu
 -- of those servers; picking one reloads its URL in place, preserving the current
 -- position and applying the server's HTTP headers. This is the quality/repair
 -- safety-net: if a stream stalls or is low quality, switch without leaving mpv.
 -- The app rewrites the file as background resolution completes, so the menu
 -- reflects whatever servers are known at the moment it is opened.
+-- (Ctrl+S is used rather than Shift+S so mpv's default screenshot binding is
+-- left untouched.)
 local switch_pending_seek = nil
 local switch_pending_subs = nil
 local menu = { open = false, overlay = nil, entries = {}, count = 0 }
@@ -139,7 +141,7 @@ local function open_menu()
 end
 
 if options.servers_json ~= "" then
-    mp.add_forced_key_binding("SHIFT+s", "viu-servers", function()
+    mp.add_forced_key_binding("CTRL+s", "viu-servers", function()
         if menu.open then
             close_menu()
         else
