@@ -42,7 +42,12 @@ class PlayerParams:
     skip_op_enabled: bool = False
     skip_ed_enabled: bool = False
     # Path to a JSON file of alternate servers (name/url/headers/quality) that the
-    # viu_skip Lua reads for its in-player server-switch menu (Shift+S). The app
+    # viu_skip Lua reads for its in-player server-switch menu (Ctrl+S). The app
     # (re)writes this file as background server resolution completes, so the menu
     # can switch streams without leaving mpv. Empty/None disables the feature.
     servers_json: str | None = None
+    # Path to a JSON file of AniSkip opening/ending intervals that the viu_skip Lua
+    # polls after launch. Fetching AniSkip is kept OFF the launch path: mpv spawns
+    # immediately with skip enabled (chapter fallback works at once) and the
+    # intervals arrive via this file a moment later, well before the opening plays.
+    skip_json: str | None = None

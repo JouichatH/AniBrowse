@@ -24,6 +24,7 @@ local options = {
     ed_start = -1,
     ed_end = -1,
     servers_json = "",
+    skip_json = "",
 }
 require("mp.options").read_options(options, "viu_skip")
 
@@ -232,6 +233,9 @@ end
 -- Resolved skip intervals (filled at file-loaded): resolved[kind] = {start, stop, source}.
 local resolved = { op = nil, ed = nil }
 local skipped = { op = false, ed = false }
+-- Chapter-title candidates from the last resolve_skips, so the async AniSkip-file
+-- pickup can respect the precedence (a chapter-title always beats aniskip).
+local title_cand_g = { op = nil, ed = nil }
 
 local function fmt_iv(iv)
     if not iv then
@@ -274,6 +278,9 @@ local function resolve_skips()
         ))
     end
 
+    -- Remember chapter-title candidates for the async AniSkip-file pickup.
+    title_cand_g = title_cand
+
     -- AniSkip candidates come straight from the passed-in options.
     local aniskip = {}
     if options.op_end > options.op_start then
@@ -310,10 +317,75 @@ local function resolve_skips()
     end
 end
 
+-- ---- async AniSkip intervals (delivered off the launch path) -----------
+-- The launcher spawns mpv immediately (no AniSkip wait) and fetches the OP/ED
+-- intervals in the background, writing them to `skip_json` as
+-- {"op":[s,e]|null,"ed":[s,e]|null,"done":bool}. We poll that file after load and
+-- fill in any kind that has NO chapter-title (chapter-title always wins). The OP
+-- is ~80s in, so intervals arriving ~1s after launch are in place well in time.
+local skip_timer = nil
+
+-- Read skip_json once; apply any usable intervals. Returns true when the fetch
+-- has completed (done=true) so the poller can stop.
+local function apply_skip_file()
+    if options.skip_json == "" then
+        return true
+    end
+    local f = io.open(options.skip_json, "r")
+    if not f then
+        return false
+    end
+    local raw = f:read("*a")
+    f:close()
+    local data = utils.parse_json(raw or "")
+    if type(data) ~= "table" then
+        return false
+    end
+    for _, kind in ipairs({ "op", "ed" }) do
+        local iv = data[kind]
+        local usable = type(iv) == "table" and iv[1] and iv[2]
+        -- Only fill kinds a chapter-title didn't already claim, and don't
+        -- re-log an interval we've already applied.
+        if usable and not title_cand_g[kind]
+            and (not resolved[kind] or resolved[kind].source == "aniskip-file")
+            and not (resolved[kind] and resolved[kind].start == iv[1]) then
+            resolved[kind] = { start = iv[1], stop = iv[2], source = "aniskip-file" }
+            print(string.format(
+                "[viu-skip] aniskip-file %s = %.1f..%.1f", kind, iv[1], iv[2]
+            ))
+        end
+    end
+    return data.done == true
+end
+
+local function start_skip_poll()
+    if options.skip_json == "" then
+        return
+    end
+    if skip_timer then
+        skip_timer:kill()
+        skip_timer = nil
+    end
+    if apply_skip_file() then
+        return  -- already done (e.g. no MAL id -> nothing to wait for)
+    end
+    local ticks = 0
+    skip_timer = mp.add_periodic_timer(0.5, function()
+        ticks = ticks + 1
+        if apply_skip_file() or ticks >= 60 then  -- stop when done or after ~30s
+            if skip_timer then
+                skip_timer:kill()
+                skip_timer = nil
+            end
+        end
+    end)
+end
+
 mp.register_event("file-loaded", function()
     skipped.op, skipped.ed = false, false
     resolved.op, resolved.ed = nil, nil
     resolve_skips()
+    start_skip_poll()
 end)
 
 -- Single skip path: when playback enters a resolved interval (and the matching

@@ -1,7 +1,10 @@
+import json
 import logging
+import os
 from typing import Optional
 
 from ....core.config import AppConfig
+from ....core.constants import APP_CACHE_DIR
 from ....core.exceptions import ViuError
 from ....libs.media_api.types import MediaItem
 from ....libs.player.base import BasePlayer
@@ -13,6 +16,36 @@ from ....libs.provider.anime.types import Anime
 from ..registry import MediaRegistryService
 
 logger = logging.getLogger(__name__)
+
+
+def _skip_json_path() -> str:
+    """Stable, app-owned path the viu_skip Lua polls for AniSkip intervals."""
+    return str(APP_CACHE_DIR / "skip.json")
+
+
+def _write_skip_json(
+    path: str,
+    op: Optional[tuple[float, float]],
+    ed: Optional[tuple[float, float]],
+    done: bool,
+) -> None:
+    """Atomically write the AniSkip interval file (best-effort).
+
+    ``op``/``ed`` are ``[start, end]`` or null; ``done`` tells the Lua the fetch
+    has finished so it can stop polling (whether or not intervals were found).
+    """
+    payload = {
+        "op": [op[0], op[1]] if op else None,
+        "ed": [ed[0], ed[1]] if ed else None,
+        "done": done,
+    }
+    try:
+        tmp = f"{path}.tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh)
+        os.replace(tmp, path)
+    except OSError as e:  # a disk hiccup here must never break playback
+        logger.debug("could not write skip json: %s", e)
 
 
 class PlayerService:
@@ -55,48 +88,54 @@ class PlayerService:
     def _with_skip(
         self, params: PlayerParams, media_item: Optional[MediaItem]
     ) -> PlayerParams:
-        """Attach opening/ending skip intervals to ``params`` when enabled.
+        """Enable opening/ending skip and deliver AniSkip intervals via file.
 
-        Best-effort: any failure (no MAL id, network hiccup, disabled) just
-        returns the params unchanged so playback is never blocked.
+        AniSkip is kept OFF the launch path: mpv spawns immediately with skip
+        enabled (so the Lua's chapter fallback acts at once), and the intervals
+        are fetched in a background thread that writes them to ``skip.json``,
+        which the Lua polls. They arrive a moment after launch — long before the
+        opening plays. Best-effort: any failure just leaves skip on chapter-only.
         """
         import dataclasses
+        import threading
 
         cfg = self.app_config.stream
         if not (cfg.opening_skip or cfg.ending_skip):
             return params
 
-        # Try AniSkip for precise intervals; even without them, still mark skip
-        # as enabled so the Lua's chapter-title fallback can act on releases that
-        # ship named OP/ED chapters.
-        skip_op = skip_ed = None
         mal_id = getattr(media_item, "id_mal", None) if media_item else None
+        skip_path = _skip_json_path()
+        # Clear any previous episode's intervals so the Lua never reads stale data.
+        # With no MAL id there is nothing to fetch, so mark done immediately.
+        _write_skip_json(skip_path, op=None, ed=None, done=mal_id is None)
+
         if mal_id:
-            try:
-                import time
+            episode = params.episode
+            op_on, ed_on = cfg.opening_skip, cfg.ending_skip
 
-                from .aniskip import fetch_skip_times
+            def _fetch_skip() -> None:
+                op = ed = None
+                try:
+                    from .aniskip import fetch_skip_times
 
-                _t0 = time.perf_counter()
-                for interval in fetch_skip_times(mal_id, params.episode):
-                    if interval.kind == "op" and cfg.opening_skip:
-                        skip_op = (interval.start, interval.end)
-                    elif interval.kind == "ed" and cfg.ending_skip:
-                        skip_ed = (interval.start, interval.end)
-                logger.info(
-                    "[viu-timing] aniskip ep=%s took=%.2fs (BLOCKS launch)",
-                    params.episode,
-                    time.perf_counter() - _t0,
-                )
-            except Exception as e:  # noqa: BLE001 - skip is best-effort
-                logger.debug("skip fetch failed for ep %s: %s", params.episode, e)
+                    for interval in fetch_skip_times(mal_id, episode):
+                        if interval.kind == "op" and op_on:
+                            op = (interval.start, interval.end)
+                        elif interval.kind == "ed" and ed_on:
+                            ed = (interval.start, interval.end)
+                except Exception as e:  # noqa: BLE001 - skip is best-effort
+                    logger.debug("skip fetch failed for ep %s: %s", episode, e)
+                _write_skip_json(skip_path, op=op, ed=ed, done=True)
+
+            threading.Thread(target=_fetch_skip, daemon=True).start()
 
         return dataclasses.replace(
             params,
-            skip_op=skip_op,
-            skip_ed=skip_ed,
+            skip_op=None,
+            skip_ed=None,
             skip_op_enabled=cfg.opening_skip,
             skip_ed_enabled=cfg.ending_skip,
+            skip_json=skip_path,
         )
 
     def _play_with_ipc(
