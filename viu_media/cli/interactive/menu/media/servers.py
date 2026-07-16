@@ -4,7 +4,7 @@ from .....libs.player.params import PlayerParams
 from .....libs.provider.anime.types import Server
 from ...session import Context, session
 from ...state import InternalDirective, MenuName, State
-from ._prefetch import get_servers, prefetch_neighbours
+from ._prefetch import get_servers, prefetch_neighbours, resolve_first
 
 
 @session.menu
@@ -28,10 +28,27 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
     # Resolve this episode's servers - instant if a prefetch worker already
     # warmed the cache while the previous episode played, otherwise a live fetch
     # (primary provider, then the nyaa torrent fallback for lagging simulcasts).
+    #
+    # Optimization A: when the preference is TOP (the default), we don't need the
+    # full server list to start - just the best-ranked one. resolve_first yields
+    # that first extractable server immediately and finishes resolving the rest in
+    # the background during playback, so time-to-playback isn't gated on extracting
+    # every source. The full list is materialized after playback (below) for the
+    # in-player server-switch menu. Any other preference needs the whole list up
+    # front (to match a named server or offer the selection menu), so it uses the
+    # blocking full resolve.
+    preferred_server = config.stream.server.value
+    pending = None
     with feedback.progress("Fetching Servers"):
-        all_servers = get_servers(
-            provider, config, provider_anime.id, anime_title, episode_number
-        )
+        if preferred_server == "TOP":
+            pending = resolve_first(
+                provider, config, provider_anime.id, anime_title, episode_number
+            )
+            all_servers = [pending.first] if pending.first else []
+        else:
+            all_servers = get_servers(
+                provider, config, provider_anime.id, anime_title, episode_number
+            )
 
     if not all_servers:
         feedback.error(f"No streaming servers found for episode {episode_number}")
@@ -43,7 +60,6 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
     server_map: Dict[str, Server] = {s.name: s for s in all_servers}
     selected_server: Server | None = None
 
-    preferred_server = config.stream.server.value
     if preferred_server == "TOP":
         selected_server = all_servers[0]
         feedback.info(f"Auto-selecting top server: {selected_server.name}")
@@ -115,6 +131,14 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
                 media_api=state.media_api,
                 provider=state.provider.model_copy(update={"episode_": target}),
             )
+
+    # The rest of the server list resolved in the background while the episode
+    # played (Optimization A). Materialize the full map now so the post-playback
+    # "change server" menu has every option, not just the one we launched on.
+    if pending is not None:
+        full_servers = pending.result(timeout=5.0)
+        if full_servers:
+            server_map = {s.name: s for s in full_servers}
 
     # Did the video actually reach its end? Only then should auto-next fire.
     # A manual quit partway through (or a corrupt stream that exits instantly)

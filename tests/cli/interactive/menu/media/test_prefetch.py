@@ -54,6 +54,98 @@ def test_get_servers_consumes_prefetched_cache():
     assert key not in pf._CACHE
 
 
+def _wait_done(pending, timeout=2.0):
+    import time
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if pending._done.is_set():
+            return True
+        time.sleep(0.005)
+    return False
+
+
+def test_resolve_first_returns_first_then_full(monkeypatch):
+    provider = FakeAnimeProvider(
+        servers={
+            "2": [
+                make_server(name="Yt-mp4", link="best"),
+                make_server(name="Mp4", link="worst"),
+            ]
+        }
+    )
+    pending = pf.resolve_first(provider, _config(), "anime-1", "Show", "2")
+
+    # First (best-ranked) server is available immediately for launch.
+    assert pending.first.name == "Yt-mp4"
+
+    # The rest finishes in the background; result() gives the whole list.
+    assert _wait_done(pending)
+    assert [s.name for s in pending.result()] == ["Yt-mp4", "Mp4"]
+
+    # And the full list is cached for the post-playback / next-visit path.
+    key = pf._key("anime-1", "2", _config().stream.translation_type)
+    assert [s.name for s in pf._CACHE[key]] == ["Yt-mp4", "Mp4"]
+
+
+def test_resolve_first_is_lazy(monkeypatch):
+    """`first` is usable before the remaining sources have been extracted."""
+    import threading
+
+    gate = threading.Event()
+
+    class LazyProvider:
+        def episode_streams(self, params):
+            def gen():
+                yield make_server(name="Yt-mp4", link="best")
+                gate.wait(2.0)  # the rest is blocked until we release
+                yield make_server(name="Mp4", link="worst")
+
+            return gen()
+
+    pending = pf.resolve_first(LazyProvider(), _config(), "anime-1", "Show", "2")
+
+    # First server is ready even though the generator is still blocked on `gate`.
+    assert pending.first.name == "Yt-mp4"
+    # A short-timeout result reflects only what is ready so far (laziness).
+    assert [s.name for s in pending.result(timeout=0.05)] == ["Yt-mp4"]
+
+    gate.set()  # release the rest
+    assert _wait_done(pending)
+    assert [s.name for s in pending.result()] == ["Yt-mp4", "Mp4"]
+
+
+def test_resolve_first_falls_back_to_nyaa(monkeypatch):
+    nyaa = [make_server(name="nyaa:SubsPlease (5)", link="magnet:x")]
+    import viu_media.cli.interactive.menu.media._source_fallback as sf
+
+    monkeypatch.setattr(sf, "nyaa_servers", lambda *a, **k: nyaa)
+
+    empty = FakeAnimeProvider(servers={})  # primary yields nothing for ep 9
+    pending = pf.resolve_first(empty, _config(), "anime-1", "Show", "9")
+
+    assert pending.first.name == "nyaa:SubsPlease (5)"
+    assert _wait_done(pending)
+    assert pending.result() == nyaa
+
+
+def test_resolve_first_uses_prefetched_cache():
+    cfg = _config()
+    cached = [make_server(name="Luf-mp4", link="CACHED")]
+    key = pf._key("anime-1", "2", cfg.stream.translation_type)
+    pf._CACHE[key] = cached
+
+    provider = FakeAnimeProvider(servers={"2": [make_server(name="LIVE", link="u")]})
+    provider.calls.clear()
+
+    pending = pf.resolve_first(provider, cfg, "anime-1", "Show", "2")
+
+    assert pending.first.name == "Luf-mp4"
+    assert pending.result(timeout=0.01) == cached  # already done, no blocking
+    assert provider.calls == []  # provider not queried
+    assert key not in pf._CACHE  # cache consumed one-shot
+
+
 def test_prefetch_neighbours_populates_cache():
     provider = FakeAnimeProvider(
         anime=make_anime(id="anime-1", episodes=["1", "2", "3"]),
