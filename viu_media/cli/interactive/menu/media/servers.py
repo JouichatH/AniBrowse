@@ -1,10 +1,18 @@
-from typing import Dict
+import json
+import logging
+import os
+import threading
+from typing import Dict, List
 
+from .....core.constants import APP_CACHE_DIR
+from .....core.patterns import TORRENT_REGEX
 from .....libs.player.params import PlayerParams
 from .....libs.provider.anime.types import Server
 from ...session import Context, session
 from ...state import InternalDirective, MenuName, State
 from ._prefetch import get_servers, prefetch_neighbours, resolve_first
+
+logger = logging.getLogger(__name__)
 
 
 @session.menu
@@ -99,10 +107,31 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
     # episode plays, so advancing is instant instead of re-fetching each time.
     prefetch_neighbours(provider, config, provider_anime, anime_title, episode_number)
 
+    # Write the in-player server-switch menu (Shift+S) data. We seed it with what
+    # we already have (just the launched server on the Optimization-A fast path)
+    # so the file exists immediately, then a background thread rewrites it with
+    # the full list as resolution finishes during playback.
+    servers_json = _servers_json_path()
+    _write_servers_json(
+        servers_json, all_servers, config.stream.quality, selected_server.name
+    )
+    if pending is not None:
+        _current_name = selected_server.name
+
+        def _update_servers_json() -> None:
+            full = pending.result(timeout=30.0)
+            if full:
+                _write_servers_json(
+                    servers_json, full, config.stream.quality, _current_name
+                )
+
+        threading.Thread(target=_update_servers_json, daemon=True).start()
+
     player_result = ctx.player.play(
         PlayerParams(
             url=stream_link_obj.link,
             title=final_title,
+            servers_json=servers_json,
             query=(
                 state.media_api.media_item.title.romaji
                 or state.media_api.media_item.title.english
@@ -157,6 +186,52 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
             }
         ),
     )
+
+
+def _servers_json_path() -> str:
+    """Stable, app-owned path the viu_skip Lua reads for the server-switch menu."""
+    return str(APP_CACHE_DIR / "servers.json")
+
+
+def _server_switch_entries(
+    servers: List[Server], quality: str, current_name: str
+) -> list[dict]:
+    """Serialize servers for the Lua switch menu: one entry per switchable server.
+
+    Each entry carries the quality-filtered URL, the server's HTTP headers and any
+    external subtitles. Torrent/magnet servers are excluded — mpv cannot loadfile a
+    magnet into a running instance (they need a separate webtorrent process).
+    """
+    entries: list[dict] = []
+    for s in servers:
+        link = _filter_by_quality(s.links, quality)
+        if not link or not link.link or TORRENT_REGEX.match(link.link):
+            continue
+        entries.append(
+            {
+                "name": s.name,
+                "url": link.link,
+                "quality": str(link.quality),
+                "headers": dict(s.headers or {}),
+                "subtitles": [sub.url for sub in (s.subtitles or [])],
+                "current": s.name == current_name,
+            }
+        )
+    return entries
+
+
+def _write_servers_json(
+    path: str, servers: List[Server], quality: str, current_name: str
+) -> None:
+    """Atomically write the server-switch menu JSON (best-effort)."""
+    entries = _server_switch_entries(servers, quality, current_name)
+    try:
+        tmp = f"{path}.tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(entries, fh)
+        os.replace(tmp, path)
+    except OSError as e:  # a disk hiccup here must never break playback
+        logger.debug("could not write servers menu json: %s", e)
 
 
 def _stream_host(url: str) -> str:

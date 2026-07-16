@@ -52,6 +52,16 @@ def test_enabled_without_interval_still_marks_enabled():
     assert "viu_skip-op_start=-1" in opts
 
 
+def test_lua_servers_json_opt_present_only_when_set():
+    # No servers_json -> the Lua's Shift+S binding stays off (opt omitted).
+    opts = next(a for a in _viu_lua_args(_params()) if a.startswith("--script-opts="))
+    assert "viu_skip-servers_json" not in opts
+
+    params = dataclasses.replace(_params(), servers_json="C:/cache/servers.json")
+    opts = next(a for a in _viu_lua_args(params) if a.startswith("--script-opts="))
+    assert "viu_skip-servers_json=C:/cache/servers.json" in opts
+
+
 # ---- exit code -> navigation action --------------------------------------
 
 

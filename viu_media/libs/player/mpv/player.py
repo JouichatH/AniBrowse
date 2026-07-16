@@ -48,6 +48,11 @@ def _viu_lua_args(params: PlayerParams) -> list[str]:
         f"viu_skip-op_start={op[0]},viu_skip-op_end={op[1]},"
         f"viu_skip-ed_start={ed[0]},viu_skip-ed_end={ed[1]}"
     )
+    # In-player server switch: the Lua only binds Shift+S when given a servers
+    # JSON path. Paths never contain commas (which separate script-opts), so this
+    # is safe to append verbatim.
+    if params.servers_json:
+        opts += f",viu_skip-servers_json={params.servers_json}"
     return [f"--script={VIU_SKIP_LUA}", f"--script-opts={opts}"]
 
 

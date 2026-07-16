@@ -23,8 +23,11 @@ local options = {
     op_end = -1,
     ed_start = -1,
     ed_end = -1,
+    servers_json = "",
 }
 require("mp.options").read_options(options, "viu_skip")
+
+local utils = require("mp.utils")
 
 -- ---- in-player episode navigation --------------------------------------
 if options.nav_keys then
@@ -35,6 +38,130 @@ if options.nav_keys then
         mp.commandv("quit", "101")
     end)
 end
+
+-- ---- in-player server switch (no IPC) ----------------------------------
+-- The launcher writes the resolved server list (name/url/headers/quality) to a
+-- JSON file and passes its path as `servers_json`. Shift+S opens a numbered menu
+-- of those servers; picking one reloads its URL in place, preserving the current
+-- position and applying the server's HTTP headers. This is the quality/repair
+-- safety-net: if a stream stalls or is low quality, switch without leaving mpv.
+-- The app rewrites the file as background resolution completes, so the menu
+-- reflects whatever servers are known at the moment it is opened.
+local switch_pending_seek = nil
+local switch_pending_subs = nil
+local menu = { open = false, overlay = nil, entries = {}, count = 0 }
+
+local function load_server_entries()
+    if options.servers_json == "" then
+        return {}
+    end
+    local f = io.open(options.servers_json, "r")
+    if not f then
+        return {}
+    end
+    local raw = f:read("*a")
+    f:close()
+    local data = utils.parse_json(raw or "")
+    if type(data) ~= "table" then
+        return {}
+    end
+    return data
+end
+
+-- Escape text going into the ASS overlay so a server name can't inject styling.
+local function ass_escape(s)
+    return (tostring(s):gsub("\\", "\\\\"):gsub("{", "\\{"):gsub("}", "\\}"))
+end
+
+local function close_menu()
+    if not menu.open then
+        return
+    end
+    for i = 1, menu.count do
+        mp.remove_key_binding("viu-srv-" .. i)
+    end
+    mp.remove_key_binding("viu-srv-esc")
+    if menu.overlay then
+        menu.overlay:remove()
+    end
+    menu.open = false
+end
+
+local function switch_to(entry)
+    if not entry or not entry.url then
+        return
+    end
+    switch_pending_seek = mp.get_property_number("time-pos")
+    switch_pending_subs = entry.subtitles
+    if type(entry.headers) == "table" then
+        local hf = {}
+        for k, v in pairs(entry.headers) do
+            hf[#hf + 1] = tostring(k) .. ": " .. tostring(v)
+        end
+        mp.set_property_native("http-header-fields", hf)
+    end
+    mp.commandv("loadfile", entry.url, "replace")
+    mp.osd_message("Switching to " .. (entry.name or "server"), 2)
+    print(string.format("[viu-skip] server-switch -> %s", entry.name or "?"))
+end
+
+local function open_menu()
+    local entries = load_server_entries()
+    if #entries == 0 then
+        mp.osd_message("No alternate servers available yet", 2)
+        return
+    end
+    menu.entries = entries
+    menu.count = math.min(#entries, 9)
+    local lines = {
+        string.format("{\\b1}Select server{\\b0}  (1-%d, Esc to cancel)", menu.count),
+    }
+    for i = 1, menu.count do
+        local e = entries[i]
+        local mark = e.current and "  <- current" or ""
+        lines[#lines + 1] = string.format(
+            "%d. %s  (%sp)%s", i, ass_escape(e.name or "?"),
+            ass_escape(e.quality or "?"), mark
+        )
+    end
+    menu.overlay = mp.create_osd_overlay("ass-events")
+    menu.overlay.data = table.concat(lines, "\\N")
+    menu.overlay:update()
+    for i = 1, menu.count do
+        mp.add_forced_key_binding(tostring(i), "viu-srv-" .. i, function()
+            local e = menu.entries[i]
+            close_menu()
+            switch_to(e)
+        end)
+    end
+    mp.add_forced_key_binding("ESC", "viu-srv-esc", close_menu)
+    menu.open = true
+end
+
+if options.servers_json ~= "" then
+    mp.add_forced_key_binding("SHIFT+s", "viu-servers", function()
+        if menu.open then
+            close_menu()
+        else
+            open_menu()
+        end
+    end)
+end
+
+-- After a server switch reloads the stream, restore the pre-switch position and
+-- (re)attach the new server's external subtitles.
+mp.register_event("file-loaded", function()
+    if switch_pending_seek then
+        mp.commandv("seek", switch_pending_seek, "absolute+exact")
+        switch_pending_seek = nil
+    end
+    if switch_pending_subs then
+        for _, url in ipairs(switch_pending_subs) do
+            mp.commandv("sub-add", url)
+        end
+        switch_pending_subs = nil
+    end
+end)
 
 -- ---- chapter logging ----------------------------------------------------
 -- Dump the embedded chapter list once the file loads. ani-browse captures mpv's
