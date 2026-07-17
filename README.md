@@ -43,20 +43,11 @@ cd ani-browse
 </p>
 <div align="center">
 
-[![PyPI - Version](https://img.shields.io/pypi/v/viu-media)](https://pypi.org/project/viu-media/)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/viu-media)](https://pypi.org/project/viu-media/)
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/JouichatH/ani-browse/test.yml?label=Tests)](https://github.com/JouichatH/ani-browse/actions)
-[![Discord](https://img.shields.io/discord/1250887070906323096?label=Discord&logo=discord)](https://discord.gg/HBEmAwvbHV)
-[![GitHub Issues](https://img.shields.io/github/issues/JouichatH/ani-browse)](https://github.com/JouichatH/ani-browse/issues)
-[![PyPI - License](https://img.shields.io/pypi/l/ani-browse)](https://github.com/JouichatH/ani-browse/blob/master/LICENSE)
+[![Tests](https://img.shields.io/github/actions/workflow/status/JouichatH/ani-browse/test.yml?label=Tests)](https://github.com/JouichatH/ani-browse/actions)
+[![Issues](https://img.shields.io/github/issues/JouichatH/ani-browse)](https://github.com/JouichatH/ani-browse/issues)
+[![License](https://img.shields.io/github/license/JouichatH/ani-browse)](https://github.com/JouichatH/ani-browse/blob/master/LICENSE)
 
 </div>
-
-<p align="center">
-  <a href="https://discord.gg/HBEmAwvbHV">
-    <img src="https://invidget.switchblade.xyz/C4rhMA4mmK" alt="Discord Server Invite">
-  </a>
-</p>
 
 [ani-browse-showcase.webm](https://github.com/user-attachments/assets/5da0ec87-7780-4310-9ca2-33fae7cadd5f)
 
@@ -101,7 +92,7 @@ cd ani-browse
 
 ## Installation
 
-Ani-Browse runs on Windows, macOS, Linux, and Android (via Termux). Pre-built binaries are available for quick installation without Python, or you can install via Python 3.10+ package managers.
+Ani-Browse runs on Windows, macOS, Linux, and Android (via Termux). The recommended install is the one-command installer at the [top of this README](#install), which clones this repo and sets everything up. Manual/source steps are below.
 
 ### Prerequisites
 
@@ -116,208 +107,25 @@ For the best experience, please install these external tools:
   - [**ffmpeg**](https://www.ffmpeg.org/) - Required for downloading HLS streams and merging subtitles.
   - [**webtorrent-cli**](https://github.com/webtorrent/webtorrent-cli) - For streaming torrents directly.
 
-### Pre-built Binaries (Recommended for Quick Start)
+### From source
 
-The easiest way to get started is to download a pre-built, self-contained binary from the [**releases page**](https://github.com/JouichatH/ani-browse/releases/latest). These binaries include all dependencies and **do not require Python** to be installed.
+The one-command installers at the [top of this README](#install) are the
+recommended path — they clone this repo, install the app (isolated via pipx),
+fetch the provider scrapers, and set up mpv / fzf / chafa / webtorrent.
 
-**Available for:**
-
-- **Linux** (x86_64): `viu-linux-x86_64`
-- **Windows** (x86_64): `viu-windows-x86_64.exe`
-- **macOS** (Intel x86_64): `viu-macos-x86_64`
-- **macOS** (Apple Silicon ARM64): `viu-macos-arm64`
-
-**Installation Steps:**
-
-1. Download the appropriate binary for your platform from the [**releases page**](https://github.com/JouichatH/ani-browse/releases/latest).
-2. **Linux/macOS:** Make it executable:
-
-    ```bash
-    # Replace with the actual binary name you downloaded
-    chmod +x viu-linux-x86_64
-    ```
-
-    Then move it to a directory in your PATH:
-
-    ```bash
-    # Option 1: System-wide installation (requires sudo)
-    sudo mv viu-linux-x86_64 /usr/local/bin/ani-browse
-
-    # Option 2: User directory installation
-    mkdir -p ~/.local/bin
-    mv viu-linux-x86_64 ~/.local/bin/ani-browse
-    # Make sure ~/.local/bin is in your PATH
-    ```
-
-    **Windows:** Simply rename `viu-windows-x86_64.exe` to `ani-browse.exe` and place it in a directory in your PATH, or run it directly.
-
-3. Verify the installation:
-
-    ```bash
-    ani-browse --version
-    ```
-
-### Recommended Installation (uv)
-
-The best way to install Ani-Browse is with [**uv**](https://github.com/astral-sh/uv), a lightning-fast Python package manager.
+To install manually instead:
 
 ```bash
-# Install with all optional features for the full experience
-uv tool install "viu-media[standard]"
-
-# Or, pick and choose the extras you need:
-uv tool install viu-media  # Core functionality only
-uv tool install "viu-media[download]"  # For advanced downloading with yt-dlp
-uv tool install "viu-media[discord]"   # For Discord Rich Presence
-uv tool install "viu-media[notifications]" # For desktop notifications
+git clone https://github.com/JouichatH/ani-browse.git
+cd ani-browse
+pipx install .                     # installs the `ani-browse` command (isolated)
+python scripts/fetch_providers.py  # fetch the provider scrapers (run with the app's Python)
+ani-browse --version
 ```
 
-### Other Installation Methods
-
-<details>
-  <summary><b>Platform-Specific and Alternative Installers</b></summary>
-  
-#### Nix / NixOS
-
-##### Ephemeral / One-Off Run (No Installation)
-
-  ```bash
-  nix run github:JouichatH/ani-browse
-  ```
-
-##### Imperative Installation
-
-  ```bash
-  nix profile install github:JouichatH/ani-browse
-  ```
-
-##### Declarative Installation
-
-###### in your flake.nix
-
-  ```nix
-  ani-browse.url = "github:JouichatH/ani-browse";
-  ```
-
-###### in your system or home-manager packages
-
-  ```nix
-  inputs.ani-browse.packages.${pkgs.system}.default
-  ```
-
-#### Arch Linux (AUR)
-
-Use an AUR helper like `yay` or `paru`.
-
-```bash
-# Stable version (recommended)
-yay -S viu-media
-
-# Git version (latest commit)
-yay -S viu-media-git
-```
-
-#### Termux
-
-You may have to have rust installed see this issue: <https://github.com/pydantic/pydantic-core/issues/1012#issuecomment-2511269688>.
-
-```bash
-# Recommended (with pip due to more control)
-pkg install python
-pkg install rust # required cause of pydantic
-
-# NOTE: order matters
-
-# get pydantic from the termux user repository
-pip install pydantic --extra-index-url https://termux-user-repository.github.io/pypi/
-
-# the above will take a while if you want to see more output and feel like sth is happening lol
-pip install pydantic --extra-index-url https://termux-user-repository.github.io/pypi/ -v
-
-# now you can install ani-browse
-pip install viu-media
-
-# === optional deps ===
-# if you have reach here awesome lol :)
-
-# yt-dlp for downloading m3u8 and hls streams
-pip install yt-dlp[default,curl-cffi]
-
-# you may also need ffmpeg for processing the videos
-pkg install ffmpeg
-
-# tip if you also want yt functionality
-pip install yt-dlp-ejs
-
-# you require js runtime
-# eg the recommended one
-pkg install deno
-
-# for faster fuzzy search
-pip install thefuzz
-
-# if you want faster scraping, though barely noticeable lol
-pip install lxml --extra-index-url https://termux-user-repository.github.io/pypi/
-
-# if compilation fails you need to have
-pkg install libxml2 libxslt
-
-# == ui setup ==
-pkg install fzf
-
-# then enable fzf in the config
-ani-browse --selector fzf config --update
-
-# if you want previews as well specify preview option
-# though images arent that pretty lol, so you can stick to text over full
-ani-browse --preview text config --update
-
-# if you set preview to full you need a terminal image renderer
-pkg install chafa
-
-# == player setup ==
-# for this you need to strictly install from playstore
-# search for mpv or vlc (recommended, since has nicer ui)
-# the only limitation is currently its not possible to pass headers to the android players
-# through android intents
-# so use servers like sharepoint and wixmp
-# though this is not an issue when it comes to downloading ;)
-# if you have installed using 'pkg' uninstall it
-
-# okey now you are all set, i promise the hussle is worth it lol :)
-# posted a video of it working to motivate you
-# note i recorded it from waydroid which is android for linux sought of like an emulator(bluestacks for example)
-```
-
-<https://github.com/user-attachments/assets/0c628421-a439-4dea-91bb-7153e8f20ccf>
-
-#### Using pipx (for isolated environments)
-
-```bash
-pipx install "viu-media[standard]"
-```
-
-#### Using pip
-
-```bash
-pip install "viu-media[standard]"
-```
-
-</details>
-
-<details>
-  <summary><b>Building from Source</b></summary>
-  
-  Requires [Git](https://git-scm.com/), [Python 3.10+](https://www.python.org/), and [uv](https://astral.sh/blog/uv).
-
-  ```bash
-  git clone https://github.com/JouichatH/ani-browse.git --depth 1
-  cd ani-browse
-  uv tool install .
-  ani-browse --version
-  ```
-
-</details>
+> The provider scrapers (allanime / animepahe / animeunity) are not vendored in
+> this repo; `scripts/fetch_providers.py` downloads them. The installer runs this
+> step for you.
 
 > [!TIP]
 > Enable shell completions for a much better experience by running `ani-browse completions` and following the on-screen instructions for your shell.
@@ -502,7 +310,7 @@ When `use_ipc = True` is set in your config, Ani-Browse provides powerful in-pla
 
 You can run the background worker as a systemd service for persistence.
 
-1. Create a service file at `~/.config/systemd/user/viu-worker.service`:
+1. Create a service file at `~/.config/systemd/user/ani-browse-worker.service`:
 
     ```ini
     [Unit]
@@ -525,7 +333,7 @@ You can run the background worker as a systemd service for persistence.
 
     ```bash
     systemctl --user daemon-reload
-    systemctl --user enable --now viu-worker.service
+    systemctl --user enable --now ani-browse-worker.service
     ```
 
 ## Project using it
