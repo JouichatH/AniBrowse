@@ -1,32 +1,89 @@
 <h1 align="center">ani-browse</h1>
-<p align="center"><sup>A terminal anime browser/streamer — multi-source, with automatic fallback to fast torrent releases.</sup></p>
+<p align="center"><sup>Watch anime from your terminal — search, stream, and download, with automatic fallback to fast torrent releases.</sup></p>
 
-> **ani-browse** is a terminal anime browser/streamer (public domain / Unlicense) with a focus on speed and multi-source playback — most notably a **nyaa torrent provider** and **automatic fallback to nyaa when the primary source lags a simulcast**, so newly-aired episodes are watchable even before AllAnime uploads them.
+## What is ani-browse?
 
-## Install
+ani-browse is a **free app for watching anime on your computer**. Instead of opening a web browser and clicking through ad-filled sites, you search and play everything from one clean screen you control with your keyboard.
 
-### Windows (one command)
+It connects to your (free) **[AniList](https://anilist.co)** account to keep track of what you watch, automatically finds the best available source for each episode, and — when a brand-new episode isn't up yet on the usual sites — quietly falls back to **fast torrent releases** so you can watch it the day it airs.
 
-Open **PowerShell** and run:
+Once it's installed, you don't need any technical knowledge: **arrow keys** to move, **Enter** to choose.
 
-```powershell
-irm https://raw.githubusercontent.com/JouichatH/ani-browse/master/install.ps1 | iex
-```
+## What it can do
 
-This installs everything reproducibly: [Scoop](https://scoop.sh) (no admin), the runtime tools (`python`, `node`, `mpv`, `fzf`, `chafa`), the `ani-browse` app (isolated via pipx), and **webtorrent-cli** for torrent streaming — including the Windows-specific webtorrent workaround (a dependency's `only-allow pnpm` guard + a native-binary rebuild) and the PATH fix so `webtorrent` is found. Then open a **new terminal** and run `ani-browse`.
+- 🔎 **Find any anime** — search the huge AniList catalog by name, genre, year, and more.
+- ▶️ **Stream instantly** — pick an episode and it starts in seconds, automatically choosing the best and fastest source.
+- 🧲 **Never wait for new episodes** — automatic torrent fallback grabs freshly-aired episodes before the usual sites upload them.
+- ⏭️ **Skip openings & endings** — optional automatic skipping of intros and outros.
+- 📥 **Download for offline** — queue episodes and let it download them in the background.
+- 📋 **Track your list** — mark episodes watched, resume where you left off, and stay in sync with AniList.
+- 🎨 **Cover-image previews** — see the artwork right inside the terminal.
 
-### Linux / macOS
+> **You'll need:** a free [AniList account](https://anilist.co/signup) to browse and track anime. The installer sets up everything else for you.
 
-```bash
-git clone https://github.com/JouichatH/ani-browse.git
-cd ani-browse
-./install.sh
-```
+## Install — step by step
 
-### Requirements at a glance
-`python ≥ 3.11`, `node` (for webtorrent), `mpv`, `fzf`, `chafa` (cover images), and `webtorrent-cli` (torrent streaming). The installers handle all of these.
+### Windows
 
-> **Torrent note:** streaming from nyaa uses BitTorrent, so you briefly seed (upload) while watching. A VPN is advisable. Torrent playback needs `webtorrent-cli` (installed automatically).
+1. Click **Start**, type **PowerShell**, and open it.
+2. Copy the line below. **Right-click** inside the PowerShell window to paste it, then press **Enter**:
+
+   ```powershell
+   irm https://raw.githubusercontent.com/JouichatH/ani-browse/master/install.ps1 | iex
+   ```
+
+3. Wait a few minutes while it installs everything — you'll see progress messages. (It's safe to run again if anything gets interrupted.)
+4. When it finishes, **close PowerShell and open a new one**.
+5. Type **`ani-browse`** and press **Enter**. You're in! 🎉
+
+> **Tip:** For the best experience (including cover images), use **Windows Terminal** — it's free from the Microsoft Store.
+
+### macOS / Linux
+
+First make sure **git** is installed (on macOS, running `git` the first time offers to install it; on Linux use your package manager, e.g. `sudo apt install git`).
+
+1. Open the **Terminal** app.
+2. Copy and paste these lines one at a time, pressing **Enter** after each:
+
+   ```bash
+   git clone https://github.com/JouichatH/ani-browse.git
+   cd ani-browse
+   ./install.sh
+   ```
+
+3. Wait for it to finish — it sets up the app plus the media player (`mpv`), the menu tool (`fzf`), and the torrent helper.
+4. Open a **new terminal**, type **`ani-browse`**, and press **Enter**. 🎉
+
+> **A note on torrents:** when a new episode is only available via torrent, ani-browse streams it over BitTorrent, which briefly uploads (seeds) while you watch. Using a **VPN** is advisable. This only happens for the torrent fallback.
+
+## First time using it
+
+1. **Log in to AniList** (one time only). Type:
+
+   ```bash
+   ani-browse anilist auth
+   ```
+
+   This opens your web browser — approve the app, copy the code it shows you, and paste it back into the terminal.
+
+2. **Start browsing:**
+
+   ```bash
+   ani-browse anilist
+   ```
+
+3. **Get around** with your keyboard:
+   - **↑ / ↓** to move, **Enter** to choose, **Esc** to go back.
+   - **Just start typing** to search.
+   - Pick an anime → pick an episode → it plays.
+
+**While an episode is playing** (a few handy keys):
+
+- **Shift + N** / **Shift + P** — next / previous episode.
+- **Ctrl + S** — switch to a different source if the current one is slow or low quality.
+- Openings and endings can be skipped automatically once you turn that on in the settings.
+
+That's everything you need to start. Settings, downloads, and power-user commands are in the documentation below.
 
 ---
 

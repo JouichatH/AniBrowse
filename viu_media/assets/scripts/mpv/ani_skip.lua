@@ -32,10 +32,10 @@ local utils = require("mp.utils")
 
 -- ---- in-player episode navigation --------------------------------------
 if options.nav_keys then
-    mp.add_forced_key_binding("SHIFT+n", "viu-next", function()
+    mp.add_forced_key_binding("SHIFT+n", "ani-next", function()
         mp.commandv("quit", "100")
     end)
-    mp.add_forced_key_binding("SHIFT+p", "viu-prev", function()
+    mp.add_forced_key_binding("SHIFT+p", "ani-prev", function()
         mp.commandv("quit", "101")
     end)
 end
@@ -81,9 +81,9 @@ local function close_menu()
         return
     end
     for i = 1, menu.count do
-        mp.remove_key_binding("viu-srv-" .. i)
+        mp.remove_key_binding("ani-srv-" .. i)
     end
-    mp.remove_key_binding("viu-srv-esc")
+    mp.remove_key_binding("ani-srv-esc")
     if menu.overlay then
         menu.overlay:remove()
     end
@@ -131,18 +131,18 @@ local function open_menu()
     menu.overlay.data = table.concat(lines, "\\N")
     menu.overlay:update()
     for i = 1, menu.count do
-        mp.add_forced_key_binding(tostring(i), "viu-srv-" .. i, function()
+        mp.add_forced_key_binding(tostring(i), "ani-srv-" .. i, function()
             local e = menu.entries[i]
             close_menu()
             switch_to(e)
         end)
     end
-    mp.add_forced_key_binding("ESC", "viu-srv-esc", close_menu)
+    mp.add_forced_key_binding("ESC", "ani-srv-esc", close_menu)
     menu.open = true
 end
 
 if options.servers_json ~= "" then
-    mp.add_forced_key_binding("CTRL+s", "viu-servers", function()
+    mp.add_forced_key_binding("CTRL+s", "ani-servers", function()
         if menu.open then
             close_menu()
         else
