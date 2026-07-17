@@ -189,7 +189,7 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
 
 
 def _servers_json_path() -> str:
-    """Stable, app-owned path the viu_skip Lua reads for the server-switch menu."""
+    """Stable, app-owned path the ani_skip Lua reads for the server-switch menu."""
     return str(APP_CACHE_DIR / "servers.json")
 
 

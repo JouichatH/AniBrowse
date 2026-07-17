@@ -1,5 +1,5 @@
 function _viu_completion;
-    set -l response (env _VIU_COMPLETE=fish_complete COMP_WORDS=(commandline -cp) COMP_CWORD=(commandline -t) viu);
+    set -l response (env _ANI_BROWSE_COMPLETE=fish_complete COMP_WORDS=(commandline -cp) COMP_CWORD=(commandline -t) ani-browse);
 
     for completion in $response;
         set -l metadata (string split "," $completion);
@@ -14,5 +14,5 @@ function _viu_completion;
     end;
 end;
 
-complete --no-files --command viu --arguments "(_viu_completion)";
+complete --no-files --command ani-browse --arguments "(_viu_completion)";
 

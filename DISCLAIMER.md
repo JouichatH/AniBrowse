@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<h2>This project: viu</h2>
+<h2>This project: ani-browse</h2>
 
 <br>
 

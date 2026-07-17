@@ -5,7 +5,7 @@ from typing import Optional
 
 from ....core.config import AppConfig
 from ....core.constants import APP_CACHE_DIR
-from ....core.exceptions import ViuError
+from ....core.exceptions import AniBrowseError
 from ....libs.media_api.types import MediaItem
 from ....libs.player.base import BasePlayer
 from ....libs.player.params import PlayerParams
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def _skip_json_path() -> str:
-    """Stable, app-owned path the viu_skip Lua polls for AniSkip intervals."""
+    """Stable, app-owned path the ani_skip Lua polls for AniSkip intervals."""
     return str(APP_CACHE_DIR / "skip.json")
 
 
@@ -152,4 +152,4 @@ class PlayerService:
                 self.player, params, self.provider, anime, registry, media_item
             )
         else:
-            raise ViuError("Not implemented")
+            raise AniBrowseError("Not implemented")

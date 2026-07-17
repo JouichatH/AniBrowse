@@ -13,7 +13,6 @@ from ...core.config import AppConfig
 from ...core.constants import (
     APP_ASCII_ART,
     CLI_NAME,
-    DISCORD_INVITE,
     REPO_HOME,
 )
 
@@ -27,8 +26,8 @@ CONFIG_HEADER = f"""
 {config_asci}
 #
 # ==============================================================================
-# This is the Viu configuration file. It uses the TOML format.
-# You can modify these values to customize the behavior of Viu.
+# This is the Ani-Browse configuration file. It uses the TOML format.
+# You can modify these values to customize the behavior of Ani-Browse.
 # For more information on the available options, please refer to the
 # official documentation on GitHub.
 # ==============================================================================
@@ -39,10 +38,6 @@ CONFIG_FOOTER = f"""
 #
 # HOPE YOU ENJOY {CLI_NAME} AND BE SURE TO STAR THE PROJECT ON GITHUB
 # {REPO_HOME}
-#
-# Also join the discord server
-# where the anime tech community lives :)
-# {DISCORD_INVITE}
 #
 # ==============================================================================
 """.lstrip()

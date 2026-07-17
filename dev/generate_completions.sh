@@ -5,10 +5,10 @@ APP_DIR="$(
 )"
 
 # fish shell completions
-_VIU_COMPLETE=fish_source viu >"$APP_DIR/completions/viu.fish"
+_ANI_BROWSE_COMPLETE=fish_source ani-browse >"$APP_DIR/completions/ani-browse.fish"
 
 # zsh completions
-_VIU_COMPLETE=zsh_source viu >"$APP_DIR/completions/viu.zsh"
+_ANI_BROWSE_COMPLETE=zsh_source ani-browse >"$APP_DIR/completions/ani-browse.zsh"
 
 # bash completions
-_VIU_COMPLETE=bash_source viu >"$APP_DIR/completions/viu.bash"
+_ANI_BROWSE_COMPLETE=bash_source ani-browse >"$APP_DIR/completions/ani-browse.bash"

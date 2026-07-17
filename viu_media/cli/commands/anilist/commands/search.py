@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import click
 
 from .....core.config import AppConfig
-from .....core.exceptions import ViuError
+from .....core.exceptions import AniBrowseError
 from .....libs.media_api.types import (
     MediaFormat,
     MediaGenre,
@@ -235,14 +235,14 @@ def search(config: AppConfig, **options: "Unpack[SearchOptions]"):
             and score_lesser is not None
             and score_greater > score_lesser
         ):
-            raise ViuError("Minimum score cannot be higher than maximum score")
+            raise AniBrowseError("Minimum score cannot be higher than maximum score")
 
         if (
             popularity_greater is not None
             and popularity_lesser is not None
             and popularity_greater > popularity_lesser
         ):
-            raise ViuError(
+            raise AniBrowseError(
                 "Minimum popularity cannot be higher than maximum popularity"
             )
 
@@ -251,14 +251,14 @@ def search(config: AppConfig, **options: "Unpack[SearchOptions]"):
             and start_date_lesser is not None
             and start_date_greater > start_date_lesser
         ):
-            raise ViuError("Start date greater cannot be later than start date lesser")
+            raise AniBrowseError("Start date greater cannot be later than start date lesser")
 
         if (
             end_date_greater is not None
             and end_date_lesser is not None
             and end_date_greater > end_date_lesser
         ):
-            raise ViuError("End date greater cannot be later than end date lesser")
+            raise AniBrowseError("End date greater cannot be later than end date lesser")
 
         # Build search parameters
         search_params = MediaSearchParams(
@@ -293,7 +293,7 @@ def search(config: AppConfig, **options: "Unpack[SearchOptions]"):
             search_result = api_client.search_media(search_params)
 
         if not search_result or not search_result.media:
-            raise ViuError("No anime found matching your search criteria")
+            raise AniBrowseError("No anime found matching your search criteria")
 
         if dump_json:
             # Use Pydantic's built-in serialization
@@ -322,7 +322,7 @@ def search(config: AppConfig, **options: "Unpack[SearchOptions]"):
             session.load_menus_from_folder("media")
             session.run(config, history=[initial_state])
 
-    except ViuError as e:
+    except AniBrowseError as e:
         feedback.error("Search failed", str(e))
         raise click.Abort()
     except Exception as e:

@@ -1,4 +1,4 @@
-"""Episode range parsing utilities for Viu CLI commands."""
+"""Episode range parsing utilities for Ani-Browse CLI commands."""
 
 from typing import Iterator
 

@@ -1,5 +1,5 @@
 """
-VLC player integration for Viu.
+VLC player integration for Ani-Browse.
 
 This module provides the VlcPlayer class, which implements the BasePlayer interface for the VLC media player.
 """
@@ -9,7 +9,7 @@ import shutil
 import subprocess
 
 from ....core.config import VlcConfig
-from ....core.exceptions import ViuError
+from ....core.exceptions import AniBrowseError
 from ....core.patterns import TORRENT_REGEX, YOUTUBE_REGEX
 from ....core.utils import detect
 from ..base import BasePlayer
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class VlcPlayer(BasePlayer):
     """
-    VLC player implementation for Viu.
+    VLC player implementation for Ani-Browse.
 
     Provides playback functionality using the VLC media player, supporting desktop, mobile, and torrent scenarios.
     """
@@ -47,9 +47,9 @@ class VlcPlayer(BasePlayer):
             PlayerResult: Information about the playback session.
         """
         if TORRENT_REGEX.match(params.url) and detect.is_running_in_termux():
-            raise ViuError("Unable to play torrents on termux")
+            raise AniBrowseError("Unable to play torrents on termux")
         elif params.syncplay and detect.is_running_in_termux():
-            raise ViuError("Unable to play with syncplay on termux")
+            raise AniBrowseError("Unable to play with syncplay on termux")
         elif detect.is_running_in_termux():
             return self._play_on_mobile(params)
         else:
@@ -118,7 +118,7 @@ class VlcPlayer(BasePlayer):
             PlayerResult: Information about the playback session.
         """
         if not self.executable:
-            raise ViuError("VLC executable not found in PATH.")
+            raise AniBrowseError("VLC executable not found in PATH.")
 
         if TORRENT_REGEX.search(params.url):
             return self._stream_on_desktop_with_webtorrent_cli(params)
@@ -151,7 +151,7 @@ class VlcPlayer(BasePlayer):
         """
         WEBTORRENT_CLI = shutil.which("webtorrent")
         if not WEBTORRENT_CLI:
-            raise ViuError("Please Install webtorrent cli inorder to stream torrents")
+            raise AniBrowseError("Please Install webtorrent cli inorder to stream torrents")
 
         args = [WEBTORRENT_CLI, params.url, "--vlc"]
 

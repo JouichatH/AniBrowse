@@ -24,7 +24,7 @@ GENERAL_IMAGE_RENDERER = (
     "The command-line tool to use for rendering images in the terminal."
 )
 GENERAL_MANGA_VIEWER = "The external application to use for viewing manga pages."
-GENERAL_CHECK_FOR_UPDATES = "Automatically check for new versions of Viu on startup."
+GENERAL_CHECK_FOR_UPDATES = "Automatically check for new versions of Ani-Browse on startup."
 GENERAL_SHOW_NEW_RELEASE = (
     "Whether to show release notes after every  update when running the new version"
 )

@@ -4,8 +4,12 @@ from importlib import metadata, resources
 from pathlib import Path
 
 PLATFORM = sys.platform
-CLI_NAME = "VIU"
-CLI_NAME_LOWER = "viu"
+CLI_NAME = "ANI_BROWSE"
+CLI_NAME_LOWER = "ani-browse"
+# Installed distribution / import-package identity. Deliberately left as the
+# upstream name: the app is packaged as `viu_media` and the provider scrapers are
+# fetched from the `viu-media` PyPI wheel, so this must match for version lookup,
+# resource resolution, and `tool upgrade` to keep working without a reinstall.
 PROJECT_NAME = "viu-media"
 APP_NAME = os.environ.get(f"{CLI_NAME}_APP_NAME", CLI_NAME_LOWER)
 
@@ -14,12 +18,10 @@ USER_NAME = os.environ.get("USERNAME", os.environ.get("USER", "User"))
 
 __version__ = metadata.version("viu_media")
 
-AUTHOR = "viu-media"
+AUTHOR = "JouichatH"
 GIT_REPO = "github.com"
 GIT_PROTOCOL = "https://"
-REPO_HOME = f"https://{GIT_REPO}/{AUTHOR}/Viu"
-
-DISCORD_INVITE = "https://discord.gg/C4rhMA4mmK"
+REPO_HOME = f"https://{GIT_REPO}/{AUTHOR}/{CLI_NAME_LOWER}"
 
 ANILIST_AUTH = (
     "https://anilist.co/api/v2/oauth/authorize?client_id=20148&response_type=token"
@@ -86,4 +88,4 @@ USER_VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 USER_CONFIG = APP_DATA_DIR / "config.toml"
 
 LOG_FILE = LOG_FOLDER / "app.log"
-SUPPORT_PROJECT_URL = "https://github.com/viu-media/viu"
+SUPPORT_PROJECT_URL = f"https://github.com/{AUTHOR}/{CLI_NAME_LOWER}"

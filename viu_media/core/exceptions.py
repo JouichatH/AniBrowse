@@ -1,6 +1,6 @@
-class ViuError(Exception):
+class AniBrowseError(Exception):
     """
-    Base exception for all custom errors raised by the Viu library and application.
+    Base exception for all custom errors raised by the Ani-Browse library and application.
 
     Catching this exception will catch any error originating from within this project,
     distinguishing it from built-in Python errors or third-party library errors.
@@ -27,7 +27,7 @@ class NavigationAbort(BaseException):
 # ==============================================================================
 
 
-class ConfigError(ViuError):
+class ConfigError(AniBrowseError):
     """
     Represents an error found in the user's configuration file (config.ini).
 
@@ -37,7 +37,7 @@ class ConfigError(ViuError):
     pass
 
 
-class DependencyNotFoundError(ViuError):
+class DependencyNotFoundError(AniBrowseError):
     """
     A required external command-line tool (e.g., ffmpeg, fzf) was not found.
 
@@ -59,7 +59,7 @@ class DependencyNotFoundError(ViuError):
 # ==============================================================================
 
 
-class ProviderError(ViuError):
+class ProviderError(AniBrowseError):
     """
     Base class for all errors related to an anime provider.
 
@@ -108,7 +108,7 @@ class ProviderParsingError(ProviderError):
 # ==============================================================================
 
 
-class DownloaderError(ViuError):
+class DownloaderError(AniBrowseError):
     """
     An error occurred during the file download or post-processing phase.
 
@@ -119,12 +119,12 @@ class DownloaderError(ViuError):
     pass
 
 
-class InvalidEpisodeRangeError(ViuError, ValueError):
+class InvalidEpisodeRangeError(AniBrowseError, ValueError):
     """
     The user-provided episode range string is malformed or invalid.
 
     Inherits from ValueError for semantic compatibility but allows for specific
-    catching as a ViuError.
+    catching as a AniBrowseError.
     """
 
     pass

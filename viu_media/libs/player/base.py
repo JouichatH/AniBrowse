@@ -1,5 +1,5 @@
 """
-Defines the abstract base class for all media player integrations in Viu.
+Defines the abstract base class for all media player integrations in Ani-Browse.
 
 All concrete player implementations must inherit from BasePlayer and implement its methods.
 """

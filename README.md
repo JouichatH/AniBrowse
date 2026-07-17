@@ -1,7 +1,7 @@
 <h1 align="center">ani-browse</h1>
 <p align="center"><sup>A terminal anime browser/streamer — multi-source, with automatic fallback to fast torrent releases.</sup></p>
 
-> **ani-browse** is a fork of [**viu-media/viu**](https://github.com/viu-media/viu) (public domain / Unlicense) with added sources and features — most notably a **nyaa torrent provider** and **automatic fallback to nyaa when the primary source lags a simulcast**, so newly-aired episodes are watchable even before AllAnime uploads them. Full credit to the viu-media authors for the excellent base.
+> **ani-browse** is a terminal anime browser/streamer (public domain / Unlicense) with a focus on speed and multi-source playback — most notably a **nyaa torrent provider** and **automatic fallback to nyaa when the primary source lags a simulcast**, so newly-aired episodes are watchable even before AllAnime uploads them.
 
 ## Install
 
@@ -31,10 +31,10 @@ cd ani-browse
 ---
 
 <details>
-<summary>Upstream Viu documentation (this fork is based on Viu)</summary>
+<summary>Full documentation</summary>
 
 <p align="center">
-  <h1 align="center">Viu</h1>
+  <h1 align="center">Ani-Browse</h1>
 </p>
 <p align="center">
   <sup>
@@ -45,10 +45,10 @@ cd ani-browse
 
 [![PyPI - Version](https://img.shields.io/pypi/v/viu-media)](https://pypi.org/project/viu-media/)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/viu-media)](https://pypi.org/project/viu-media/)
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/viu-media/Viu/test.yml?label=Tests)](https://github.com/viu-media/Viu/actions)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/JouichatH/ani-browse/test.yml?label=Tests)](https://github.com/JouichatH/ani-browse/actions)
 [![Discord](https://img.shields.io/discord/1250887070906323096?label=Discord&logo=discord)](https://discord.gg/HBEmAwvbHV)
-[![GitHub Issues](https://img.shields.io/github/issues/viu-media/Viu)](https://github.com/viu-media/Viu/issues)
-[![PyPI - License](https://img.shields.io/pypi/l/viu)](https://github.com/viu-media/Viu/blob/master/LICENSE)
+[![GitHub Issues](https://img.shields.io/github/issues/JouichatH/ani-browse)](https://github.com/JouichatH/ani-browse/issues)
+[![PyPI - License](https://img.shields.io/pypi/l/ani-browse)](https://github.com/JouichatH/ani-browse/blob/master/LICENSE)
 
 </div>
 
@@ -58,12 +58,12 @@ cd ani-browse
   </a>
 </p>
 
-[viu-showcase.webm](https://github.com/user-attachments/assets/5da0ec87-7780-4310-9ca2-33fae7cadd5f)
+[ani-browse-showcase.webm](https://github.com/user-attachments/assets/5da0ec87-7780-4310-9ca2-33fae7cadd5f)
 
 <details>
 <summary>Rofi</summary>
   
-  [viu-showcase-rofi.webm](https://github.com/user-attachments/assets/01f197d9-5ac9-45e6-a00b-8e8cd5ab459c)
+  [ani-browse-showcase-rofi.webm](https://github.com/user-attachments/assets/01f197d9-5ac9-45e6-a00b-8e8cd5ab459c)
 
 </details>
 
@@ -101,7 +101,7 @@ cd ani-browse
 
 ## Installation
 
-Viu runs on Windows, macOS, Linux, and Android (via Termux). Pre-built binaries are available for quick installation without Python, or you can install via Python 3.10+ package managers.
+Ani-Browse runs on Windows, macOS, Linux, and Android (via Termux). Pre-built binaries are available for quick installation without Python, or you can install via Python 3.10+ package managers.
 
 ### Prerequisites
 
@@ -118,7 +118,7 @@ For the best experience, please install these external tools:
 
 ### Pre-built Binaries (Recommended for Quick Start)
 
-The easiest way to get started is to download a pre-built, self-contained binary from the [**releases page**](https://github.com/viu-media/viu/releases/latest). These binaries include all dependencies and **do not require Python** to be installed.
+The easiest way to get started is to download a pre-built, self-contained binary from the [**releases page**](https://github.com/JouichatH/ani-browse/releases/latest). These binaries include all dependencies and **do not require Python** to be installed.
 
 **Available for:**
 
@@ -129,7 +129,7 @@ The easiest way to get started is to download a pre-built, self-contained binary
 
 **Installation Steps:**
 
-1. Download the appropriate binary for your platform from the [**releases page**](https://github.com/viu-media/viu/releases/latest).
+1. Download the appropriate binary for your platform from the [**releases page**](https://github.com/JouichatH/ani-browse/releases/latest).
 2. **Linux/macOS:** Make it executable:
 
     ```bash
@@ -141,25 +141,25 @@ The easiest way to get started is to download a pre-built, self-contained binary
 
     ```bash
     # Option 1: System-wide installation (requires sudo)
-    sudo mv viu-linux-x86_64 /usr/local/bin/viu
+    sudo mv viu-linux-x86_64 /usr/local/bin/ani-browse
 
     # Option 2: User directory installation
     mkdir -p ~/.local/bin
-    mv viu-linux-x86_64 ~/.local/bin/viu
+    mv viu-linux-x86_64 ~/.local/bin/ani-browse
     # Make sure ~/.local/bin is in your PATH
     ```
 
-    **Windows:** Simply rename `viu-windows-x86_64.exe` to `viu.exe` and place it in a directory in your PATH, or run it directly.
+    **Windows:** Simply rename `viu-windows-x86_64.exe` to `ani-browse.exe` and place it in a directory in your PATH, or run it directly.
 
 3. Verify the installation:
 
     ```bash
-    viu --version
+    ani-browse --version
     ```
 
 ### Recommended Installation (uv)
 
-The best way to install Viu is with [**uv**](https://github.com/astral-sh/uv), a lightning-fast Python package manager.
+The best way to install Ani-Browse is with [**uv**](https://github.com/astral-sh/uv), a lightning-fast Python package manager.
 
 ```bash
 # Install with all optional features for the full experience
@@ -182,13 +182,13 @@ uv tool install "viu-media[notifications]" # For desktop notifications
 ##### Ephemeral / One-Off Run (No Installation)
 
   ```bash
-  nix run github:viu-media/viu
+  nix run github:JouichatH/ani-browse
   ```
 
 ##### Imperative Installation
 
   ```bash
-  nix profile install github:viu-media/viu
+  nix profile install github:JouichatH/ani-browse
   ```
 
 ##### Declarative Installation
@@ -196,13 +196,13 @@ uv tool install "viu-media[notifications]" # For desktop notifications
 ###### in your flake.nix
 
   ```nix
-  viu.url = "github:viu-media/viu";
+  ani-browse.url = "github:JouichatH/ani-browse";
   ```
 
 ###### in your system or home-manager packages
 
   ```nix
-  inputs.viu.packages.${pkgs.system}.default
+  inputs.ani-browse.packages.${pkgs.system}.default
   ```
 
 #### Arch Linux (AUR)
@@ -234,7 +234,7 @@ pip install pydantic --extra-index-url https://termux-user-repository.github.io/
 # the above will take a while if you want to see more output and feel like sth is happening lol
 pip install pydantic --extra-index-url https://termux-user-repository.github.io/pypi/ -v
 
-# now you can install viu
+# now you can install ani-browse
 pip install viu-media
 
 # === optional deps ===
@@ -266,11 +266,11 @@ pkg install libxml2 libxslt
 pkg install fzf
 
 # then enable fzf in the config
-viu --selector fzf config --update
+ani-browse --selector fzf config --update
 
 # if you want previews as well specify preview option
 # though images arent that pretty lol, so you can stick to text over full
-viu --preview text config --update
+ani-browse --preview text config --update
 
 # if you set preview to full you need a terminal image renderer
 pkg install chafa
@@ -311,16 +311,16 @@ pip install "viu-media[standard]"
   Requires [Git](https://git-scm.com/), [Python 3.10+](https://www.python.org/), and [uv](https://astral.sh/blog/uv).
 
   ```bash
-  git clone https://github.com/viu-media/Viu.git --depth 1
-  cd Viu
+  git clone https://github.com/JouichatH/ani-browse.git --depth 1
+  cd ani-browse
   uv tool install .
-  viu --version
+  ani-browse --version
   ```
 
 </details>
 
 > [!TIP]
-> Enable shell completions for a much better experience by running `viu completions` and following the on-screen instructions for your shell.
+> Enable shell completions for a much better experience by running `ani-browse completions` and following the on-screen instructions for your shell.
 
 ## Getting Started: Quick Start
 
@@ -329,7 +329,7 @@ Get up and running in three simple steps:
 1. **Authenticate with AniList:**
 
     ```bash
-    viu anilist auth
+    ani-browse anilist auth
     ```
 
     This will open your browser. Authorize the app and paste the obtained token back into the terminal. Alternatively, you can pass the token directly as an argument, or provide a path to a text file containing the token.
@@ -337,16 +337,16 @@ Get up and running in three simple steps:
 2. **Launch the Interactive TUI:**
 
     ```bash
-    viu anilist
+    ani-browse anilist
     ```
 
 3. **Browse & Play:** Use your arrow keys to navigate the menus, select an anime, and choose an episode to stream instantly.
 
 ## Usage Guide
 
-### The Interactive TUI (`viu anilist`)
+### The Interactive TUI (`ani-browse anilist`)
 
-This is the main, user-friendly way to use Viu. It provides a rich terminal experience where you can:
+This is the main, user-friendly way to use Ani-Browse. It provides a rich terminal experience where you can:
 
 - Browse trending, popular, and seasonal anime.
 - Manage your personal lists (Watching, Completed, Paused, etc.).
@@ -354,40 +354,40 @@ This is the main, user-friendly way to use Viu. It provides a rich terminal expe
 - View detailed information, characters, recommendations, reviews, and airing schedules.
 - Stream or download episodes directly from the menus.
 
-### Powerful Searching (`viu anilist search`)
+### Powerful Searching (`ani-browse anilist search`)
 
 Filter the entire AniList database with powerful command-line flags.
 
 ```bash
 # Search for anime from 2024, sorted by popularity, that is releasing and not on your list
-viu anilist search -y 2024 -s POPULARITY_DESC --status RELEASING --not-on-list
+ani-browse anilist search -y 2024 -s POPULARITY_DESC --status RELEASING --not-on-list
 
 # Find the most popular movies with the "Fantasy" genre
-viu anilist search -g Fantasy -f MOVIE -s POPULARITY_DESC
+ani-browse anilist search -g Fantasy -f MOVIE -s POPULARITY_DESC
 
 # Dump search results as JSON instead of launching the TUI
-viu anilist search -t "Demon Slayer" --dump-json
+ani-browse anilist search -t "Demon Slayer" --dump-json
 ```
 
-### Background Downloads (`viu queue` & `worker`)
+### Background Downloads (`ani-browse queue` & `worker`)
 
-Viu includes a robust background downloading system.
+Ani-Browse includes a robust background downloading system.
 
 1. **Add episodes to the queue:**
 
     ```bash
     # Add episodes 1-12 of Jujutsu Kaisen to the download queue
-    viu queue add -t "Jujutsu Kaisen" -r "0:12"
+    ani-browse queue add -t "Jujutsu Kaisen" -r "0:12"
     ```
 
 2. **Start the worker process:**
 
     ````bash
     # Run the worker in the foreground (press Ctrl+C to stop)
-    viu worker
+    ani-browse worker
 
     # Or run it as a background process
-    viu worker &
+    ani-browse worker &
     ```The worker will now process the queue, download your episodes, and check for notifications.
     ````
 
@@ -399,25 +399,25 @@ These commands are designed for automation and quick, non-interactive tasks.
 
 ```bash
 # Download the latest 5 episodes of One Piece
-viu download -t "One Piece" -r "-5"
+ani-browse download -t "One Piece" -r "-5"
 
 # Download episodes 1 to 24, merge subtitles, and clean up original files
-viu download -t "Jujutsu Kaisen" -r "0:24" --merge --clean
+ani-browse download -t "Jujutsu Kaisen" -r "0:24" --merge --clean
 ```
 
 #### `search` (Binging) Examples
 
 ```bash
 # Start binging an anime from the first episode
-viu search -t "Attack on Titan" -r ":"
+ani-browse search -t "Attack on Titan" -r ":"
 
 # Watch the latest episode directly
-viu search -t "My Hero Academia" -r "-1"
+ani-browse search -t "My Hero Academia" -r "-1"
 ```
 
-### Local Data Management (`viu registry`)
+### Local Data Management (`ani-browse registry`)
 
-Viu maintains a local database of your anime for offline access and enhanced performance.
+Ani-Browse maintains a local database of your anime for offline access and enhanced performance.
 
 - `registry sync`: Synchronize your local data with your remote AniList account.
 - `registry stats`: Show detailed statistics about your viewing habits.
@@ -428,13 +428,13 @@ Viu maintains a local database of your anime for offline access and enhanced per
 
 ## Configuration
 
-Viu is highly customizable. A default configuration file with detailed comments is created on the first run.
+Ani-Browse is highly customizable. A default configuration file with detailed comments is created on the first run.
 
-- **Find your config file:** `viu config --path`
-- **Edit in your default editor:** `viu config`
-- **Use the interactive wizard:** `viu config --interactive`
+- **Find your config file:** `ani-browse config --path`
+- **Edit in your default editor:** `ani-browse config`
+- **Use the interactive wizard:** `ani-browse config --interactive`
 
-Most settings in the config file can be temporarily overridden with command-line flags (e.g., `viu --provider animepahe anilist`).
+Most settings in the config file can be temporarily overridden with command-line flags (e.g., `ani-browse --provider animepahe anilist`).
 
 <details>
   <summary><b>Default Configuration (`config.ini`) Explained</b></summary>
@@ -483,7 +483,7 @@ download_check_interval = 5      ; How often to process the download queue (minu
 
 ### MPV IPC Integration
 
-When `use_ipc = True` is set in your config, Viu provides powerful in-player controls without needing to close MPV.
+When `use_ipc = True` is set in your config, Ani-Browse provides powerful in-player controls without needing to close MPV.
 
 **Key Bindings:**
 
@@ -506,12 +506,12 @@ You can run the background worker as a systemd service for persistence.
 
     ```ini
     [Unit]
-    Description=Viu Background Worker
+    Description=Ani-Browse Background Worker
     After=network-online.target
 
     [Service]
     Type=simple
-    ExecStart=/path/to/your/viu worker --log
+    ExecStart=/path/to/your/ani-browse worker --log
     Restart=always
     RestartSec=30
 
@@ -519,7 +519,7 @@ You can run the background worker as a systemd service for persistence.
     WantedBy=default.target
     ```
 
-    *Replace `/path/to/your/viu` with the output of `which viu`.*
+    *Replace `/path/to/your/ani-browse` with the output of `which ani-browse`.*
 
 2. Enable and start the service:
 
@@ -530,7 +530,7 @@ You can run the background worker as a systemd service for persistence.
 
 ## Project using it
 
-**[Inazuma](https://github.com/viu-media/Inazuma)** - official gui wrapper over viu built in kivymd
+**[Inazuma](https://github.com/JouichatH/Inazuma)** - official gui wrapper over ani-browse built in kivymd
 
 ## Contributing
 

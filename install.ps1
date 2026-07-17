@@ -1,4 +1,4 @@
-# ani-browse one-command installer for Windows (fork of viu-media/viu).
+# ani-browse one-command installer for Windows (fork of JouichatH/ani-browse).
 #
 # Installs everything needed for a reproducible setup: a no-admin package
 # manager (Scoop), the runtime tools (python, node, mpv, fzf, chafa), the

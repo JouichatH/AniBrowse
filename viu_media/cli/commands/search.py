@@ -4,7 +4,7 @@ import click
 
 
 from ...core.config import AppConfig
-from ...core.exceptions import ViuError
+from ...core.exceptions import AniBrowseError
 from ..utils.completion import anime_titles_shell_complete
 from . import examples
 
@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 def search(config: AppConfig, **options: "Unpack[Options]"):
     from viu_media.cli.service.feedback.service import FeedbackService
 
-    from ...core.exceptions import ViuError
+    from ...core.exceptions import AniBrowseError
     from ...libs.provider.anime.params import (
         AnimeParams,
         SearchParams,
@@ -76,7 +76,7 @@ def search(config: AppConfig, **options: "Unpack[Options]"):
                 )
             )
         if not search_results:
-            raise ViuError("No results were found matching your query")
+            raise AniBrowseError("No results were found matching your query")
 
         _search_results = {
             search_result.title: search_result
@@ -87,7 +87,7 @@ def search(config: AppConfig, **options: "Unpack[Options]"):
             "Select Anime", list(_search_results.keys())
         )
         if not selected_anime_title:
-            raise ViuError("No title selected")
+            raise AniBrowseError("No title selected")
         anime_result = _search_results[selected_anime_title]
 
         # ---- fetch selected anime ----
@@ -95,7 +95,7 @@ def search(config: AppConfig, **options: "Unpack[Options]"):
             anime = provider.get(AnimeParams(id=anime_result.id, query=anime_title))
 
         if not anime:
-            raise ViuError(f"Failed to fetch anime {anime_result.title}")
+            raise AniBrowseError(f"Failed to fetch anime {anime_result.title}")
 
         available_episodes: list[str] = sorted(
             getattr(anime.episodes, config.stream.translation_type), key=float
@@ -120,14 +120,14 @@ def search(config: AppConfig, **options: "Unpack[Options]"):
                         anime_title,
                     )
             except (ValueError, IndexError) as e:
-                raise ViuError(f"Invalid episode range: {e}") from e
+                raise AniBrowseError(f"Invalid episode range: {e}") from e
         else:
             episode = selector.choose(
                 "Select Episode",
                 getattr(anime.episodes, config.stream.translation_type),
             )
             if not episode:
-                raise ViuError("No episode selected")
+                raise AniBrowseError("No episode selected")
             stream_anime(
                 config, provider, selector, feedback, anime, episode, anime_title
             )
@@ -159,7 +159,7 @@ def stream_anime(
             )
         )
         if not streams:
-            raise ViuError(
+            raise AniBrowseError(
                 f"Failed to get streams for anime: {anime.title}, episode: {episode}"
             )
 
@@ -167,7 +167,7 @@ def stream_anime(
         with feedback.progress("Fetching top server"):
             server = next(streams, None)
             if not server:
-                raise ViuError(
+                raise AniBrowseError(
                     f"Failed to get server for anime: {anime.title}, episode: {episode}"
                 )
     else:
@@ -179,7 +179,7 @@ def stream_anime(
         else:
             server_name = selector.choose("Select Server", servers_names)
             if not server_name:
-                raise ViuError("Server not selected")
+                raise AniBrowseError("Server not selected")
             server = servers[server_name]
     quality = [
         ep_stream.link
@@ -192,14 +192,14 @@ def stream_anime(
             "Select Quality", [link.quality for link in server.links]
         )
         if not stream_link:
-            raise ViuError("Quality not selected")
+            raise AniBrowseError("Quality not selected")
         stream_link = next(
             (link.link for link in server.links if link.quality == stream_link), None
         )
 
     stream_link = server.links[0].link
     if not stream_link:
-        raise ViuError(
+        raise AniBrowseError(
             f"Failed to get stream link for anime: {anime.title}, episode: {episode}"
         )
     feedback.info(f"[green bold]Now Streaming:[/] {anime.title} Episode: {episode}")

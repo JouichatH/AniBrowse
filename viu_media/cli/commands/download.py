@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import click
 
 from ...core.config import AppConfig
-from ...core.exceptions import ViuError
+from ...core.exceptions import AniBrowseError
 from ..utils.completion import anime_titles_shell_complete
 from . import examples
 
@@ -105,7 +105,7 @@ if TYPE_CHECKING:
 def download(config: AppConfig, **options: "Unpack[Options]"):
     from viu_media.cli.service.feedback.service import FeedbackService
 
-    from ...core.exceptions import ViuError
+    from ...core.exceptions import AniBrowseError
     from ...libs.provider.anime.params import (
         AnimeParams,
         SearchParams,
@@ -129,7 +129,7 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
                 )
             )
         if not search_results:
-            raise ViuError("No results were found matching your query")
+            raise AniBrowseError("No results were found matching your query")
 
         _search_results = {
             search_result.title: search_result
@@ -140,7 +140,7 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
             "Select Anime", list(_search_results.keys())
         )
         if not selected_anime_title:
-            raise ViuError("No title selected")
+            raise AniBrowseError("No title selected")
         anime_result = _search_results[selected_anime_title]
 
         # ---- fetch selected anime ----
@@ -148,7 +148,7 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
             anime = provider.get(AnimeParams(id=anime_result.id, query=anime_title))
 
         if not anime:
-            raise ViuError(f"Failed to fetch anime {anime_result.title}")
+            raise AniBrowseError(f"Failed to fetch anime {anime_result.title}")
 
         available_episodes: list[str] = sorted(
             getattr(anime.episodes, config.stream.translation_type), key=float
@@ -174,14 +174,14 @@ def download(config: AppConfig, **options: "Unpack[Options]"):
                         episode,
                     )
             except (ValueError, IndexError) as e:
-                raise ViuError(f"Invalid episode range: {e}") from e
+                raise AniBrowseError(f"Invalid episode range: {e}") from e
         else:
             episode = selector.choose(
                 "Select Episode",
                 getattr(anime.episodes, config.stream.translation_type),
             )
             if not episode:
-                raise ViuError("No episode selected")
+                raise AniBrowseError("No episode selected")
             download_anime(
                 config,
                 options,
@@ -219,7 +219,7 @@ def download_anime(
             )
         )
         if not streams:
-            raise ViuError(
+            raise AniBrowseError(
                 f"Failed to get streams for anime: {anime.title}, episode: {episode}"
             )
 
@@ -227,7 +227,7 @@ def download_anime(
         with feedback.progress("Fetching top server"):
             server = next(streams, None)
             if not server:
-                raise ViuError(
+                raise AniBrowseError(
                     f"Failed to get server for anime: {anime.title}, episode: {episode}"
                 )
     else:
@@ -239,11 +239,11 @@ def download_anime(
         else:
             server_name = selector.choose("Select Server", servers_names)
             if not server_name:
-                raise ViuError("Server not selected")
+                raise AniBrowseError("Server not selected")
             server = servers[server_name]
     stream_link = server.links[0].link
     if not stream_link:
-        raise ViuError(
+        raise AniBrowseError(
             f"Failed to get stream link for anime: {anime.title}, episode: {episode}"
         )
     feedback.info(f"[green bold]Now Downloading:[/] {anime.title} Episode: {episode}")

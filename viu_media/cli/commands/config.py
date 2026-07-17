@@ -11,25 +11,25 @@ from ...core.config import AppConfig
 \b\bExamples:
   # Edit your config in your default editor 
   # NB: If it opens vim or vi exit with `:q`
-  viu config
+  ani-browse config
 \b
   # Start the interactive configuration wizard
-  viu config --interactive
+  ani-browse config --interactive
 \b
   # get the path of the config file
-  viu config --path
+  ani-browse config --path
 \b
   # print desktop entry info
-  viu config --generate-desktop-entry
+  ani-browse config --generate-desktop-entry
 \b
   # update your config without opening an editor
-  viu --icons --selector fzf --preview full config --update
+  ani-browse --icons --selector fzf --preview full config --update
 \b 
   # interactively define your config
-  viu config --interactive
+  ani-browse config --interactive
 \b 
   # view the current contents of your config
-  viu config --view
+  ani-browse config --view
 """,
 )
 @click.option("--path", "-p", help="Print the config location and exit", is_flag=True)
@@ -45,13 +45,13 @@ from ...core.config import AppConfig
 @click.option(
     "--generate-desktop-entry",
     "-d",
-    help="Generate the desktop entry of viu",
+    help="Generate the desktop entry of ani-browse",
     is_flag=True,
 )
 @click.option(
     "--update",
     "-u",
-    help="Persist all the config options passed to viu to your config file",
+    help="Persist all the config options passed to ani-browse to your config file",
     is_flag=True,
 )
 @click.option(
@@ -114,7 +114,7 @@ def config(
 
 def _generate_desktop_entry():
     """
-    Generates a desktop entry for Viu.
+    Generates a desktop entry for Ani-Browse.
     """
     import shutil
     import sys
@@ -125,18 +125,18 @@ def _generate_desktop_entry():
     from rich.prompt import Confirm
 
     from ...core.constants import (
-        CLI_NAME,
+        CLI_NAME_LOWER,
         ICON_PATH,
         PLATFORM,
         USER_APPLICATIONS,
         __version__,
     )
 
-    EXECUTABLE = shutil.which("viu")
+    EXECUTABLE = shutil.which(CLI_NAME_LOWER)
     if EXECUTABLE:
         cmds = f"{EXECUTABLE} --selector rofi anilist"
     else:
-        cmds = f"{sys.executable} -m viu --selector rofi anilist"
+        cmds = f"{sys.executable} -m viu_media --selector rofi anilist"
 
     # TODO: Get funs of the other platforms to complete this lol
     if PLATFORM == "win32":
@@ -151,7 +151,7 @@ def _generate_desktop_entry():
         desktop_entry = dedent(
             f"""
             [Desktop Entry]
-            Name={CLI_NAME.title()}
+            Name={CLI_NAME_LOWER.title()}
             Type=Application
             version={__version__}
             Path={Path().home()}
@@ -162,7 +162,7 @@ def _generate_desktop_entry():
             Categories=Entertainment
         """
         )
-        desktop_entry_path = USER_APPLICATIONS / f"{CLI_NAME}.desktop"
+        desktop_entry_path = USER_APPLICATIONS / f"{CLI_NAME_LOWER}.desktop"
         if desktop_entry_path.exists():
             if not Confirm.ask(
                 f"The file already exists {desktop_entry_path}; or would you like to rewrite it",

@@ -12,7 +12,7 @@ from rich.prompt import Confirm
 import yt_dlp
 from yt_dlp.utils import sanitize_filename
 from ..utils.detect import get_clean_env
-from ..exceptions import ViuError
+from ..exceptions import AniBrowseError
 from ..patterns import TORRENT_REGEX
 from ..utils.networking import get_remote_filename
 from .base import BaseDownloader
@@ -161,7 +161,7 @@ class YtDLPDownloader(BaseDownloader):
             try:
                 response.raise_for_status()
             except httpx.HTTPError:
-                raise ViuError("Failed to download sub: {e}")
+                raise AniBrowseError("Failed to download sub: {e}")
 
             filename = get_remote_filename(response)
             if not filename:
@@ -182,7 +182,7 @@ class YtDLPDownloader(BaseDownloader):
         """Merge subtitles with video and return the path to the merged file."""
         self.FFMPEG_EXECUTABLE = shutil.which("ffmpeg")
         if not self.FFMPEG_EXECUTABLE:
-            raise ViuError("Please install ffmpeg in order to merge subs")
+            raise AniBrowseError("Please install ffmpeg in order to merge subs")
         merged_filename = video_path.stem + ".mkv"
 
         subs_input_args = list(

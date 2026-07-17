@@ -2,7 +2,7 @@ _viu_completion() {
     local IFS=$'\n'
     local response
 
-    response=$(env COMP_WORDS="${COMP_WORDS[*]}" COMP_CWORD=$COMP_CWORD _VIU_COMPLETE=bash_complete $1)
+    response=$(env COMP_WORDS="${COMP_WORDS[*]}" COMP_CWORD=$COMP_CWORD _ANI_BROWSE_COMPLETE=bash_complete $1)
 
     for completion in $response; do
         IFS=',' read type value <<< "$completion"
@@ -22,7 +22,7 @@ _viu_completion() {
 }
 
 _viu_completion_setup() {
-    complete -o nosort -F _viu_completion viu
+    complete -o nosort -F _viu_completion ani-browse
 }
 
 _viu_completion_setup;

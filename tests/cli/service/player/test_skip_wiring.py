@@ -9,7 +9,7 @@ from viu_media.cli.service.player import service as service_mod
 from viu_media.cli.service.player.service import PlayerService
 from viu_media.libs.player.mpv.player import (
     _action_for_exit_code,
-    _viu_lua_args,
+    _ani_lua_args,
 )
 from viu_media.libs.player.params import PlayerParams
 from viu_media.core.config import AppConfig
@@ -34,17 +34,17 @@ def _read_skip_json_when_done(path, timeout=2.0):
     raise AssertionError(f"skip json never marked done: {path}")
 
 
-# ---- _viu_lua_args (mpv arg construction) --------------------------------
+# ---- _ani_lua_args (mpv arg construction) --------------------------------
 
 
 def test_lua_always_loaded_for_nav_keys():
     # Even with no skip, the Lua loads so Shift+N/P navigation works.
-    args = _viu_lua_args(_params())
-    assert any(a.startswith("--script=") and a.endswith("viu_skip.lua") for a in args)
+    args = _ani_lua_args(_params())
+    assert any(a.startswith("--script=") and a.endswith("ani_skip.lua") for a in args)
     opts = next(a for a in args if a.startswith("--script-opts="))
-    assert "viu_skip-nav_keys=yes" in opts
-    assert "viu_skip-op_enabled=no" in opts
-    assert "viu_skip-ed_enabled=no" in opts
+    assert "ani_skip-nav_keys=yes" in opts
+    assert "ani_skip-op_enabled=no" in opts
+    assert "ani_skip-ed_enabled=no" in opts
 
 
 def test_lua_passes_intervals_and_enabled_flags():
@@ -55,38 +55,38 @@ def test_lua_passes_intervals_and_enabled_flags():
         skip_op_enabled=True,
         skip_ed_enabled=True,
     )
-    opts = next(a for a in _viu_lua_args(params) if a.startswith("--script-opts="))
-    assert "viu_skip-op_enabled=yes" in opts
-    assert "viu_skip-ed_enabled=yes" in opts
-    assert "viu_skip-op_start=80.0" in opts
-    assert "viu_skip-ed_end=1400.0" in opts
+    opts = next(a for a in _ani_lua_args(params) if a.startswith("--script-opts="))
+    assert "ani_skip-op_enabled=yes" in opts
+    assert "ani_skip-ed_enabled=yes" in opts
+    assert "ani_skip-op_start=80.0" in opts
+    assert "ani_skip-ed_end=1400.0" in opts
 
 
 def test_enabled_without_interval_still_marks_enabled():
     # Chapter-based skip: enabled but AniSkip had no interval -> start stays -1.
     params = dataclasses.replace(_params(), skip_op_enabled=True)
-    opts = next(a for a in _viu_lua_args(params) if a.startswith("--script-opts="))
-    assert "viu_skip-op_enabled=yes" in opts
-    assert "viu_skip-op_start=-1" in opts
+    opts = next(a for a in _ani_lua_args(params) if a.startswith("--script-opts="))
+    assert "ani_skip-op_enabled=yes" in opts
+    assert "ani_skip-op_start=-1" in opts
 
 
 def test_lua_servers_json_opt_present_only_when_set():
     # No servers_json -> the Lua's Ctrl+S binding stays off (opt omitted).
-    opts = next(a for a in _viu_lua_args(_params()) if a.startswith("--script-opts="))
-    assert "viu_skip-servers_json" not in opts
+    opts = next(a for a in _ani_lua_args(_params()) if a.startswith("--script-opts="))
+    assert "ani_skip-servers_json" not in opts
 
     params = dataclasses.replace(_params(), servers_json="C:/cache/servers.json")
-    opts = next(a for a in _viu_lua_args(params) if a.startswith("--script-opts="))
-    assert "viu_skip-servers_json=C:/cache/servers.json" in opts
+    opts = next(a for a in _ani_lua_args(params) if a.startswith("--script-opts="))
+    assert "ani_skip-servers_json=C:/cache/servers.json" in opts
 
 
 def test_lua_skip_json_opt_present_only_when_set():
-    opts = next(a for a in _viu_lua_args(_params()) if a.startswith("--script-opts="))
-    assert "viu_skip-skip_json" not in opts
+    opts = next(a for a in _ani_lua_args(_params()) if a.startswith("--script-opts="))
+    assert "ani_skip-skip_json" not in opts
 
     params = dataclasses.replace(_params(), skip_json="C:/cache/skip.json")
-    opts = next(a for a in _viu_lua_args(params) if a.startswith("--script-opts="))
-    assert "viu_skip-skip_json=C:/cache/skip.json" in opts
+    opts = next(a for a in _ani_lua_args(params) if a.startswith("--script-opts="))
+    assert "ani_skip-skip_json=C:/cache/skip.json" in opts
 
 
 # ---- exit code -> navigation action --------------------------------------

@@ -1,5 +1,5 @@
 """
-Player factory and registration logic for Viu media players.
+Player factory and registration logic for Ani-Browse media players.
 
 This module provides a factory for instantiating the correct player implementation based on configuration.
 """

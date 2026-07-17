@@ -1,6 +1,6 @@
 import click
 from viu_media.core.config import AppConfig
-from viu_media.core.exceptions import ViuError
+from viu_media.core.exceptions import AniBrowseError
 from viu_media.libs.media_api.types import (
     MediaFormat,
     MediaGenre,
@@ -138,7 +138,7 @@ def add(config: AppConfig, **options):
             search_result = media_api.search_media(search_params)
 
         if not search_result or not search_result.media:
-            raise ViuError("No anime found matching your search criteria.")
+            raise AniBrowseError("No anime found matching your search criteria.")
 
         if options.get("yes"):
             anime_to_queue = search_result.media
@@ -211,7 +211,7 @@ def add(config: AppConfig, **options):
             f"Done. Total of {total_queued} episode(s) queued across all selections."
         )
 
-    except ViuError as e:
+    except AniBrowseError as e:
         feedback.error("Queue add failed", str(e))
     except Exception as e:
         feedback.error("An unexpected error occurred", str(e))

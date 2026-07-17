@@ -1,5 +1,5 @@
 """
-IPC-based MPV Player implementation for Viu.
+IPC-based MPV Player implementation for Ani-Browse.
 This provides advanced features like episode navigation, quality switching, and auto-next.
 """
 
@@ -17,7 +17,7 @@ from queue import Empty, Queue
 from typing import Any, Callable, Dict, List, Literal, Optional
 
 from .....core.config.model import StreamConfig
-from .....core.exceptions import ViuError
+from .....core.exceptions import AniBrowseError
 from .....core.utils import formatter
 from .....libs.media_api.types import MediaItem
 from .....libs.player.base import BasePlayer
@@ -46,7 +46,7 @@ def _numeric_next(episode: str) -> Optional[str]:
         return None
 
 
-class MPVIPCError(ViuError):
+class MPVIPCError(AniBrowseError):
     """Exception raised for MPV IPC communication errors."""
 
     pass
@@ -487,7 +487,7 @@ class MpvIPCPlayer(BaseIPCPlayer):
             self._bind_key(key, command, description)
 
         self._show_text(
-            "Viu IPC: Shift+N=Next, Shift+P=Prev, Shift+R=Reload, "
+            "Ani-Browse IPC: Shift+N=Next, Shift+P=Prev, Shift+R=Reload, "
             "Shift+O=Skip OP, Shift+E=Skip ED, Shift+A=Auto-Next",
             4000,
         )

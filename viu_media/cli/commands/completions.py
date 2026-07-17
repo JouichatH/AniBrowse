@@ -7,16 +7,16 @@ import click
 \b
 \b\bExamples:
     # try to detect your shell and print completions
-    viu completions
+    ani-browse completions
 \b
     # print fish completions
-    viu completions --fish
+    ani-browse completions --fish
 \b
     # print bash completions
-    viu completions --bash
+    ani-browse completions --bash
 \b
     # print zsh completions
-    viu completions --zsh
+    ani-browse completions --zsh
 """,
 )
 @click.option("--fish", is_flag=True, help="print fish completions")
@@ -41,7 +41,7 @@ def completions(fish, zsh, bash):
         print(
             """
 function _viu_completion;
-    set -l response (env _VIU_COMPLETE=fish_complete COMP_WORDS=(commandline -cp) COMP_CWORD=(commandline -t) viu);
+    set -l response (env _VIU_COMPLETE=fish_complete COMP_WORDS=(commandline -cp) COMP_CWORD=(commandline -t) ani-browse);
 
     for completion in $response;
         set -l metadata (string split "," $completion);
@@ -56,21 +56,21 @@ function _viu_completion;
     end;
 end;
 
-complete --no-files --command viu --arguments "(_viu_completion)";
+complete --no-files --command ani-browse --arguments "(_viu_completion)";
         """
         )
     elif zsh or (current_shell == "zsh" and not bash):
         print(
             """
-#compdef viu
+#compdef ani-browse
 
 _viu_completion() {
     local -a completions
     local -a completions_with_descriptions
     local -a response
-    (( ! $+commands[viu] )) && return 1
+    (( ! $+commands[ani-browse] )) && return 1
 
-    response=("${(@f)$(env COMP_WORDS="${words[*]}" COMP_CWORD=$((CURRENT-1)) _VIU_COMPLETE=zsh_complete viu)}")
+    response=("${(@f)$(env COMP_WORDS="${words[*]}" COMP_CWORD=$((CURRENT-1)) _VIU_COMPLETE=zsh_complete ani-browse)}")
 
     for type key descr in ${response}; do
         if [[ "$type" == "plain" ]]; then
@@ -100,7 +100,7 @@ if [[ $zsh_eval_context[-1] == loadautofunc ]]; then
     _viu_completion "$@"
 else
     # eval/source/. command, register function for later
-    compdef _viu_completion viu
+    compdef _viu_completion ani-browse
 fi
         """
         )
@@ -131,7 +131,7 @@ _viu_completion() {
 }
 
 _viu_completion_setup() {
-    complete -o nosort -F _viu_completion viu
+    complete -o nosort -F _viu_completion ani-browse
 }
 
 _viu_completion_setup;

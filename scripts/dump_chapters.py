@@ -66,7 +66,7 @@ def parse_ffprobe_chapters(ffprobe_json: str) -> List[Tuple[float, float, str]]:
 
 
 def classify_title(title: str) -> Optional[str]:
-    """How the viu_skip Lua matcher currently classifies a chapter title."""
+    """How the ani_skip Lua matcher currently classifies a chapter title."""
     if not title:
         return None
     t = title.lower()

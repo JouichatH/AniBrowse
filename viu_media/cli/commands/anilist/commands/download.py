@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Dict, List
 import click
 from viu_media.cli.utils.completion import anime_titles_shell_complete
 from viu_media.core.config import AppConfig
-from viu_media.core.exceptions import ViuError
+from viu_media.core.exceptions import AniBrowseError
 from viu_media.libs.media_api.types import (
     MediaFormat,
     MediaGenre,
@@ -181,7 +181,7 @@ def download(config: AppConfig, **options: "Unpack[DownloadOptions]"):
             search_result = media_api.search_media(search_params)
 
         if not search_result or not search_result.media:
-            raise ViuError("No anime found matching your search criteria.")
+            raise AniBrowseError("No anime found matching your search criteria.")
 
         anime_to_download: List[MediaItem]
         if options.get("yes"):
@@ -219,7 +219,7 @@ def download(config: AppConfig, **options: "Unpack[DownloadOptions]"):
         total_downloaded = 0
         episode_range_str = options.get("episode_range")
         if not episode_range_str:
-            raise ViuError("--episode-range is required.")
+            raise AniBrowseError("--episode-range is required.")
 
         for media_item in anime_to_download:
             watch_history.add_media_to_list_if_not_present(media_item)
@@ -259,7 +259,7 @@ def download(config: AppConfig, **options: "Unpack[DownloadOptions]"):
             f"Finished. Successfully downloaded a total of {total_downloaded} episodes."
         )
 
-    except ViuError as e:
+    except AniBrowseError as e:
         feedback.error("Download command failed", str(e))
     except Exception as e:
         feedback.error("An unexpected error occurred", str(e))

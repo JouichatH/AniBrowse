@@ -1,4 +1,4 @@
--- viu_skip.lua - in-player navigation + opening/ending skip for ani-browse's
+-- ani_skip.lua - in-player navigation + opening/ending skip for ani-browse's
 -- clean (non-IPC) playback path, where each episode is a fresh mpv process.
 --
 -- Navigation: Shift+N / Shift+P quit mpv with a sentinel exit code that the
@@ -9,7 +9,7 @@
 --   2. chapter titles that look like an opening/ending (covers releases that
 --      ship OP/ED chapters even when AniSkip has no data for the episode).
 --
--- Options (via --script-opts=viu_skip-KEY=VALUE):
+-- Options (via --script-opts=ani_skip-KEY=VALUE):
 --   nav_keys            : enable Shift+N/P navigation (default yes)
 --   op_enabled/ed_enabled : whether opening/ending skip is on (default no)
 --   op_start/op_end     : AniSkip opening interval, seconds (-1 = none)
@@ -26,7 +26,7 @@ local options = {
     servers_json = "",
     skip_json = "",
 }
-require("mp.options").read_options(options, "viu_skip")
+require("mp.options").read_options(options, "ani_skip")
 
 local utils = require("mp.utils")
 
@@ -105,7 +105,7 @@ local function switch_to(entry)
     end
     mp.commandv("loadfile", entry.url, "replace")
     mp.osd_message("Switching to " .. (entry.name or "server"), 2)
-    print(string.format("[viu-skip] server-switch -> %s", entry.name or "?"))
+    print(string.format("[ani-skip] server-switch -> %s", entry.name or "?"))
 end
 
 local function open_menu()
@@ -172,10 +172,10 @@ end)
 -- collected and the matcher below tuned against them.
 mp.register_event("file-loaded", function()
     local chapters = mp.get_property_native("chapter-list") or {}
-    print(string.format("[viu-chapters] count=%d", #chapters))
+    print(string.format("[ani-chapters] count=%d", #chapters))
     for i, ch in ipairs(chapters) do
         print(string.format(
-            "[viu-chapters] #%d t=%.3f title=%s",
+            "[ani-chapters] #%d t=%.3f title=%s",
             i, ch.time or -1, ch.title or ""
         ))
     end
@@ -250,11 +250,11 @@ local function resolve_skips()
     local total = mp.get_property_native("duration") or 0
 
     print(string.format(
-        "[viu-skip] options op_enabled=%s ed_enabled=%s aniskip_op=%.1f..%.1f aniskip_ed=%.1f..%.1f",
+        "[ani-skip] options op_enabled=%s ed_enabled=%s aniskip_op=%.1f..%.1f aniskip_ed=%.1f..%.1f",
         tostring(options.op_enabled), tostring(options.ed_enabled),
         options.op_start, options.op_end, options.ed_start, options.ed_end
     ))
-    print(string.format("[viu-skip] detect count=%d duration=%.1f", #chapters, total))
+    print(string.format("[ani-skip] detect count=%d duration=%.1f", #chapters, total))
 
     -- Gather chapter candidates per source, logging each chapter's read.
     local title_cand, shape_cand = {}, {}
@@ -272,7 +272,7 @@ local function resolve_skips()
             shape_cand[sk] = { start = start_t, stop = stop_t, source = "chapter-shape" }
         end
         print(string.format(
-            "[viu-skip] detect #%d t=%.1f span=%.1f title=%q title_kind=%s shape_kind=%s",
+            "[ani-skip] detect #%d t=%.1f span=%.1f title=%q title_kind=%s shape_kind=%s",
             i - 1, start_t, stop_t - start_t, ch.title or "",
             tk or "none", sk or "none"
         ))
@@ -299,7 +299,7 @@ local function resolve_skips()
         if title_cand[kind] and aniskip[kind] then
             local dt = math.abs(title_cand[kind].start - aniskip[kind].start)
             print(string.format(
-                "[viu-skip] resolve %s: chapter-title %s vs aniskip %s -> %s (chapter-title wins, dstart=%.1fs)",
+                "[ani-skip] resolve %s: chapter-title %s vs aniskip %s -> %s (chapter-title wins, dstart=%.1fs)",
                 kind, fmt_iv(title_cand[kind]), fmt_iv(aniskip[kind]),
                 dt <= 10 and "AGREE" or "CONFLICT", dt
             ))
@@ -308,12 +308,12 @@ local function resolve_skips()
         -- Shape-only (no trustworthy source): recognised but deliberately not skipped.
         if not chosen and shape_cand[kind] then
             print(string.format(
-                "[viu-skip] resolve %s: shape-only candidate %s -> NOT skipping (low confidence)",
+                "[ani-skip] resolve %s: shape-only candidate %s -> NOT skipping (low confidence)",
                 kind, fmt_iv(shape_cand[kind])
             ))
         end
 
-        print(string.format("[viu-skip] resolved %s = %s", kind, fmt_iv(chosen)))
+        print(string.format("[ani-skip] resolved %s = %s", kind, fmt_iv(chosen)))
     end
 end
 
@@ -351,7 +351,7 @@ local function apply_skip_file()
             and not (resolved[kind] and resolved[kind].start == iv[1]) then
             resolved[kind] = { start = iv[1], stop = iv[2], source = "aniskip-file" }
             print(string.format(
-                "[viu-skip] aniskip-file %s = %.1f..%.1f", kind, iv[1], iv[2]
+                "[ani-skip] aniskip-file %s = %.1f..%.1f", kind, iv[1], iv[2]
             ))
         end
     end
@@ -407,7 +407,7 @@ mp.observe_property("time-pos", "number", function(_, t)
             mp.commandv("seek", iv.stop, "absolute+exact")
             mp.osd_message(kind == "op" and "Skipped opening" or "Skipped ending", 1)
             print(string.format(
-                "[viu-skip] skipped %s -> %.1f via %s", kind, iv.stop, iv.source
+                "[ani-skip] skipped %s -> %.1f via %s", kind, iv.stop, iv.source
             ))
         end
     end

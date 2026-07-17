@@ -57,9 +57,9 @@ def auth(config: AppConfig, status: bool, logout: bool, token_input: str | None)
     1. Interactively: Run the command without arguments to open a browser
        and be prompted to paste the token.
     2. As an argument: Pass the token string directly to the command.
-       $ viu anilist auth "your_token_here"
+       $ ani-browse anilist auth "your_token_here"
     3. As a file: Pass the path to a text file containing the token.
-       $ viu anilist auth /path/to/token.txt
+       $ ani-browse anilist auth /path/to/token.txt
     """
     from .....libs.media_api.api import create_api_client
     from ....service.auth import AuthService

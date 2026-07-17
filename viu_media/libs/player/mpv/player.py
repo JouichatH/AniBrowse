@@ -1,5 +1,5 @@
 """
-MPV player integration for Viu.
+MPV player integration for Ani-Browse.
 
 This module provides the MpvPlayer class, which implements the BasePlayer interface for the MPV media player.
 """
@@ -12,7 +12,7 @@ import sys
 
 from ....core.config import MpvConfig
 from ....core.constants import SCRIPTS_DIR
-from ....core.exceptions import ViuError
+from ....core.exceptions import AniBrowseError
 from ....core.patterns import TORRENT_REGEX, YOUTUBE_REGEX
 from ....core.utils import detect
 from ..base import BasePlayer
@@ -21,42 +21,42 @@ from ..types import PlayerResult
 
 logger = logging.getLogger(__name__)
 
-VIU_SKIP_LUA = SCRIPTS_DIR / "mpv" / "viu_skip.lua"
+ANI_SKIP_LUA = SCRIPTS_DIR / "mpv" / "ani_skip.lua"
 
 MPV_AV_TIME_PATTERN = re.compile(r"[AV]+: ([0-9:]+) / ([0-9:]+) \(([0-9]+)%\)")
 
 
-#: mpv exit codes emitted by viu_skip.lua's Shift+N / Shift+P bindings.
+#: mpv exit codes emitted by ani_skip.lua's Shift+N / Shift+P bindings.
 NEXT_EPISODE_EXIT_CODE = 100
 PREVIOUS_EPISODE_EXIT_CODE = 101
 
 
-def _viu_lua_args(params: PlayerParams) -> list[str]:
-    """mpv args that load viu_skip.lua for in-player nav keys + op/ed skipping.
+def _ani_lua_args(params: PlayerParams) -> list[str]:
+    """mpv args that load ani_skip.lua for in-player nav keys + op/ed skipping.
 
     Always loaded on the clean path (the nav keys need it); the skip options are
     passed through from ``params``. Returns ``[]`` only if the script is missing.
     """
-    if not VIU_SKIP_LUA.exists():
+    if not ANI_SKIP_LUA.exists():
         return []
     op = params.skip_op or (-1.0, -1.0)
     ed = params.skip_ed or (-1.0, -1.0)
     opts = (
-        "viu_skip-nav_keys=yes,"
-        f"viu_skip-op_enabled={'yes' if params.skip_op_enabled else 'no'},"
-        f"viu_skip-ed_enabled={'yes' if params.skip_ed_enabled else 'no'},"
-        f"viu_skip-op_start={op[0]},viu_skip-op_end={op[1]},"
-        f"viu_skip-ed_start={ed[0]},viu_skip-ed_end={ed[1]}"
+        "ani_skip-nav_keys=yes,"
+        f"ani_skip-op_enabled={'yes' if params.skip_op_enabled else 'no'},"
+        f"ani_skip-ed_enabled={'yes' if params.skip_ed_enabled else 'no'},"
+        f"ani_skip-op_start={op[0]},ani_skip-op_end={op[1]},"
+        f"ani_skip-ed_start={ed[0]},ani_skip-ed_end={ed[1]}"
     )
     # In-player server switch: the Lua only binds Ctrl+S when given a servers
     # JSON path. Paths never contain commas (which separate script-opts), so this
     # is safe to append verbatim.
     if params.servers_json:
-        opts += f",viu_skip-servers_json={params.servers_json}"
+        opts += f",ani_skip-servers_json={params.servers_json}"
     # AniSkip intervals delivered via file (fetched off the launch path).
     if params.skip_json:
-        opts += f",viu_skip-skip_json={params.skip_json}"
-    return [f"--script={VIU_SKIP_LUA}", f"--script-opts={opts}"]
+        opts += f",ani_skip-skip_json={params.skip_json}"
+    return [f"--script={ANI_SKIP_LUA}", f"--script-opts={opts}"]
 
 
 def _run_mpv_teed(args: list[str], env: dict) -> tuple[str, int | None]:
@@ -89,7 +89,7 @@ def _run_mpv_teed(args: list[str], env: dict) -> tuple[str, int | None]:
         # mpv rewrites its status line in place with \r; split on it too so our
         # \n-terminated diagnostic lines are not hidden behind the status line.
         for piece in chunk.replace("\r", "\n").split("\n"):
-            if "[viu-skip]" in piece or "[viu-chapters]" in piece:
+            if "[ani-skip]" in piece or "[ani-chapters]" in piece:
                 try:
                     sys.stderr.write(piece.strip() + "\n")
                     sys.stderr.flush()
@@ -111,14 +111,14 @@ def _action_for_exit_code(code: int | None) -> str | None:
 
 
 _CHAPTER_LINE = re.compile(
-    r"\[viu-chapters\] #(\d+) t=(-?[0-9.]+) title=(.*)"
+    r"\[ani-chapters\] #(\d+) t=(-?[0-9.]+) title=(.*)"
 )
 
 
 def parse_mpv_chapters(
     stdout: str | None, stderr: str | None
 ) -> list[tuple[float, str]]:
-    """Extract the ``(time, title)`` chapters that viu_skip.lua logged.
+    """Extract the ``(time, title)`` chapters that ani_skip.lua logged.
 
     The embedded chapter list comes from the media container the source served;
     capturing the real titles lets us see the OP/ED naming variations and tune
@@ -142,14 +142,14 @@ def _log_mpv_chapters(stdout: str | None, stderr: str | None) -> None:
             "mpv chapters: %s",
             ", ".join(f"{t:.0f}s={title!r}" for t, title in chapters),
         )
-    # Also surface any skips the viu_skip Lua performed, for diagnosing coverage.
+    # Also surface any skips the ani_skip Lua performed, for diagnosing coverage.
     for stream in (stdout, stderr):
         if not stream:
             continue
         for line in stream.splitlines():
-            i = line.find("[viu-skip]")
+            i = line.find("[ani-skip]")
             if i != -1:
-                logger.info("viu_skip %s", line[i + len("[viu-skip]"):].strip())
+                logger.info("ani_skip %s", line[i + len("[ani-skip]"):].strip())
 
 
 def parse_playback_time(
@@ -174,7 +174,7 @@ def parse_playback_time(
 
 class MpvPlayer(BasePlayer):
     """
-    MPV player implementation for Viu.
+    MPV player implementation for Ani-Browse.
 
     Provides playback functionality using the MPV media player, supporting desktop, mobile, torrents, and syncplay.
     """
@@ -200,9 +200,9 @@ class MpvPlayer(BasePlayer):
             PlayerResult: Information about the playback session.
         """
         if TORRENT_REGEX.match(params.url) and detect.is_running_in_termux():
-            raise ViuError("Unable to play torrents on termux")
+            raise AniBrowseError("Unable to play torrents on termux")
         elif params.syncplay and detect.is_running_in_termux():
-            raise ViuError("Unable to play with syncplay on termux")
+            raise AniBrowseError("Unable to play with syncplay on termux")
         elif detect.is_running_in_termux():
             return self._play_on_mobile(params)
         else:
@@ -262,7 +262,7 @@ class MpvPlayer(BasePlayer):
             PlayerResult: Information about the playback session.
         """
         if not self.executable:
-            raise ViuError("MPV executable not found in PATH.")
+            raise AniBrowseError("MPV executable not found in PATH.")
 
         if TORRENT_REGEX.search(params.url):
             return self._stream_on_desktop_with_webtorrent_cli(params)
@@ -284,9 +284,9 @@ class MpvPlayer(BasePlayer):
         mpv_args = [self.executable, params.url]
 
         mpv_args.extend(self._create_mpv_cli_options(params))
-        # Load the viu_skip Lua for in-player next/prev keys and opening/ending
+        # Load the ani_skip Lua for in-player next/prev keys and opening/ending
         # skip (the IPC path does its own thing, so this is clean-path only).
-        mpv_args.extend(_viu_lua_args(params))
+        mpv_args.extend(_ani_lua_args(params))
 
         pre_args = self.config.pre_args.split(",") if self.config.pre_args else []
 
@@ -294,7 +294,7 @@ class MpvPlayer(BasePlayer):
             pre_args + mpv_args, detect.get_clean_env()
         )
         stop_time, total_time = parse_playback_time(output, None)
-        # Record the episode's embedded chapters (from viu_skip.lua) so real
+        # Record the episode's embedded chapters (from ani_skip.lua) so real
         # OP/ED title variations land in the log for tuning the skip matcher.
         _log_mpv_chapters(output, None)
         return PlayerResult(
@@ -349,7 +349,7 @@ class MpvPlayer(BasePlayer):
         """
         WEBTORRENT_CLI = shutil.which("webtorrent")
         if not WEBTORRENT_CLI:
-            raise ViuError("Please Install webtorrent cli inorder to stream torrents")
+            raise AniBrowseError("Please Install webtorrent cli inorder to stream torrents")
 
         args = [WEBTORRENT_CLI, params.url, "--mpv"]
         if mpv_args := self._create_mpv_cli_options(params):
@@ -371,7 +371,7 @@ class MpvPlayer(BasePlayer):
         """
         SYNCPLAY_EXECUTABLE = shutil.which("syncplay")
         if not SYNCPLAY_EXECUTABLE:
-            raise ViuError(
+            raise AniBrowseError(
                 "Please install syncplay to be able to stream with your friends"
             )
         args = [SYNCPLAY_EXECUTABLE, params.url]

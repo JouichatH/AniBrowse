@@ -508,7 +508,7 @@ class MediaRegistryConfig(OtherConfig):
 
 
 class AppConfig(BaseModel):
-    """The root configuration model for the Viu application."""
+    """The root configuration model for the Ani-Browse application."""
 
     general: GeneralConfig = Field(
         default_factory=GeneralConfig,

@@ -1,12 +1,12 @@
-#compdef viu
+#compdef ani-browse
 
 _viu_completion() {
     local -a completions
     local -a completions_with_descriptions
     local -a response
-    (( ! $+commands[viu] )) && return 1
+    (( ! $+commands[ani-browse] )) && return 1
 
-    response=("${(@f)$(env COMP_WORDS="${words[*]}" COMP_CWORD=$((CURRENT-1)) _VIU_COMPLETE=zsh_complete viu)}")
+    response=("${(@f)$(env COMP_WORDS="${words[*]}" COMP_CWORD=$((CURRENT-1)) _ANI_BROWSE_COMPLETE=zsh_complete ani-browse)}")
 
     for type key descr in ${response}; do
         if [[ "$type" == "plain" ]]; then
@@ -36,6 +36,6 @@ if [[ $zsh_eval_context[-1] == loadautofunc ]]; then
     _viu_completion "$@"
 else
     # eval/source/. command, register function for later
-    compdef _viu_completion viu
+    compdef _viu_completion ani-browse
 fi
 

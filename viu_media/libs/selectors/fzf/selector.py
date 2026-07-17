@@ -8,7 +8,7 @@ from rich.prompt import Prompt
 from viu_media.core.utils import detect
 
 from ....core.config import FzfConfig
-from ....core.exceptions import NavigationAbort, ViuError
+from ....core.exceptions import NavigationAbort, AniBrowseError
 from ..base import BaseSelector
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ class FzfSelector(BaseSelector):
         self.config = config
         self.executable = shutil.which("fzf")
         if not self.executable:
-            raise ViuError("Please install fzf to use the fzf selector")
+            raise AniBrowseError("Please install fzf to use the fzf selector")
 
         os.environ["FZF_DEFAULT_OPTS"] = self.config.opts
 

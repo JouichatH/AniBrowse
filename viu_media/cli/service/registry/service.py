@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, Generator, List, Optional, TypedDict
 
 from ....core.config.model import MediaRegistryConfig
-from ....core.exceptions import ViuError
+from ....core.exceptions import AniBrowseError
 from ....core.utils.file import AtomicWriter, FileLock, check_file_modified
 from ....libs.media_api.params import MediaSearchParams
 from ....libs.media_api.types import (
@@ -69,7 +69,7 @@ class MediaRegistryService:
 
         # check if there was a major change in the registry
         if self._index.version[0] != REGISTRY_VERSION[0]:
-            raise ViuError(
+            raise AniBrowseError(
                 f"Incompatible registry version of {self._index.version}. Current registry supports version {REGISTRY_VERSION}. Please migrate your registry using the migrator"
             )
 

@@ -22,7 +22,7 @@ from rich.progress import (
 from rich.prompt import Confirm
 from ..utils.file import sanitize_filename
 from ..utils.detect import get_clean_env
-from ..exceptions import ViuError
+from ..exceptions import AniBrowseError
 from ..patterns import TORRENT_REGEX
 from ..utils.networking import get_remote_filename
 from .base import BaseDownloader
@@ -283,7 +283,7 @@ class DefaultDownloader(BaseDownloader):
                         hook(error_info)
                     except Exception as hook_error:
                         logger.warning(f"Progress hook failed: {hook_error}")
-            raise ViuError(f"Failed to download video: {e}")
+            raise AniBrowseError(f"Failed to download video: {e}")
 
     def _download_subs(self, params: DownloadParams) -> list[Path]:
         """Download subtitles from provided URLs."""
@@ -327,7 +327,7 @@ class DefaultDownloader(BaseDownloader):
         """Merge subtitles with video using ffmpeg and return the path to the merged file."""
         ffmpeg_executable = shutil.which("ffmpeg")
         if not ffmpeg_executable:
-            raise ViuError("Please install ffmpeg in order to merge subtitles")
+            raise AniBrowseError("Please install ffmpeg in order to merge subtitles")
 
         merged_filename = video_path.stem + ".mkv"
 

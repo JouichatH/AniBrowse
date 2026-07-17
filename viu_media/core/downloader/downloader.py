@@ -1,5 +1,5 @@
 from ..config.model import DownloadsConfig
-from ..exceptions import ViuError
+from ..exceptions import AniBrowseError
 from .base import BaseDownloader
 
 DOWNLOADERS = ["auto", "default", "yt-dlp"]
@@ -13,7 +13,7 @@ class DownloadFactory:
         """
         downloader_name = config.downloader
         if downloader_name not in DOWNLOADERS:
-            raise ViuError(
+            raise AniBrowseError(
                 f"Unsupported selector: '{downloader_name}'.Available selectors are: {DOWNLOADERS}"
             )
 
@@ -36,7 +36,7 @@ class DownloadFactory:
 
                 return DefaultDownloader(config)
         else:
-            raise ViuError("Downloader not implemented")
+            raise AniBrowseError("Downloader not implemented")
 
 
 # Simple alias for ease of use

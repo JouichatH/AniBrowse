@@ -16,7 +16,6 @@ dependencies = [
 
 [project.scripts]
 ani-browse = 'viu_media:Cli'
-viu = 'viu_media:Cli'
 
 [project.optional-dependencies]
 standard = [

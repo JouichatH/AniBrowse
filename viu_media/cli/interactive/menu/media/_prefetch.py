@@ -140,7 +140,7 @@ def resolve_servers(
         )
         servers = list(iterator) if iterator else []
         logger.info(
-            "[viu-timing] resolve_servers ep=%s provider=%s n=%d took=%.2fs",
+            "[ani-timing] resolve_servers ep=%s provider=%s n=%d took=%.2fs",
             episode,
             type(provider).__name__,
             len(servers),
@@ -225,7 +225,7 @@ def resolve_first(
         # Primary yielded nothing extractable -> nyaa fallback (full list).
         servers = _nyaa_fallback(provider, config, title, episode)
         logger.info(
-            "[viu-timing] resolve_first ep=%s provider=%s FIRST=nyaa/none took=%.2fs",
+            "[ani-timing] resolve_first ep=%s provider=%s FIRST=nyaa/none took=%.2fs",
             episode,
             type(provider).__name__,
             time.perf_counter() - _t0,
@@ -237,7 +237,7 @@ def resolve_first(
         return pending
 
     logger.info(
-        "[viu-timing] resolve_first ep=%s provider=%s FIRST=%s took=%.2fs",
+        "[ani-timing] resolve_first ep=%s provider=%s FIRST=%s took=%.2fs",
         episode,
         type(provider).__name__,
         first.name,

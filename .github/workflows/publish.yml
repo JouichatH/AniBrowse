@@ -23,7 +23,7 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Build viu
+      - name: Build ani-browse
         run: uv build
 
       - name: Upload distributions

@@ -70,7 +70,7 @@ commands = {
 @click.pass_context
 def cli(ctx: click.Context, **options: "Unpack[Options]"):
     """
-    The main entry point for the Viu CLI.
+    The main entry point for the Ani-Browse CLI.
     """
     setup_logging(options["log"])
     setup_exceptions_handler(

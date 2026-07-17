@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Optional, Dict, Any, Callable
 
-from ..exceptions import ViuError, DependencyNotFoundError
+from ..exceptions import AniBrowseError, DependencyNotFoundError
 
 try:
     import libtorrent as lt
@@ -19,7 +19,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class TorrentDownloadError(ViuError):
+class TorrentDownloadError(AniBrowseError):
     """Raised when torrent download fails."""
 
     pass
@@ -69,7 +69,7 @@ class TorrentDownloader:
 
         # Configure session settings
         settings = {
-            "user_agent": "Viu/1.0",
+            "user_agent": "Ani-Browse/1.0",
             "listen_interfaces": f"0.0.0.0:{self.listen_port}",
             "enable_outgoing_utp": True,
             "enable_incoming_utp": True,

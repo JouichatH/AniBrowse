@@ -1,5 +1,5 @@
 """
-The player package provides abstractions and implementations for media player integration in Viu.
+The player package provides abstractions and implementations for media player integration in Ani-Browse.
 
 This package defines the base player interface, player parameter/result types, and concrete implementations for various media players (e.g., MPV, VLC, Syncplay).
 """

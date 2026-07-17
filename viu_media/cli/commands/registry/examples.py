@@ -6,26 +6,26 @@ main = """
 
 Examples:
   # Sync with remote AniList
-  viu registry sync --upload --download
+  ani-browse registry sync --upload --download
 
   # Show detailed registry statistics  
-  viu registry stats --detailed
+  ani-browse registry stats --detailed
 
   # Search local registry
-  viu registry search "attack on titan"
+  ani-browse registry search "attack on titan"
 
   # Export registry to JSON
-  viu registry export --format json --output backup.json
+  ani-browse registry export --format json --output backup.json
 
   # Import from backup
-  viu registry import backup.json
+  ani-browse registry import backup.json
 
   # Clean up orphaned entries
-  viu registry clean --dry-run
+  ani-browse registry clean --dry-run
 
   # Create full backup
-  viu registry backup --compress
+  ani-browse registry backup --compress
 
   # Restore from backup
-  viu registry restore backup.tar.gz
+  ani-browse registry restore backup.tar.gz
 """
