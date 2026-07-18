@@ -9,6 +9,7 @@ by feeding synthetic item dicts.
 import pytest
 
 from viu_media.libs.provider.anime.nyaa.provider import (
+    _BATCH_RANGE_RE,
     _BATCH_RE,
     _EP_RE,
     Nyaa,
@@ -20,6 +21,16 @@ from viu_media.libs.provider.anime.params import EpisodeStreamsParams, SearchPar
 def nyaa():
     # No httpx client: these tests never touch the network.
     return Nyaa(client=None)  # type: ignore[arg-type]
+
+
+@pytest.fixture(autouse=True)
+def _clear_rss_cache():
+    # _fetch caches RSS per query at module level; keep tests independent.
+    from viu_media.libs.provider.anime.nyaa import provider as mod
+
+    mod._rss_cache.clear()
+    yield
+    mod._rss_cache.clear()
 
 
 # ---- _search_variants ----------------------------------------------------
@@ -45,6 +56,19 @@ def test_variants_plain_title_is_single():
 def test_variants_are_deduped_case_insensitively():
     variants = Nyaa._search_variants("Naruto")
     assert len(variants) == len({v.lower() for v in variants})
+
+
+def test_variants_ordinal_season_title():
+    """AniList "X 4th Season" must not produce the unmatchable "X 4th S4"
+    (this made a real Slime S4 lookup return nothing), and must include the
+    fansub "4th Season" naming plus the bare root (season filter narrows it).
+    """
+    variants = Nyaa._search_variants("Tensei Shitara Slime Datta Ken 4th Season")
+    assert variants[0] == "Tensei Shitara Slime Datta Ken S4"
+    assert "Tensei Shitara Slime Datta Ken Season 4" in variants
+    assert "Tensei Shitara Slime Datta Ken 4th Season" in variants
+    assert "Tensei Shitara Slime Datta Ken" in variants
+    assert not any("4th S4" in v for v in variants)
 
 
 # ---- regexes -------------------------------------------------------------
@@ -155,3 +179,214 @@ def test_search_returns_episode_list(nyaa, monkeypatch):
     result = nyaa.search(SearchParams(query="show"))
     assert result and result.results
     assert result.results[0].episodes.sub == ["1", "2"]
+
+
+# ---- batch torrents ------------------------------------------------------
+
+
+def _batch(group, res, seeders, start, end, hash="b"):
+    return {
+        "title": f"[{group}] Show ({start:02d}-{end:02d}) ({res}p) [Batch]",
+        "hash": hash,
+        "seeders": seeders,
+        "group": group,
+        "res": res,
+        "ep": None,
+        "batch": True,
+        "batch_start": start,
+        "batch_end": end,
+    }
+
+
+def test_batch_range_regex_captures_bounds():
+    m = _BATCH_RANGE_RE.search("[X] Show (01-28) (1080p) [Batch]")
+    assert m and (int(m.group(1)), int(m.group(2))) == (1, 28)
+    m2 = _BATCH_RANGE_RE.search("[X] Show [05~10] 720p")
+    assert m2 and (int(m2.group(1)), int(m2.group(2))) == (5, 10)
+
+
+def test_episodes_expands_batch_ranges_and_merges_singles():
+    items = [_batch("SubsPlease", "1080", 100, 1, 3), _item("SubsPlease", "1080", 5, ep="4")]
+    # Batch 1-3 expanded, single ep 4 merged, sorted numeric, deduped.
+    assert Nyaa._episodes(items) == ["1", "2", "3", "4"]
+
+
+def test_episode_streams_falls_back_to_batch_with_marker(nyaa, monkeypatch):
+    items = [_batch("SubsPlease", "1080", 126, 1, 28, hash="pack")]
+    monkeypatch.setattr(nyaa, "_items_for", lambda q: items)
+    params = EpisodeStreamsParams(
+        anime_id="show", query="show", episode="7", translation_type="sub", quality="1080"
+    )
+    servers = list(nyaa.episode_streams(params) or [])
+    assert servers, "batch should cover episode 7"
+    assert "batch" in servers[0].name
+    # The magnet is tagged so the player streams only episode 7 out of the pack.
+    assert "x.aniep=7" in servers[0].links[0].link
+
+
+def test_episode_streams_prefers_single_over_batch(nyaa, monkeypatch):
+    items = [
+        _batch("SubsPlease", "1080", 999, 1, 28, hash="pack"),
+        _item("SubsPlease", "1080", 5, ep="7", hash="single"),
+    ]
+    monkeypatch.setattr(nyaa, "_items_for", lambda q: items)
+    params = EpisodeStreamsParams(
+        anime_id="show", query="show", episode="7", translation_type="sub", quality="1080"
+    )
+    servers = list(nyaa.episode_streams(params) or [])
+    # Single-episode torrent wins even with far fewer seeders; no batch marker.
+    assert "urn:btih:single" in servers[0].links[0].link
+    assert all("x.aniep" not in s.links[0].link for s in servers)
+
+
+def test_episode_streams_batch_out_of_range_returns_none(nyaa, monkeypatch):
+    monkeypatch.setattr(nyaa, "_items_for", lambda q: [_batch("SubsPlease", "1080", 10, 1, 12)])
+    params = EpisodeStreamsParams(
+        anime_id="show", query="show", episode="20", translation_type="sub", quality="1080"
+    )
+    assert nyaa.episode_streams(params) is None
+
+
+def test_search_lists_episodes_for_batch_only_show(nyaa, monkeypatch):
+    monkeypatch.setattr(nyaa, "_items_for", lambda q: [_batch("SubsPlease", "1080", 126, 1, 4)])
+    result = nyaa.search(SearchParams(query="frieren"))
+    assert result and result.results
+    assert result.results[0].episodes.sub == ["1", "2", "3", "4"]
+
+
+# ---- season consistency (E1) ---------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "title, season",
+    [
+        ("[SubsPlease] Sousou no Frieren S2 (01-10) (1080p) [Batch]", 2),
+        ("[Erai-raws] Show 2nd Season - 07 [1080p]", 2),
+        ("[X] Show Season 3 - 01 (720p)", 3),
+        ("Mushoku Tensei III: Isekai Ittara Honki Dasu", 3),
+        ("Spy x Family Part 2", 2),
+        ("[SubsPlease] Sousou no Frieren (01-28) (1080p) [Batch]", None),
+        ("[X] Show S01E03 something", None),  # S01E03 has no word boundary
+    ],
+)
+def test_season_of(title, season):
+    assert Nyaa._season_of(title) == season
+
+
+def test_items_for_drops_other_season_items(nyaa, monkeypatch):
+    """A season-less query must not pick up S2 releases covering the same
+    episode NUMBERS (they would play a different season's episode)."""
+    rss = [
+        _batch("SubsPlease", "1080", 291, 1, 10, hash="s2pack"),
+        _item("SubsPlease", "1080", 999, ep="7", hash="s2single"),
+        _batch("SubsPlease", "1080", 126, 1, 28, hash="s1pack"),
+    ]
+    rss[0]["title"] = "[SubsPlease] Sousou no Frieren S2 (01-10) (1080p) [Batch]"
+    rss[1]["title"] = "[SubsPlease] Sousou no Frieren S2 - 07 (1080p)"
+    rss[2]["title"] = "[SubsPlease] Sousou no Frieren (01-28) (1080p) [Batch]"
+    monkeypatch.setattr(nyaa, "_fetch", lambda q: rss)
+
+    items = nyaa._items_for("Sousou no Frieren")
+    assert [i["hash"] for i in items] == ["s1pack"]
+
+    # And the S2 query keeps only the S2 items.
+    items2 = nyaa._items_for("Sousou no Frieren Season 2")
+    assert sorted(i["hash"] for i in items2) == ["s2pack", "s2single"]
+
+
+def test_items_for_unmarked_counts_as_season_one(nyaa, monkeypatch):
+    """A '(Season 1)'-labelled pack still matches a season-less query."""
+    rss = [_batch("Judas", "1080", 50, 1, 28, hash="s1labeled")]
+    rss[0]["title"] = "[Judas] Sousou no Frieren (Season 1) (01-28) [1080p]"
+    monkeypatch.setattr(nyaa, "_fetch", lambda q: rss)
+    assert [i["hash"] for i in nyaa._items_for("Sousou no Frieren")] == ["s1labeled"]
+
+
+# ---- batch range sanity (E4) ---------------------------------------------
+
+
+def _rss_xml(titles):
+    items = "".join(
+        f"<item><title>{t}</title>"
+        f"<nyaa:infoHash xmlns:nyaa='https://nyaa.si/xmlns/nyaa'>{'a' * 40}</nyaa:infoHash>"
+        f"<link>https://nyaa.si/download/1.torrent</link>"
+        f"<nyaa:seeders xmlns:nyaa='https://nyaa.si/xmlns/nyaa'>5</nyaa:seeders></item>"
+        for t in titles
+    )
+    return f"<rss><channel>{items}</channel></rss>"
+
+
+class _FakeResp:
+    def __init__(self, text):
+        self.text = text
+
+    def raise_for_status(self):
+        pass
+
+
+class _FakeClient:
+    def __init__(self, text):
+        self._text = text
+
+    def get(self, url, timeout=None):
+        return _FakeResp(self._text)
+
+
+def test_fetch_rejects_year_and_huge_ranges():
+    ny = Nyaa(client=_FakeClient(_rss_xml([
+        "[X] Show (1999-2023) [BD] (1080p)",     # year span
+        "[X] Show (001-500) (1080p) [Batch]",    # implausible span
+        "[X] Show (01-28) (1080p) [Batch]",      # legit
+    ])))  # type: ignore[arg-type]
+    items = ny._fetch("show")
+    spans = [(i["batch_start"], i["batch_end"]) for i in items]
+    assert spans == [(None, None), (None, None), (1, 28)]
+
+
+def test_fetch_captures_torrent_url():
+    ny = Nyaa(client=_FakeClient(_rss_xml(["[X] Show - 03 (1080p)"])))  # type: ignore[arg-type]
+    items = ny._fetch("show")
+    assert items[0]["torrent_url"] == "https://nyaa.si/download/1.torrent"
+
+
+class _CountingClient(_FakeClient):
+    def __init__(self, text):
+        super().__init__(text)
+        self.calls = 0
+
+    def get(self, url, timeout=None):
+        self.calls += 1
+        return super().get(url, timeout)
+
+
+def test_fetch_caches_rss_per_query(monkeypatch):
+    import viu_media.libs.provider.anime.nyaa.provider as mod
+
+    monkeypatch.setattr(mod, "_rss_cache", {})  # isolate from other tests
+    client = _CountingClient(_rss_xml(["[X] Show - 03 (1080p)"]))
+    ny = Nyaa(client=client)  # type: ignore[arg-type]
+    first = ny._fetch("Show")
+    again = ny._fetch("show")  # case-insensitive hit
+    assert client.calls == 1
+    assert again == first
+    # Expired entries re-fetch.
+    mod._rss_cache["show"] = (mod.time.monotonic() - mod._RSS_TTL - 1, first)
+    ny._fetch("show")
+    assert client.calls == 2
+
+
+# ---- magnet construction (O1) --------------------------------------------
+
+
+def test_magnet_embeds_xs_and_marker():
+    mag = Nyaa._magnet(
+        "a" * 40, "Show (01-28)", select_ep="7",
+        torrent_url="https://nyaa.si/download/123.torrent",
+    )
+    assert "xs=https%3A%2F%2Fnyaa.si%2Fdownload%2F123.torrent" in mag
+    assert "x.aniep=7" in mag
+
+
+def test_magnet_omits_optional_params():
+    mag = Nyaa._magnet("a" * 40, "Show - 03")
+    assert "xs=" not in mag and "x.aniep" not in mag
