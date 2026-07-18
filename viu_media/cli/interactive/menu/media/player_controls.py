@@ -135,6 +135,9 @@ def _build_options(
             f"{'🔂 ' if icons else ''}Replay": _replay(ctx, state),
             f"{'💽 ' if icons else ''}Change Server": _change_server(ctx, state),
             f"{'📀 ' if icons else ''}Change Quality": _change_quality(ctx, state),
+            f"{'🛰️ ' if icons else ''}Change Provider (Current: {config.general.provider.value.upper()})": _change_provider(
+                ctx, state
+            ),
             f"{'🎞️ ' if icons else ''}Episode List": _episodes_list(ctx, state),
             f"{'🔘 ' if icons else ''}Toggle Auto Next Episode (Current: {config.stream.auto_next})": _toggle_config_state(
                 ctx, state, "AUTO_EPISODE"
@@ -237,8 +240,34 @@ def _previous_episode(ctx: Context, state: State) -> MenuAction:
                     update={"episode_": prev_episode_num}
                 ),
             )
-        feedback.warning("This is the last available episode.")
+        feedback.warning("This is the first episode.")
         return InternalDirective.RELOAD
+
+    return action
+
+
+def _change_provider(ctx: Context, state: State) -> MenuAction:
+    """Switch streaming provider mid-show and re-resolve with it.
+
+    Backs out to the provider_search pass-through, which re-runs the search
+    against the NEW provider and lands back on its episode list - so the user
+    can hop e.g. allanime -> nyaa without walking the whole menu tree.
+    """
+
+    def action():
+        from .....libs.provider.anime.types import ProviderName
+
+        new_provider = ctx.selector.choose(
+            "Select Provider", [provider.value for provider in ProviderName]
+        )
+        if not new_provider:
+            return InternalDirective.RELOAD
+        ctx.config.general.provider = ProviderName(new_provider)
+        ctx._provider = None  # force re-creation from the new config
+        ctx.feedback.info(
+            f"Provider switched to {new_provider} - re-searching this show there."
+        )
+        return InternalDirective.BACKX3  # player_controls+servers+episodes -> provider_search
 
     return action
 
@@ -263,60 +292,46 @@ def _toggle_config_state(
     ],
 ) -> MenuAction:
     def action():
-        match config_state:
-            case "AUTO_ANIME":
-                ctx.config.general.auto_select_anime_result = (
-                    not ctx.config.general.auto_select_anime_result
-                )
-            case "AUTO_EPISODE":
-                ctx.config.stream.auto_next = not ctx.config.stream.auto_next
-            case "OPENING_SKIP":
-                ctx.config.stream.opening_skip = not ctx.config.stream.opening_skip
-            case "ENDING_SKIP":
-                ctx.config.stream.ending_skip = not ctx.config.stream.ending_skip
-            case "CONTINUE_FROM_HISTORY":
-                ctx.config.stream.continue_from_watch_history = (
-                    not ctx.config.stream.continue_from_watch_history
-                )
-            case "TRANSLATION_TYPE":
-                ctx.config.stream.translation_type = (
-                    "sub" if ctx.config.stream.translation_type == "dub" else "dub"
-                )
+        from ._toggles import apply_toggle
+
+        apply_toggle(ctx, config_state)
         return InternalDirective.RELOAD
 
     return action
 
 
 def _change_server(ctx: Context, state: State) -> MenuAction:
+    """Pick another of this episode's servers and replay on it immediately.
+
+    Server names are provider-defined raw strings ("Luf-mp4", "nyaa:...") that
+    mostly aren't ProviderServer enum values - the old enum round-trip crashed
+    on them. The chosen name goes through the one-shot switch override, and
+    backing into the servers pass-through replays with it right away.
+    """
+
     def action():
-        from .....libs.provider.anime.types import ProviderServer
-
         feedback = ctx.feedback
-
         selector = ctx.selector
 
-        provider_anime = state.provider.anime
-        media_item = state.media_api.media_item
-        current_episode_num = state.provider.episode
-        selected_server = state.provider.server
         server_map = state.provider.servers
+        current = state.provider.server_name_
 
-        if (
-            not provider_anime
-            or not media_item
-            or not current_episode_num
-            or not selected_server
-            or not server_map
-        ):
+        if not server_map:
             feedback.error("Player state is incomplete. Returning.")
             return InternalDirective.BACK
 
-        new_server_name = selector.choose(
-            "Select a different server:", list(server_map.keys())
-        )
-        if new_server_name:
-            ctx.config.stream.server = ProviderServer(new_server_name)
-        return InternalDirective.RELOAD
+        labels = {
+            (f"{name}  (current)" if name == current else name): name
+            for name in server_map
+        }
+        picked = selector.choose("Select a different server:", list(labels.keys()))
+        if not picked:
+            return InternalDirective.RELOAD
+        chosen = labels[picked]
+        if chosen == current:
+            return InternalDirective.RELOAD
+        ctx.switch.force_server(chosen)
+        return InternalDirective.BACK  # into the servers pass-through -> replays
 
     return action
 
@@ -347,6 +362,14 @@ def _change_quality(ctx: Context, state: State) -> MenuAction:
         )
         if new_quality:
             ctx.config.stream.quality = new_quality  # type:ignore
+            # Session-global and in-memory only: every later episode, show and
+            # provider ranks servers against this quality until the app exits
+            # (config.toml is not modified). Say so - a silently sticky "720"
+            # once sent a user to a 23-seeder torrent swarm instead of 125.
+            feedback.info(
+                f"Quality preference set to {new_quality} for the rest of this "
+                "session (config file unchanged)."
+            )
         return InternalDirective.RELOAD
 
     return action

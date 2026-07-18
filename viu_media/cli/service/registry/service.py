@@ -170,6 +170,7 @@ class MediaRegistryService:
         repeat: Optional[int] = None,
         notes: Optional[str] = None,
         last_notified_episode: Optional[str] = None,
+        favorite: Optional[bool] = None,
     ):
         if media_item:
             self.get_or_create_record(media_item)
@@ -188,7 +189,11 @@ class MediaRegistryService:
             and media_item.episodes
         ):
             index_entry.progress = str(media_item.episodes)
-        else:
+        elif watched and not status:
+            # Watch-event fallback ONLY: watching an already-COMPLETED show
+            # means a rewatch (REPEATING). It used to run on EVERY update, so
+            # explicitly marking a show COMPLETED was instantly overwritten to
+            # REPEATING, and even a score/favorite edit flipped the status.
             if not index_entry.status:
                 index_entry.status = UserMediaListStatus.WATCHING
             elif index_entry.status == UserMediaListStatus.COMPLETED:
@@ -206,12 +211,35 @@ class MediaRegistryService:
             index_entry.notes = notes
         if last_notified_episode:
             index_entry.last_notified_episode = last_notified_episode
+        if favorite is not None:
+            index_entry.favorite = favorite
 
         if watched:
             index_entry.last_watched = datetime.now()
 
         index.media_index[f"{self._media_api}_{media_id}"] = index_entry
         self._save_index(index)
+
+    def is_favorite(self, media_id: int) -> bool:
+        """Whether a media is in the local favorites."""
+        index = self._load_index()
+        entry = index.media_index.get(f"{self._media_api}_{media_id}")
+        return bool(entry and entry.favorite)
+
+    def get_favorites(self) -> MediaSearchResult:
+        """All locally-favorited media, most recently watched first."""
+        index = self._load_index()
+        entries = [e for e in index.media_index.values() if e.favorite]
+        entries.sort(key=lambda e: e.last_watched, reverse=True)
+
+        media_list: List[MediaItem] = []
+        for entry in entries:
+            record = self.get_media_record(entry.media_id)
+            if record:
+                media_list.append(record.media_item)
+
+        page_info = PageInfo(total=len(media_list))
+        return MediaSearchResult(page_info=page_info, media=media_list)
 
     # TODO: standardize params passed to this
     def get_recently_watched(self, limit: Optional[int] = None) -> MediaSearchResult:

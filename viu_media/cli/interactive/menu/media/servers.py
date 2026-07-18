@@ -46,17 +46,21 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
     # front (to match a named server or offer the selection menu), so it uses the
     # blocking full resolve.
     preferred_server = config.stream.server.value
+    # One-shot override from the post-playback "Change Server" action: replay
+    # this episode on that exact server (raw provider name, not the enum).
+    forced_server = ctx.switch.forced_server
     pending = None
     with feedback.progress("Fetching Servers"):
-        if preferred_server == "TOP":
+        if forced_server is not None or preferred_server != "TOP":
+            # Need the whole list up front (to match a name / offer the menu).
+            all_servers = get_servers(
+                provider, config, provider_anime.id, anime_title, episode_number
+            )
+        else:
             pending = resolve_first(
                 provider, config, provider_anime.id, anime_title, episode_number
             )
             all_servers = [pending.first] if pending.first else []
-        else:
-            all_servers = get_servers(
-                provider, config, provider_anime.id, anime_title, episode_number
-            )
 
     if not all_servers:
         feedback.error(f"No streaming servers found for episode {episode_number}")
@@ -68,7 +72,15 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
     server_map: Dict[str, Server] = {s.name: s for s in all_servers}
     selected_server: Server | None = None
 
-    if preferred_server == "TOP":
+    if forced_server is not None and forced_server in server_map:
+        selected_server = server_map[forced_server]
+        feedback.info(f"Switching to server: {selected_server.name}")
+    elif forced_server is not None:
+        feedback.warning(
+            f"Server '{forced_server}' is no longer available; using the default."
+        )
+        selected_server = all_servers[0]
+    elif preferred_server == "TOP":
         selected_server = all_servers[0]
         feedback.info(f"Auto-selecting top server: {selected_server.name}")
     elif preferred_server in server_map:

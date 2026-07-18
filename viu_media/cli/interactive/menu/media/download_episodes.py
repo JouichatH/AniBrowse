@@ -3,6 +3,48 @@ from ...session import Context, session
 from ...state import InternalDirective, State
 
 
+def _episodes_from_ranges(text: str | None, available: list[str]) -> list[str]:
+    """Episodes matching a human range string, in ``available``'s order.
+
+    Understands episode NUMBERS (not indices): "1-24", "8", "3,5-7", open ends
+    "20-" (20 onwards) and "-5" (up to 5). Unknown numbers are skipped; a
+    non-parseable string yields [].
+    """
+    if not text or not text.strip():
+        return []
+
+    def _num(s: str) -> float | None:
+        try:
+            return float(s)
+        except ValueError:
+            return None
+
+    wanted: list[tuple[float, float]] = []
+    for part in text.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            lo_s, _, hi_s = part.partition("-")
+            lo = _num(lo_s.strip()) if lo_s.strip() else float("-inf")
+            hi = _num(hi_s.strip()) if hi_s.strip() else float("inf")
+            if lo is None or hi is None:
+                return []
+            wanted.append((lo, hi))
+        else:
+            v = _num(part)
+            if v is None:
+                return []
+            wanted.append((v, v))
+
+    out = []
+    for ep in available:
+        v = _num(ep)
+        if v is not None and any(lo <= v <= hi for lo, hi in wanted):
+            out.append(ep)
+    return out
+
+
 @session.menu
 def download_episodes(ctx: Context, state: State) -> State | InternalDirective:
     """Menu to select and download episodes synchronously."""
@@ -60,15 +102,49 @@ def download_episodes(ctx: Context, state: State) -> State | InternalDirective:
         feedback.warning("No episodes found for download.")
         return InternalDirective.BACK
 
-    # Step 2: Let user select episodes
-    selected_episodes = selector.choose_multiple(
-        "Select episodes to download (TAB to select, ENTER to confirm)",
-        choices=available_episodes,
+    # Step 2: Let user select episodes. A 50-episode season must be one
+    # action, not fifty TAB presses - so offer all/range alongside picking.
+    icons = config.general.icons
+    n = len(available_episodes)
+    mode_all = f"{'📦 ' if icons else ''}All episodes ({n})"
+    mode_range = f"{'🔢 ' if icons else ''}Range (e.g. 1-24 or 1,5,8-10)"
+    mode_pick = f"{'☑️ ' if icons else ''}Pick individually (TAB to select)"
+    mode = selector.choose(
+        "Which episodes?", [mode_all, mode_range, mode_pick]
     )
+
+    selected_episodes: list[str] = []
+    if mode == mode_all:
+        selected_episodes = list(available_episodes)
+    elif mode == mode_range:
+        range_str = selector.ask(
+            f"Episodes to download (1-{available_episodes[-1]}; e.g. 1-24, 8, 3,5-7):"
+        )
+        selected_episodes = _episodes_from_ranges(range_str, available_episodes)
+        if range_str and not selected_episodes:
+            feedback.warning(
+                f"'{range_str}' didn't match any available episode.",
+                f"Available: {available_episodes[0]}-{available_episodes[-1]}",
+            )
+            return InternalDirective.BACK
+    elif mode == mode_pick:
+        selected_episodes = selector.choose_multiple(
+            "Select episodes to download (TAB to select, ENTER to confirm)",
+            choices=available_episodes,
+        )
 
     if not selected_episodes:
         feedback.info("No episodes selected for download.")
         return InternalDirective.BACK
+
+    if len(selected_episodes) > 5:
+        confirm = selector.choose(
+            f"Download {len(selected_episodes)} episodes now? (runs in the "
+            "foreground and may take a long while)",
+            ["Yes, download them", "Cancel"],
+        )
+        if confirm != "Yes, download them":
+            return InternalDirective.BACK
 
     # Step 3: Download episodes synchronously using the session-scoped service
     feedback.info(

@@ -67,7 +67,11 @@ def media_airing_schedule(
             )
 
     while True:
-        chosen_title = selector.choose(
+        from ._cursor import remembered_choose
+
+        chosen_title = remembered_choose(
+            selector,
+            "media_airing_schedule",
             prompt="Select an episode or view full schedule",
             choices=choices,
             preview=preview_command,

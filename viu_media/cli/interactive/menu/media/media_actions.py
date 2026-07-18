@@ -13,6 +13,7 @@ from .....libs.media_api.types import (
 from .....libs.player.params import PlayerParams
 from ...session import Context, session
 from ...state import InternalDirective, MediaApiState, MenuName, State
+from ._cursor import remembered_choose
 
 MenuAction = Callable[[], State | InternalDirective]
 
@@ -58,8 +59,16 @@ def media_actions(ctx: Context, state: State) -> State | InternalDirective:
             ctx, state, force_episodes_menu=True
         )
 
+    is_fav = ctx.media_registry.is_favorite(media_item.id)
+    fav_label = (
+        f"{'💛 ' if icons else ''}Remove from Favorites"
+        if is_fav
+        else f"{'🤍 ' if icons else ''}Add to Favorites"
+    )
+
     options.update(
         {
+            fav_label: _toggle_favorite(ctx, state, is_fav),
             f"{'📥 ' if icons else ''}Download": _download_episodes(ctx, state),
             f"{'📼 ' if icons else ''}Watch Trailer": _watch_trailer(ctx, state),
             f"{'🔗 ' if icons else ''}Recommendations": _view_recommendations(
@@ -108,7 +117,11 @@ def media_actions(ctx: Context, state: State) -> State | InternalDirective:
         }
     )
 
-    choice = ctx.selector.choose(
+    # Cursor memory: toggles RELOAD this menu and children back into it - keep
+    # the cursor where the user last acted instead of resetting to the top.
+    choice = remembered_choose(
+        ctx.selector,
+        "media_actions",
         prompt="Select Action",
         choices=list(options.keys()),
     )
@@ -175,6 +188,25 @@ def _download_episodes(ctx: Context, state: State) -> MenuAction:
     return action
 
 
+def _toggle_favorite(ctx: Context, state: State, is_fav: bool) -> MenuAction:
+    """Flip the local favorite flag (on-disk registry; no login needed)."""
+
+    def action():
+        media_item = state.media_api.media_item
+        if not media_item:
+            return InternalDirective.RELOAD
+        ctx.media_registry.update_media_index_entry(
+            media_id=media_item.id, media_item=media_item, favorite=not is_fav
+        )
+        title = media_item.title.english or media_item.title.romaji or "This show"
+        ctx.feedback.info(
+            f"{title} {'removed from' if is_fav else 'added to'} your favorites."
+        )
+        return InternalDirective.RELOAD
+
+    return action
+
+
 def _watch_trailer(ctx: Context, state: State) -> MenuAction:
     def action():
         feedback = ctx.feedback
@@ -208,29 +240,32 @@ def _manage_user_media_list(ctx: Context, state: State) -> MenuAction:
         if not media_item:
             return InternalDirective.RELOAD
 
-        if not ctx.media_api.is_authenticated():
-            feedback.warning(
-                "You are not authenticated",
-            )
-            return InternalDirective.RELOAD
-
         status = ctx.selector.choose(
             "Select list status", choices=[t.value for t in UserMediaListStatus]
         )
         if status:
-            # local
+            # Local-first: the on-disk registry is the source of truth and
+            # needs no login; AniList is synced only when authenticated.
             ctx.media_registry.update_media_index_entry(
                 media_id=media_item.id,
                 media_item=media_item,
                 status=UserMediaListStatus(status),
             )
-            # remote
-            if not ctx.media_api.update_list_entry(
-                UpdateUserMediaListEntryParams(
-                    media_item.id, status=UserMediaListStatus(status)
+            if ctx.media_api.is_authenticated():
+                if not ctx.media_api.update_list_entry(
+                    UpdateUserMediaListEntryParams(
+                        media_item.id, status=UserMediaListStatus(status)
+                    )
+                ):
+                    feedback.warning(
+                        f"Saved locally, but the AniList update failed for "
+                        f"{media_item.title.english}"
+                    )
+            else:
+                feedback.info(
+                    f"Added to your local {status} list (log in to also sync "
+                    "with AniList)."
                 )
-            ):
-                print(f"Failed to update {media_item.title.english}")
         return InternalDirective.RELOAD
 
     return action
@@ -270,11 +305,11 @@ def _manage_user_media_list_in_bulk(ctx: Context, state: State) -> MenuAction:
                 )
         else:
             selected_titles = ctx.selector.choose_multiple(
-                "Select anime to download",
+                "Select anime to manage",
                 list(choice_map.keys()),
             )
         if not selected_titles:
-            feedback.warning("No anime selected. Aborting download.")
+            feedback.warning("No anime selected. Aborting bulk update.")
             return InternalDirective.RELOAD
         anime_to_update_status = [choice_map[title] for title in selected_titles]
 
@@ -316,6 +351,8 @@ def _change_provider(ctx: Context, state: State) -> MenuAction:
         new_provider = ctx.selector.choose(
             "Select Provider", [provider.value for provider in ProviderName]
         )
+        if not new_provider:  # backed out of the picker: keep the current one
+            return InternalDirective.RELOAD
         ctx.config.general.provider = ProviderName(new_provider)
         # force a reset of the provider
         ctx._provider = None
@@ -337,25 +374,9 @@ def _toggle_config_state(
     ],
 ) -> MenuAction:
     def action():
-        match config_state:
-            case "AUTO_ANIME":
-                ctx.config.general.auto_select_anime_result = (
-                    not ctx.config.general.auto_select_anime_result
-                )
-            case "AUTO_EPISODE":
-                ctx.config.stream.auto_next = not ctx.config.stream.auto_next
-            case "OPENING_SKIP":
-                ctx.config.stream.opening_skip = not ctx.config.stream.opening_skip
-            case "ENDING_SKIP":
-                ctx.config.stream.ending_skip = not ctx.config.stream.ending_skip
-            case "CONTINUE_FROM_HISTORY":
-                ctx.config.stream.continue_from_watch_history = (
-                    not ctx.config.stream.continue_from_watch_history
-                )
-            case "TRANSLATION_TYPE":
-                ctx.config.stream.translation_type = (
-                    "sub" if ctx.config.stream.translation_type == "dub" else "dub"
-                )
+        from ._toggles import apply_toggle
+
+        apply_toggle(ctx, config_state)
         return InternalDirective.RELOAD
 
     return action
@@ -369,22 +390,26 @@ def _score_anime(ctx: Context, state: State) -> MenuAction:
         if not media_item:
             return InternalDirective.RELOAD
 
-        if not ctx.media_api.is_authenticated():
-            return InternalDirective.RELOAD
-
         score_str = ctx.selector.ask("Enter score (0.0 - 10.0):")
+        if not score_str:  # backed out of the prompt
+            return InternalDirective.RELOAD
         try:
-            score = float(score_str) if score_str else 0.0
+            score = float(score_str)
             if not 0.0 <= score <= 10.0:
                 raise ValueError("Score out of range.")
-            # local
+            # Local-first: the score always lands in the local registry;
+            # AniList is synced only when authenticated.
             ctx.media_registry.update_media_index_entry(
                 media_id=media_item.id, media_item=media_item, score=score
             )
-            # remote
-            ctx.media_api.update_list_entry(
-                UpdateUserMediaListEntryParams(media_id=media_item.id, score=score)
-            )
+            if ctx.media_api.is_authenticated():
+                ctx.media_api.update_list_entry(
+                    UpdateUserMediaListEntryParams(media_id=media_item.id, score=score)
+                )
+            else:
+                feedback.info(
+                    f"Scored {score:g} locally (log in to also sync with AniList)."
+                )
         except (ValueError, TypeError):
             feedback.error(
                 "Invalid score entered", "Please enter a number between 0.0 and 10.0"

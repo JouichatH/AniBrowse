@@ -126,19 +126,20 @@ def _run_loop_capped(session, max_steps: int):
                 raise AssertionError("CONFIG_EDIT is not drivable headlessly")
             elif next_step == InternalDirective.BACK:
                 session._history.pop()
-            elif next_step == InternalDirective.BACKX2:
-                if len(session._history) > 2:
+            elif next_step in (
+                InternalDirective.BACKX2,
+                InternalDirective.BACKX3,
+                InternalDirective.BACKX4,
+            ):
+                # Mirrors session.py: pop up to N, never a silent no-op (a
+                # shallow stack answering Esc with BACKXn must exit, not loop).
+                n = {
+                    InternalDirective.BACKX2: 2,
+                    InternalDirective.BACKX3: 3,
+                    InternalDirective.BACKX4: 4,
+                }[next_step]
+                for _ in range(min(n, len(session._history))):
                     session._history.pop()
-                    session._history.pop()
-            elif next_step == InternalDirective.BACKX3:
-                if len(session._history) > 3:
-                    session._history.pop()
-                    session._history.pop()
-                    session._history.pop()
-            elif next_step == InternalDirective.BACKX4:
-                if len(session._history) > 4:
-                    for _ in range(4):
-                        session._history.pop()
             elif next_step == InternalDirective.EXIT:
                 break
         else:
@@ -166,10 +167,28 @@ def ipc_client_factory():
 @pytest.fixture(autouse=True)
 def _reset_session_state():
     """session._history is class-level state: keep tests independent."""
-    from viu_media.cli.interactive.menu.media import _prefetch
+    from viu_media.cli.interactive.menu.media import _cursor, _prefetch
     from viu_media.cli.interactive.session import Session
 
     _prefetch.clear()
+    _cursor._last_index.clear()
     yield
     Session._history = []
     _prefetch.clear()
+    _cursor._last_index.clear()
+
+
+@pytest.fixture(autouse=True)
+def _never_write_real_config(monkeypatch):
+    """Preference toggles persist to config.toml; tests must NEVER touch the
+    user's real file. Tests that want the real behaviour (against a tmp path)
+    restore it from ``stub.__wrapped__``."""
+    from viu_media.cli.interactive.menu.media import _toggles
+
+    original = _toggles._persist_field
+
+    def stub(ctx, section, field, value):
+        return None
+
+    stub.__wrapped__ = original
+    monkeypatch.setattr(_toggles, "_persist_field", stub)

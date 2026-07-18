@@ -60,6 +60,9 @@ class MediaRegistryIndexEntry(BaseModel):
     score: float = 0
     repeat: int = 0
     notes: str = ""
+    # Local favorites: purely on-disk, no AniList involvement (older
+    # registry.json files load fine - the field just defaults to False).
+    favorite: bool = False
 
     last_notified_episode: Optional[str] = None
 

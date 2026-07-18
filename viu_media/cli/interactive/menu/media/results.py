@@ -49,6 +49,12 @@ def results(ctx: Context, state: State) -> State | InternalDirective:
         }
     )
 
+    # Cursor memory: backing out of a show lands on that show again, not on
+    # the top of the list. Keyed per page so pagination starts fresh.
+    from ._cursor import remembered_choose
+
+    cursor_key = f"results:{page_info.current_page if page_info else 1}"
+
     preview_command = None
     if ctx.config.general.preview != "none":
         from ....utils.preview import create_preview_context
@@ -60,7 +66,9 @@ def results(ctx: Context, state: State) -> State | InternalDirective:
                 ctx.config,
             )
 
-            choice = ctx.selector.choose(
+            choice = remembered_choose(
+                ctx.selector,
+                cursor_key,
                 prompt="Select Anime",
                 choices=list(choices),
                 preview=preview_command,
@@ -69,7 +77,9 @@ def results(ctx: Context, state: State) -> State | InternalDirective:
     else:
         # No preview mode
 
-        choice = ctx.selector.choose(
+        choice = remembered_choose(
+            ctx.selector,
+            cursor_key,
             prompt="Select Anime",
             choices=list(choices),
             preview=None,

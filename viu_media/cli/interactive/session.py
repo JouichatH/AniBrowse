@@ -39,6 +39,22 @@ class Switch:
     _episodes: bool = False
     _servers: bool = False
     _dont_play: bool = False
+    _forced_server: Optional[str] = None
+
+    @property
+    def forced_server(self) -> Optional[str]:
+        """One-shot server-name override for the servers menu.
+
+        Set by "Change Server" in the post-playback menu so the replay launches
+        on the chosen server immediately (server names are provider-defined raw
+        strings, so they cannot round-trip through the ProviderServer enum in
+        config.stream.server)."""
+        v = self._forced_server
+        self._forced_server = None
+        return v
+
+    def force_server(self, name: str):
+        self._forced_server = name
 
     @property
     def show_provider_results_menu(self):
@@ -296,6 +312,18 @@ class Session:
             except KeyboardInterrupt:
                 # Ctrl-C anywhere: exit the app cleanly (session still saved).
                 break
+            except Exception:
+                # A menu bug must degrade to "that action failed", never to a
+                # traceback that kills the whole session mid-binge. Log it in
+                # full, tell the user, and back out one level.
+                logger.exception(
+                    "Menu %s crashed; backing out", current_state.menu_name
+                )
+                self._context.feedback.error(
+                    "Something went wrong in this menu; going back.",
+                    "The full error was written to the app log.",
+                )
+                next_step = InternalDirective.BACK
 
             if isinstance(next_step, InternalDirective):
                 if next_step == InternalDirective.MAIN:
@@ -308,20 +336,20 @@ class Session:
                     # Always pop; popping the root empties the stack and the while
                     # loop exits - so Back/Esc at the main menu quits (no dead end).
                     self._history.pop()
-                elif next_step == InternalDirective.BACKX2:
-                    if len(self._history) > 2:
-                        self._history.pop()
-                        self._history.pop()
-                elif next_step == InternalDirective.BACKX3:
-                    if len(self._history) > 3:
-                        self._history.pop()
-                        self._history.pop()
-                        self._history.pop()
-                elif next_step == InternalDirective.BACKX4:
-                    if len(self._history) > 4:
-                        self._history.pop()
-                        self._history.pop()
-                        self._history.pop()
+                elif next_step in (
+                    InternalDirective.BACKX2,
+                    InternalDirective.BACKX3,
+                    InternalDirective.BACKX4,
+                ):
+                    # Pop up to N frames. This must never silently no-op: a
+                    # shallow stack (e.g. a resumed session) whose menu keeps
+                    # answering Esc with BACKX2 would otherwise loop forever.
+                    n = {
+                        InternalDirective.BACKX2: 2,
+                        InternalDirective.BACKX3: 3,
+                        InternalDirective.BACKX4: 4,
+                    }[next_step]
+                    for _ in range(min(n, len(self._history))):
                         self._history.pop()
                 elif next_step == InternalDirective.EXIT:
                     break

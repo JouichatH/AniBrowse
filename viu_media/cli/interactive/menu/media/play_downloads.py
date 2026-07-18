@@ -119,7 +119,9 @@ def downloads_player_controls(
     available_episodes = list(sorted(downloaded_episodes.keys(), key=float))
     current_index = available_episodes.index(current_episode_num)
 
+    played = False
     if not ctx.switch.dont_play:
+        played = True
         file_path = downloaded_episodes[current_episode_num]
 
         # Use the player service to play the local file
@@ -142,7 +144,9 @@ def downloads_player_controls(
         # Track watch history after playing
         ctx.watch_history.track(media_item, player_result)
 
-    if config.stream.auto_next and current_index < len(available_episodes) - 1:
+    # Only auto-advance off the back of an actual playback - re-entering this
+    # menu after a toggle/no-selection must not teleport to the next episode.
+    if played and config.stream.auto_next and current_index < len(available_episodes) - 1:
         feedback.info("Auto-playing next episode...")
         next_episode_num = available_episodes[current_index + 1]
 
@@ -178,11 +182,19 @@ def downloads_player_controls(
         }
     )
 
-    choice = selector.choose(prompt="What's next?", choices=list(options.keys()))
+    from ._cursor import remembered_choose
+
+    choice = remembered_choose(
+        selector,
+        "downloads_player_controls",
+        prompt="What's next?",
+        choices=list(options.keys()),
+    )
 
     if choice and choice in options:
         return options[choice]()
     else:
+        ctx.switch.force_dont_play()  # re-show the menu, don't replay
         return InternalDirective.RELOAD
 
 
@@ -277,7 +289,7 @@ def _previous_episode(ctx: Context, state: State) -> MenuAction:
                     update={"episode_": prev_episode_num, "start_time_": None}
                 ),
             )
-        feedback.warning("This is the last available episode.")
+        feedback.warning("This is the first episode.")
         ctx.switch.force_dont_play()
         return InternalDirective.RELOAD
 
@@ -299,21 +311,10 @@ def _toggle_config_state(
     ],
 ) -> MenuAction:
     def action():
-        match config_state:
-            case "AUTO_ANIME":
-                ctx.config.general.auto_select_anime_result = (
-                    not ctx.config.general.auto_select_anime_result
-                )
-            case "AUTO_EPISODE":
-                ctx.config.stream.auto_next = not ctx.config.stream.auto_next
-            case "CONTINUE_FROM_HISTORY":
-                ctx.config.stream.continue_from_watch_history = (
-                    not ctx.config.stream.continue_from_watch_history
-                )
-            case "TRANSLATION_TYPE":
-                ctx.config.stream.translation_type = (
-                    "sub" if ctx.config.stream.translation_type == "dub" else "dub"
-                )
+        from ._toggles import apply_toggle
+
+        apply_toggle(ctx, config_state)
+        ctx.switch.force_dont_play()  # re-show the menu, don't replay the file
         return InternalDirective.RELOAD
 
     return action

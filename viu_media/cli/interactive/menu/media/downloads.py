@@ -72,7 +72,11 @@ def downloads(ctx: Context, state: State) -> State | InternalDirective:
         f"{'❌ ' if icons else ''}Exit": lambda: InternalDirective.EXIT,
     }
 
-    choice = ctx.selector.choose(
+    from ._cursor import remembered_choose
+
+    choice = remembered_choose(
+        ctx.selector,
+        "downloads",
         prompt="Select Downloads Category",
         choices=list(options.keys()),
     )

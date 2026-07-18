@@ -71,6 +71,17 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
     if not chosen_episode or ctx.switch.show_episodes_menu:
         choices = [*available_episodes, "Back"]
 
+        # Land the cursor on the episode you'd naturally watch next (from the
+        # local watch history) instead of on episode 1 of a 50-episode list.
+        cursor_episode = chosen_episode
+        if cursor_episode is None:
+            cursor_episode, _ = ctx.watch_history.get_episode(media_item)
+        start_index = (
+            choices.index(cursor_episode)
+            if cursor_episode and cursor_episode in choices
+            else None
+        )
+
         # Esc (NavigationAbort) must back out the same way the explicit "Back"
         # choice does: this menu's parent is the pass-through provider-search
         # menu, so a single BACK would just re-run that search and land right
@@ -89,12 +100,16 @@ def episodes(ctx: Context, state: State) -> State | InternalDirective:
                         prompt="Select Episode",
                         choices=choices,
                         preview=preview_command,
+                        start_index=start_index,
                     )
                     # Workers are automatically cleaned up when exiting the context
             else:
                 # No preview mode
                 chosen_episode_str = ctx.selector.choose(
-                    prompt="Select Episode", choices=choices, preview=None
+                    prompt="Select Episode",
+                    choices=choices,
+                    preview=None,
+                    start_index=start_index,
                 )
         except NavigationAbort:
             return InternalDirective.BACKX2

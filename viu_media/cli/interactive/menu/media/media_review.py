@@ -55,7 +55,11 @@ def media_review(ctx: Context, state: State) -> Union[State, InternalDirective]:
             preview_command = preview_ctx.get_review_preview(choice_map, ctx.config)
 
     while True:
-        chosen_title = selector.choose(
+        from ._cursor import remembered_choose
+
+        chosen_title = remembered_choose(
+            selector,
+            "media_review",
             prompt="Select a review to read",
             choices=choices,
             preview=preview_command,

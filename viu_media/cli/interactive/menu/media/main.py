@@ -10,6 +10,7 @@ from .....libs.media_api.types import (
 )
 from ...session import Context, session
 from ...state import InternalDirective, MediaApiState, MenuName, State
+from ._cursor import remembered_choose
 
 logger = logging.getLogger(__name__)
 MenuAction = Callable[[], State | InternalDirective]
@@ -21,26 +22,34 @@ def main(ctx: Context, state: State) -> State | InternalDirective:
     feedback = ctx.feedback
     feedback.clear_console()
 
+    # The personal lists work without a login: they read the on-disk registry
+    # and only use AniList when authenticated. The label says which mode the
+    # user is in instead of erroring "You haven't logged in" after the fact.
+    local = "" if ctx.media_api.is_authenticated() else " (Local)"
+
     options: Dict[str, MenuAction] = {
-        f"{'🔥 ' if icons else ''}Trending": _create_media_list_action(
-            ctx, state, MediaSort.TRENDING_DESC
+        f"{'▶️ ' if icons else ''}Continue Watching": _create_recent_media_action(
+            ctx, state
         ),
-        f"{'🎞️ ' if icons else ''}Recent": _create_recent_media_action(ctx, state),
-        f"{'📺 ' if icons else ''}Watching": _create_user_list_action(
+        f"{'📺 ' if icons else ''}Watching{local}": _create_user_list_action(
             ctx, state, UserMediaListStatus.WATCHING
         ),
-        f"{'🔁 ' if icons else ''}Rewatching": _create_user_list_action(
-            ctx, state, UserMediaListStatus.REPEATING
-        ),
-        f"{'⏸️ ' if icons else ''}Paused": _create_user_list_action(
-            ctx, state, UserMediaListStatus.PAUSED
-        ),
-        f"{'📑 ' if icons else ''}Planned": _create_user_list_action(
-            ctx, state, UserMediaListStatus.PLANNING
+        f"{'💛 ' if icons else ''}My Favorites": _create_favorites_action(ctx, state),
+        f"{'🔥 ' if icons else ''}Trending": _create_media_list_action(
+            ctx, state, MediaSort.TRENDING_DESC
         ),
         f"{'🔎 ' if icons else ''}Search": _create_search_media_list(ctx, state),
         f"{'🔍 ' if icons else ''}Dynamic Search": _create_dynamic_search_action(
             ctx, state
+        ),
+        f"{'🔁 ' if icons else ''}Rewatching{local}": _create_user_list_action(
+            ctx, state, UserMediaListStatus.REPEATING
+        ),
+        f"{'⏸️ ' if icons else ''}Paused{local}": _create_user_list_action(
+            ctx, state, UserMediaListStatus.PAUSED
+        ),
+        f"{'📑 ' if icons else ''}Planned{local}": _create_user_list_action(
+            ctx, state, UserMediaListStatus.PLANNING
         ),
         f"{'🏠 ' if icons else ''}Downloads": _create_downloads_action(ctx, state),
         f"{'🔔 ' if icons else ''}Recently Updated": _create_media_list_action(
@@ -59,17 +68,19 @@ def main(ctx: Context, state: State) -> State | InternalDirective:
         f"{'🎬 ' if icons else ''}Upcoming": _create_media_list_action(
             ctx, state, MediaSort.POPULARITY_DESC, MediaStatus.NOT_YET_RELEASED
         ),
-        f"{'✅ ' if icons else ''}Completed": _create_user_list_action(
+        f"{'✅ ' if icons else ''}Completed{local}": _create_user_list_action(
             ctx, state, UserMediaListStatus.COMPLETED
         ),
-        f"{'🚮 ' if icons else ''}Dropped": _create_user_list_action(
+        f"{'🚮 ' if icons else ''}Dropped{local}": _create_user_list_action(
             ctx, state, UserMediaListStatus.DROPPED
         ),
         f"{'📝 ' if icons else ''}Edit Config": lambda: InternalDirective.CONFIG_EDIT,
         f"{'❌ ' if icons else ''}Exit": lambda: InternalDirective.EXIT,
     }
 
-    choice = ctx.selector.choose(
+    choice = remembered_choose(
+        ctx.selector,
+        "main",
         prompt="Select Category",
         choices=list(options.keys()),
     )
@@ -173,12 +184,35 @@ def _create_search_media_list(ctx: Context, state: State) -> MenuAction:
 def _create_user_list_action(
     ctx: Context, state: State, status: UserMediaListStatus
 ) -> MenuAction:
-    """A factory to create menu actions for fetching user lists, handling authentication."""
+    """Personal list, local-first.
+
+    Authenticated: the AniList list. Not authenticated: the same list from the
+    on-disk registry (updated by watching and by Add/Update List), so personal
+    lists work fully offline instead of erroring "You haven't logged in".
+    """
 
     def action():
         feedback = ctx.feedback
+
         if not ctx.media_api.is_authenticated():
-            feedback.error("You haven't logged in")
+            result = None
+            with feedback.progress(f"Getting your local {status.value} list"):
+                result = ctx.media_registry.get_media_by_status(status)
+            if result and result.media:
+                return State(
+                    menu_name=MenuName.RESULTS,
+                    media_api=MediaApiState(
+                        search_result={
+                            media_item.id: media_item for media_item in result.media
+                        },
+                        page_info=result.page_info,
+                    ),
+                )
+            feedback.info(
+                f"Your local {status.value} list is empty",
+                "Watch something or use Add/Update List on a show to fill it. "
+                "Log in to use your AniList lists instead.",
+            )
             return InternalDirective.MAIN
 
         search_params = UserMediaListSearchParams(status=status)
@@ -206,9 +240,15 @@ def _create_user_list_action(
 
 
 def _create_recent_media_action(ctx: Context, state: State) -> MenuAction:
+    """Continue Watching: everything you've watched, most recent first.
+
+    Purely local (the registry tracks progress as you watch), so it works
+    without a login; each entry shows "(watched of total)" in the list.
+    """
+
     def action():
         result = ctx.media_registry.get_recently_watched()
-        if result:
+        if result and result.media:
             return State(
                 menu_name=MenuName.RESULTS,
                 media_api=MediaApiState(
@@ -218,8 +258,35 @@ def _create_recent_media_action(ctx: Context, state: State) -> MenuAction:
                     page_info=result.page_info,
                 ),
             )
-        else:
-            return InternalDirective.MAIN
+        ctx.feedback.info(
+            "Nothing to continue yet",
+            "Shows you watch land here automatically, newest first.",
+        )
+        return InternalDirective.MAIN
+
+    return action
+
+
+def _create_favorites_action(ctx: Context, state: State) -> MenuAction:
+    """Locally-favorited shows (the heart toggle on a show's actions menu)."""
+
+    def action():
+        result = ctx.media_registry.get_favorites()
+        if result and result.media:
+            return State(
+                menu_name=MenuName.RESULTS,
+                media_api=MediaApiState(
+                    search_result={
+                        media_item.id: media_item for media_item in result.media
+                    },
+                    page_info=result.page_info,
+                ),
+            )
+        ctx.feedback.info(
+            "No favorites yet",
+            "Open a show and pick 'Add to Favorites' - no login needed.",
+        )
+        return InternalDirective.MAIN
 
     return action
 
