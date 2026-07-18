@@ -226,6 +226,7 @@ class DownloadService:
                     query=media_title,
                     episode=episode_number,
                     translation_type=self.app_config.stream.translation_type,
+                    quality=self.app_config.stream.quality,
                 )
             )
             if not streams_iterator:

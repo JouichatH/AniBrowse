@@ -206,3 +206,25 @@ def test_prefetch_neighbours_populates_cache():
     tt = cfg.stream.translation_type
     assert pf._key("anime-1", "1", tt) in pf._CACHE
     assert pf._key("anime-1", "3", tt) in pf._CACHE
+
+
+def test_resolve_paths_pass_config_quality_to_provider():
+    """Regression: EpisodeStreamsParams.quality defaults to "720", and the
+    resolve paths used to omit it - so a 1080 config still ranked nyaa's 720p
+    torrents first. The provider must receive the CONFIG quality."""
+    cfg = _config()
+    cfg.stream.quality = "1080"
+
+    provider = FakeAnimeProvider(
+        servers={"2": [make_server(name="Luf-mp4", link="u2")]}
+    )
+    pf.resolve_servers(provider, cfg, "anime-1", "Show", "2")
+    params = [p for (name, p) in provider.calls if name == "episode_streams"]
+    assert params and all(p.quality == "1080" for p in params)
+
+    provider2 = FakeAnimeProvider(
+        servers={"2": [make_server(name="Luf-mp4", link="u2")]}
+    )
+    pf.resolve_first(provider2, cfg, "anime-1", "Show", "2").result(timeout=5)
+    params2 = [p for (name, p) in provider2.calls if name == "episode_streams"]
+    assert params2 and all(p.quality == "1080" for p in params2)

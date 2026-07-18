@@ -136,14 +136,19 @@ def resolve_servers(
                 query=title,
                 episode=episode,
                 translation_type=config.stream.translation_type,
+                # Must be passed explicitly: the dataclass default is "720",
+                # which silently outranked 1080p torrents on the nyaa-primary
+                # path for anyone whose config said 1080.
+                quality=config.stream.quality,
             )
         )
         servers = list(iterator) if iterator else []
         logger.info(
-            "[ani-timing] resolve_servers ep=%s provider=%s n=%d took=%.2fs",
+            "[ani-timing] resolve_servers ep=%s provider=%s n=%d q=%s took=%.2fs",
             episode,
             type(provider).__name__,
             len(servers),
+            config.stream.quality,
             time.perf_counter() - _t0,
         )
     except Exception as e:  # noqa: BLE001 - provider hiccup -> try nyaa
@@ -208,6 +213,8 @@ def resolve_first(
                 query=title,
                 episode=episode,
                 translation_type=config.stream.translation_type,
+                # Explicit: the dataclass default is "720" (see resolve_servers).
+                quality=config.stream.quality,
             )
         )
     except Exception as e:  # noqa: BLE001 - provider hiccup -> nyaa
@@ -225,9 +232,10 @@ def resolve_first(
         # Primary yielded nothing extractable -> nyaa fallback (full list).
         servers = _nyaa_fallback(provider, config, title, episode)
         logger.info(
-            "[ani-timing] resolve_first ep=%s provider=%s FIRST=nyaa/none took=%.2fs",
+            "[ani-timing] resolve_first ep=%s provider=%s FIRST=nyaa/none q=%s took=%.2fs",
             episode,
             type(provider).__name__,
+            config.stream.quality,
             time.perf_counter() - _t0,
         )
         pending = PendingServers(servers[0] if servers else None, servers=servers)
@@ -237,10 +245,11 @@ def resolve_first(
         return pending
 
     logger.info(
-        "[ani-timing] resolve_first ep=%s provider=%s FIRST=%s took=%.2fs",
+        "[ani-timing] resolve_first ep=%s provider=%s FIRST=%s q=%s took=%.2fs",
         episode,
         type(provider).__name__,
         first.name,
+        config.stream.quality,
         time.perf_counter() - _t0,
     )
     pending = PendingServers(first)
@@ -288,6 +297,23 @@ def prefetch_neighbours(provider, config, anime, title: str, current: str) -> No
         _prefetch_one(provider, config, anime.id, title, episode)
 
 
+def _warm_if_torrent(servers) -> None:
+    """Hand a just-prefetched torrent episode to the stream session to warm.
+
+    The player's warm helper is a strict no-op unless a torrent stream session
+    is already running (i.e. the user is torrent-watching right now), so this
+    costs nothing on direct-provider binges.
+    """
+    try:
+        link = servers[0].links[0].link
+        if link.startswith("magnet:"):
+            from ....libs.player.mpv.player import warm_torrent_stream
+
+            warm_torrent_stream(link)
+    except Exception as e:  # noqa: BLE001 - prefetch must never raise
+        logger.debug("torrent warm skipped: %s", e)
+
+
 def _prefetch_one(
     provider, config, anime_id: str, title: str, episode: str
 ) -> None:
@@ -305,6 +331,7 @@ def _prefetch_one(
             if servers:
                 _cache_put(key, servers)
                 logger.debug("prefetched %d server(s) for ep %s", len(servers), episode)
+                _warm_if_torrent(servers)
         except Exception as e:  # noqa: BLE001 - prefetch must never raise
             logger.debug("prefetch failed for ep %s: %s", episode, e)
         finally:

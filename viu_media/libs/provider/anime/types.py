@@ -9,10 +9,13 @@ from pydantic import BaseModel, ConfigDict
 
 # ENUMS
 class ProviderName(Enum):
+    # Order matters: provider-selection menus list these in definition order.
+    # nyaa sits second as the house fallback (and the automatic one whenever
+    # the primary yields no servers - see _source_fallback/_prefetch).
     ALLANIME = "allanime"
+    NYAA = "nyaa"
     ANIMEPAHE = "animepahe"
     ANIMEUNITY = "animeunity"
-    NYAA = "nyaa"
 
 
 class ProviderServer(Enum):

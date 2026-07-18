@@ -156,6 +156,7 @@ def stream_anime(
                 query=anime_title,
                 episode=episode,
                 translation_type=config.stream.translation_type,
+                quality=config.stream.quality,
             )
         )
         if not streams:

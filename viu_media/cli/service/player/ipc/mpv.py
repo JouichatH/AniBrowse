@@ -832,6 +832,7 @@ class MpvIPCPlayer(BaseIPCPlayer):
             query=self.player_state.query,
             episode=target_episode,
             translation_type=self.stream_config.translation_type,
+            quality=self.stream_config.quality,
         )
         try:
             episode_streams = list(self.provider.episode_streams(stream_params) or [])
