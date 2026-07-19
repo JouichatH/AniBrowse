@@ -59,14 +59,24 @@ if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot 'pyproject.toml'))) {
 #    Extras baked in: thefuzz (fuzzy titles) + lxml (fast HTML parsing).
 Say "`nInstalling ani-browse (isolated via uv tool)..."
 uv tool install --force --python 3.12 --with thefuzz --with lxml "$repo"
-uv tool update-shell *> $null
-$uvBin = Join-Path $env:USERPROFILE '.local\bin'
-if ($env:Path -notlike "*$uvBin*") { $env:Path = "$uvBin;$env:Path" }
+# Put uv's executable dir on PATH (session + user), asking uv where it is:
+# scoop's uv relocates it (scoop\persist\uv\tools\shims), so don't guess.
+# cmd /c so no native stderr reaches PowerShell - under Stop+redirection,
+# PS 5.1 turns benign stderr notes into fatal errors (`uv tool update-shell`
+# killed the whole installer with "directory is already in PATH").
+$uvBin = (cmd /c "uv tool dir --bin 2>nul").Trim()
+if ($uvBin) {
+    if ($env:Path -notlike "*$uvBin*") { $env:Path = "$uvBin;$env:Path" }
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    if ($userPath -notlike "*$uvBin*") {
+        [Environment]::SetEnvironmentVariable('Path', "$userPath;$uvBin", 'User')
+    }
+}
 
 # 4b. Fetch the provider scrapers (not vendored in this repo; see
 #     scripts/fetch_providers.py) into the isolated app environment.
 Say "Fetching provider scrapers from the viu-media wheel..."
-$appPy = Join-Path "$(uv tool dir)".Trim() 'viu-media\Scripts\python.exe'
+$appPy = Join-Path (cmd /c "uv tool dir 2>nul").Trim() 'viu-media\Scripts\python.exe'
 if (Test-Path $appPy) {
     & $appPy (Join-Path $repo 'scripts\fetch_providers.py')
 } else {
