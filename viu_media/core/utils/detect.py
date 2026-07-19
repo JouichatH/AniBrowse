@@ -20,6 +20,27 @@ def is_running_in_termux():
     return False
 
 
+def is_legacy_windows_console(environ=None) -> bool:
+    """True when running in the classic Windows console host (conhost).
+
+    conhost cannot render emoji (menu icons become empty boxes) or images.
+    Every modern host sets a marker env var - Windows Terminal: WT_SESSION;
+    VS Code: TERM_PROGRAM; ConEmu/Cmder: ConEmuANSI; Alacritty / WezTerm:
+    their own - while conhost sets none of them.
+    """
+    if sys.platform != "win32":
+        return False
+    env = environ if environ is not None else os.environ
+    markers = (
+        "WT_SESSION",
+        "TERM_PROGRAM",
+        "ConEmuANSI",
+        "ALACRITTY_WINDOW_ID",
+        "WEZTERM_PANE",
+    )
+    return not any(env.get(m) for m in markers)
+
+
 def is_bash_script(text: str) -> bool:
     # Normalize line endings
     text = text.strip()

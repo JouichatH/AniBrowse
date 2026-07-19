@@ -242,6 +242,18 @@ class Session:
 
     def _load_context(self, config: AppConfig):
         self._shutdown_download_worker()
+        from ...core.utils import detect
+
+        # The classic Windows console (conhost) can't render emoji: with icons
+        # on, every menu row starts with an empty box. Fall back to clean text
+        # automatically - the same session opened in Windows Terminal keeps
+        # icons, since only conhost lacks the modern-host env markers.
+        if config.general.icons and detect.is_legacy_windows_console():
+            logger.info(
+                "Legacy Windows console detected: menu icons disabled "
+                "(emoji unsupported there; use Windows Terminal to get them)."
+            )
+            config.general.icons = False
         self._context = Context(config)
         logger.info("Application context reloaded.")
 
