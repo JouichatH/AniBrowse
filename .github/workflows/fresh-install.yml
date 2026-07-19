@@ -96,7 +96,9 @@ jobs:
         shell: powershell
         run: |
           $appPy = "${{ steps.app.outputs.appPy }}"
-          & $appPy -c @'
+          # Written to a file, not python -c: PowerShell 5.1 mangles embedded
+          # double quotes when passing multi-line args to native commands.
+          @'
           import sys
           from pathlib import Path
           import viu_media.libs.provider.anime as pkg
@@ -127,14 +129,15 @@ jobs:
               print("\n".join(failures))
               sys.exit(1)
           print("providers OK: fetched, handshake + ranking patches present, importable")
-          '@
+          '@ | Set-Content -Path "$env:RUNNER_TEMP\check_providers.py" -Encoding utf8
+          & $appPy "$env:RUNNER_TEMP\check_providers.py"
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: First-run config re-detects the terminal
         shell: powershell
         run: |
           $appPy = "${{ steps.app.outputs.appPy }}"
-          & $appPy -c @'
+          @'
           import os
 
           # Simulate the classic failure: first run inside plain conhost
@@ -165,7 +168,8 @@ jobs:
           assert wt_cfg.general.preview == "full", wt_cfg.general.preview
           assert wt_cfg.general.image_renderer == "system-sixels"
           print("config OK: env-detected fields stay dynamic across terminals")
-          '@
+          '@ | Set-Content -Path "$env:RUNNER_TEMP\check_config.py" -Encoding utf8
+          & $appPy "$env:RUNNER_TEMP\check_config.py"
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       # Real network probe against allanime. Best-effort: datacenter IPs may be
