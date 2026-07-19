@@ -39,6 +39,7 @@ commands = {
     "worker": "worker.worker",
     "queue": "queue.queue",
     "completions": "completions.completions",
+    "doctor": "doctor.doctor",
 }
 
 
