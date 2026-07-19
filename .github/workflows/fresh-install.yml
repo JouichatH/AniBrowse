@@ -49,12 +49,42 @@ jobs:
         shell: powershell
         run: |
           $env:Path = "$env:USERPROFILE\scoop\shims;$env:Path"
-          $toolsDir = (cmd /c "uv tool dir 2>nul").Trim()
-          $appPy = Join-Path $toolsDir 'viu-media\Scripts\python.exe'
-          if (-not (Test-Path $appPy)) { Write-Error "app python not found at $appPy"; exit 1 }
+          # scoop's uv manifest sets UV_TOOL_DIR/UV_TOOL_BIN_DIR in the User
+          # registry AND the installing session. Fresh workflow steps see
+          # neither, so `uv tool dir` here answers the %APPDATA% default and
+          # misses where the installer actually put the app. Re-hydrate from
+          # the registry, then fall back to searching known locations.
+          foreach ($v in 'UV_TOOL_DIR', 'UV_TOOL_BIN_DIR') {
+              $reg = [Environment]::GetEnvironmentVariable($v, 'User')
+              if ($reg) { Set-Item "env:$v" $reg }
+          }
+          $candidates = @(
+              (cmd /c "uv tool dir 2>nul").Trim(),
+              "$env:USERPROFILE\scoop\persist\uv\tools\versions",
+              "$env:USERPROFILE\scoop\persist\uv\tools",
+              "$env:APPDATA\uv\tools"
+          ) | Where-Object { $_ }
+          $appPy = $null
+          foreach ($c in $candidates) {
+              $p = Join-Path $c 'viu-media\Scripts\python.exe'
+              if (Test-Path $p) { $appPy = $p; break }
+          }
+          if (-not $appPy) {
+              $hit = Get-ChildItem "$env:USERPROFILE\scoop\persist\uv" -Recurse -Filter python.exe -ErrorAction SilentlyContinue |
+                  Where-Object { $_.FullName -like '*viu-media*Scripts*python.exe' } |
+                  Select-Object -First 1
+              if ($hit) { $appPy = $hit.FullName }
+          }
+          if (-not $appPy) { Write-Error "app python not found (candidates: $($candidates -join '; '))"; exit 1 }
+          Write-Host "app python: $appPy"
           "appPy=$appPy" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          $uvBin = (cmd /c "uv tool dir --bin 2>nul").Trim()
-          $uvBin | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          $binCandidates = @(
+              (cmd /c "uv tool dir --bin 2>nul").Trim(),
+              "$env:USERPROFILE\scoop\persist\uv\tools\shims"
+          ) | Where-Object { $_ -and (Test-Path (Join-Path $_ 'ani-browse.exe')) }
+          if (-not $binCandidates) { Write-Error "ani-browse shim not found"; exit 1 }
+          Write-Host "ani-browse shim dir: $($binCandidates[0])"
+          $binCandidates[0] | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
       - name: App entrypoint runs
         shell: powershell
