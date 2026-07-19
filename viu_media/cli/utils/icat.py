@@ -1,3 +1,6 @@
+# pyright: reportAttributeAccessIssue=false
+# (termios/tty attributes only exist on POSIX; this kitty-icat module is
+# unix-only, but pyright on Windows sees empty stubs for those modules.)
 import shutil
 import subprocess
 import sys

@@ -109,7 +109,7 @@ def test_resolve_first_returns_first_then_full(monkeypatch):
     pending = pf.resolve_first(provider, _config(), "anime-1", "Show", "2")
 
     # First (best-ranked) server is available immediately for launch.
-    assert pending.first.name == "Yt-mp4"
+    assert pending.first is not None and pending.first.name == "Yt-mp4"
 
     # The rest finishes in the background; result() gives the whole list.
     assert _wait_done(pending)
@@ -117,7 +117,9 @@ def test_resolve_first_returns_first_then_full(monkeypatch):
 
     # And the full list is cached for the post-playback / next-visit path.
     key = pf._key("anime-1", "2", _config().stream.translation_type)
-    assert [s.name for s in pf._cache_get(key)] == ["Yt-mp4", "Mp4"]
+    cached = pf._cache_get(key)
+    assert cached is not None
+    assert [s.name for s in cached] == ["Yt-mp4", "Mp4"]
 
 
 def test_resolve_first_is_lazy(monkeypatch):
@@ -138,7 +140,7 @@ def test_resolve_first_is_lazy(monkeypatch):
     pending = pf.resolve_first(LazyProvider(), _config(), "anime-1", "Show", "2")
 
     # First server is ready even though the generator is still blocked on `gate`.
-    assert pending.first.name == "Yt-mp4"
+    assert pending.first is not None and pending.first.name == "Yt-mp4"
     # A short-timeout result reflects only what is ready so far (laziness).
     assert [s.name for s in pending.result(timeout=0.05)] == ["Yt-mp4"]
 
@@ -156,7 +158,7 @@ def test_resolve_first_falls_back_to_nyaa(monkeypatch):
     empty = FakeAnimeProvider(servers={})  # primary yields nothing for ep 9
     pending = pf.resolve_first(empty, _config(), "anime-1", "Show", "9")
 
-    assert pending.first.name == "nyaa:SubsPlease (5)"
+    assert pending.first is not None and pending.first.name == "nyaa:SubsPlease (5)"
     assert _wait_done(pending)
     assert pending.result() == nyaa
 
@@ -172,7 +174,7 @@ def test_resolve_first_uses_prefetched_cache():
 
     pending = pf.resolve_first(provider, cfg, "anime-1", "Show", "2")
 
-    assert pending.first.name == "Luf-mp4"
+    assert pending.first is not None and pending.first.name == "Luf-mp4"
     assert pending.result(timeout=0.01) == cached  # already done, no blocking
     assert provider.calls == []  # provider not queried
     # Peek, not pop: a replay of the same episode still finds the cache.

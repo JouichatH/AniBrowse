@@ -61,11 +61,13 @@ def fetch_skip_times(
         import httpx
 
         url = f"{ANISKIP_URL}/{mal_id}/{episode_number}"
-        params = [
-            ("types", "op"),
-            ("types", "ed"),
-            ("episodeLength", str(episode_length or 0)),
-        ]
+        params = httpx.QueryParams(
+            [
+                ("types", "op"),
+                ("types", "ed"),
+                ("episodeLength", str(episode_length or 0)),
+            ]
+        )
         r = httpx.get(url, params=params, timeout=timeout)
         if r.status_code == 404:
             return []

@@ -9,8 +9,9 @@ _SPEC = importlib.util.spec_from_file_location(
     "dump_chapters",
     Path(__file__).resolve().parents[2] / "scripts" / "dump_chapters.py",
 )
+assert _SPEC is not None and _SPEC.loader is not None
 dc = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(dc)  # type: ignore[union-attr]
+_SPEC.loader.exec_module(dc)
 
 
 @pytest.mark.parametrize(

@@ -136,7 +136,7 @@ def test_apply_toggle_flips_and_persists(tmp_path, monkeypatch):
 
     # Re-enable real persistence (the autouse fixture stubs it) at a tmp path.
     monkeypatch.setattr(
-        _toggles, "_persist_field", _toggles._persist_field.__wrapped__
+        _toggles, "_persist_field", getattr(_toggles._persist_field, "__wrapped__")
     )
     cfg_path = tmp_path / "config.toml"
     cfg_path.write_text(
@@ -236,15 +236,16 @@ def test_main_watching_works_logged_out_via_local_registry(
     # succeed if the local list actually rendered them (FakeSelector asserts
     # picks exist among the choices).
     sel = FakeSelector([pick("Watching (Local)"), pick("Local Show")])
+    feedback = FakeFeedback()
     ctx = make_context(
         config=polish_config,
         selector=sel,
         media_api=FakeApiClient(),  # user=None -> not authenticated
         media_registry=registry,
-        feedback=FakeFeedback(),
+        feedback=feedback,
     )
     drive(ctx, make_state("main"))
-    errors = [m for m in ctx._feedback.messages if m[0] == "error"]
+    errors = [m for m in feedback.messages if m[0] == "error"]
     assert not errors, f"unexpected errors: {errors}"
 
 

@@ -190,5 +190,5 @@ def _never_write_real_config(monkeypatch):
     def stub(ctx, section, field, value):
         return None
 
-    stub.__wrapped__ = original
+    setattr(stub, "__wrapped__", original)
     monkeypatch.setattr(_toggles, "_persist_field", stub)

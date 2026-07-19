@@ -52,6 +52,7 @@ def test_file_loaded_prefetches_neighbours(ipc_client_factory):
         events=[{"event": "file-loaded"}],
         shutdown_when=lambda c: c._idle_polls > 3,
     )
+    assert provider.servers is not None
     provider.servers["1"] = [make_server(name="Luf-mp4", link="https://cdn/ep1.m3u8")]
     player = _play(client, provider, episode="2")
 

@@ -1,6 +1,7 @@
 """Tests for the in-player server-switch menu JSON (Phase 3)."""
 
 import json
+from typing import Literal
 
 from viu_media.cli.interactive.menu.media.servers import (
     _filter_by_quality,
@@ -9,8 +10,10 @@ from viu_media.cli.interactive.menu.media.servers import (
 )
 from viu_media.libs.provider.anime.types import EpisodeStream, Server, Subtitle
 
+Quality = Literal["360", "480", "720", "1080"]
 
-def _server(name, link, quality="1080", headers=None, subs=None):
+
+def _server(name, link, quality: Quality = "1080", headers=None, subs=None):
     return Server(
         name=name,
         links=[EpisodeStream(link=link, quality=quality)],
@@ -80,11 +83,14 @@ def test_filter_by_quality_picks_requested_or_falls_back():
         EpisodeStream(link="b", quality="1080"),
     ]
     # Exact requested quality wins regardless of order.
-    assert _filter_by_quality(links, "1080").link == "b"
-    assert _filter_by_quality(links, "720").link == "a"
+    exact = _filter_by_quality(links, "1080")
+    assert exact is not None and exact.link == "b"
+    lower = _filter_by_quality(links, "720")
+    assert lower is not None and lower.link == "a"
     # Requested quality absent -> first link (providers yield links best-first, so
     # this is the best available, e.g. animepahe sorts its links high->low).
-    assert _filter_by_quality(links, "480").link == "a"
+    fallback = _filter_by_quality(links, "480")
+    assert fallback is not None and fallback.link == "a"
     # Empty -> None (servers.py surfaces a "no stream of quality" error).
     assert _filter_by_quality([], "1080") is None
 

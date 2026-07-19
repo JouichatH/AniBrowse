@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections import deque
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional
+from typing import Any, Callable, ClassVar, Dict, Iterable, Iterator, List, Optional
 
 from viu_media.core.exceptions import NavigationAbort
 from viu_media.libs.media_api.base import BaseApiClient
@@ -125,7 +125,9 @@ class FakeSelector(BaseSelector):
         # Records the start_index passed to each choose() call (cursor position).
         self.start_indices: List[Optional[int]] = []
 
-    def _next(self, kind: str, prompt: str, choices: Optional[List[str]] = None):
+    def _next(
+        self, kind: str, prompt: str, choices: Optional[List[str]] = None
+    ) -> Any:
         self.calls.append((kind, prompt, choices))
         if not self.script:
             raise NavigationAbort()
@@ -136,7 +138,15 @@ class FakeSelector(BaseSelector):
             return choices[entry]
         return entry
 
-    def choose(self, prompt, choices, *, preview=None, header=None, start_index=None):
+    def choose(
+        self,
+        prompt: str,
+        choices: List[str],
+        *,
+        preview: Optional[str] = None,
+        header: Optional[str] = None,
+        start_index: Optional[int] = None,
+    ) -> str | None:
         self.start_indices.append(start_index)
         answer = self._next("choose", prompt, choices)
         if answer is not None and answer not in choices:
@@ -146,29 +156,34 @@ class FakeSelector(BaseSelector):
             )
         return answer
 
-    def choose_multiple(self, prompt, choices, preview=None):
+    def choose_multiple(
+        self,
+        prompt: str,
+        choices: List[str],
+        preview: Optional[str] = None,
+    ) -> List[str]:
         answer = self._next("choose_multiple", prompt, choices)
         if answer is None:
             return []
         return answer if isinstance(answer, list) else [answer]
 
-    def confirm(self, prompt, *, default=False):
+    def confirm(self, prompt: str, *, default: bool = False) -> bool:
         answer = self._next("confirm", prompt)
         return bool(answer)
 
-    def ask(self, prompt, *, default=None):
+    def ask(self, prompt: str, *, default: Optional[str] = None) -> str | None:
         return self._next("ask", prompt)
 
     def search(
         self,
-        prompt,
-        search_command,
+        prompt: str,
+        search_command: str,
         *,
-        preview=None,
-        header=None,
-        initial_query=None,
-        initial_results=None,
-    ):
+        preview: Optional[str] = None,
+        header: Optional[str] = None,
+        initial_query: Optional[str] = None,
+        initial_results: Optional[List[str]] = None,
+    ) -> str | None:
         return self._next("search", prompt, initial_results)
 
 
@@ -246,7 +261,7 @@ class FakeApiClient(BaseApiClient):
 class FakeAnimeProvider(BaseAnimeProvider):
     """Provider serving canned search results / anime / per-episode servers."""
 
-    HEADERS: Dict[str, str] = {}
+    HEADERS: ClassVar[Dict[str, str]] = {}
 
     def __init__(
         self,

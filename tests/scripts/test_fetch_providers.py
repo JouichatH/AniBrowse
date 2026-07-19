@@ -13,8 +13,9 @@ _SPEC = importlib.util.spec_from_file_location(
     "fetch_providers",
     Path(__file__).resolve().parents[2] / "scripts" / "fetch_providers.py",
 )
+assert _SPEC is not None and _SPEC.loader is not None
 fp = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(fp)  # type: ignore[union-attr]
+_SPEC.loader.exec_module(fp)
 
 
 # The exact upstream viu-media==3.5.0 body of AllAnime.episode_streams. The patch
@@ -93,8 +94,10 @@ def test_patched_body_ranks_best_first():
     import types
 
     fake_extractors = types.ModuleType("_fake_extractors")
-    fake_extractors.extract_server = lambda client, ep, episode, source: source.get(
-        "sourceName"
+    setattr(
+        fake_extractors,
+        "extract_server",
+        lambda client, ep, episode, source: source.get("sourceName"),
     )
     # Rewrite the relative import to the fake module name.
     src = src.replace(

@@ -128,7 +128,7 @@ def test_with_skip_enables_and_delivers_intervals_via_file(monkeypatch, tmp_path
         "viu_media.cli.service.player.aniskip.fetch_skip_times",
         lambda *a, **k: intervals,
     )
-    out = svc._with_skip(_params(), _Media())
+    out = svc._with_skip(_params(), _Media())  # type: ignore[arg-type]
 
     # Launch params carry no intervals (they're delivered via file), but skip is
     # enabled and the file path is set.
@@ -153,7 +153,7 @@ def test_with_skip_respects_disabled_ending(monkeypatch, tmp_path):
         "viu_media.cli.service.player.aniskip.fetch_skip_times",
         lambda *a, **k: intervals,
     )
-    out = svc._with_skip(_params(), _Media())
+    out = svc._with_skip(_params(), _Media())  # type: ignore[arg-type]
     assert out.skip_ed_enabled is False
 
     data = _read_skip_json_when_done(skip_path)
@@ -164,7 +164,7 @@ def test_with_skip_respects_disabled_ending(monkeypatch, tmp_path):
 def test_with_skip_noop_when_both_disabled():
     svc, _ = _service(opening_skip=False, ending_skip=False)
     params = _params()
-    assert svc._with_skip(params, _Media()) is params
+    assert svc._with_skip(params, _Media()) is params  # type: ignore[arg-type]
 
 
 def test_with_skip_without_mal_id_still_enables_for_chapter_fallback(
@@ -179,7 +179,7 @@ def test_with_skip_without_mal_id_still_enables_for_chapter_fallback(
     class NoMal:
         id_mal = None
 
-    out = svc._with_skip(_params(), NoMal())
+    out = svc._with_skip(_params(), NoMal())  # type: ignore[arg-type]
     assert out.skip_op is None and out.skip_ed is None
     assert out.skip_op_enabled is True and out.skip_ed_enabled is True
     assert out.skip_json == skip_path

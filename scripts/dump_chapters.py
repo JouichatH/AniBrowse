@@ -253,7 +253,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 continue
             out = _ffprobe_torrent(url, ffprobe, webtorrent, args.port)
         else:
-            out = _ffprobe(url, headers, ffprobe)
+            out = _ffprobe(url, headers or {}, ffprobe)
         chapters = parse_ffprobe_chapters(out)
         if not chapters:
             print(f"ep {episode}: no chapters")

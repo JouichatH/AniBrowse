@@ -206,9 +206,10 @@ class Nyaa(BaseAnimeProvider):
                 bm = _BATCH_RANGE_RE.search(title)
                 if bm:
                     batch_start, batch_end = int(bm.group(1)), int(bm.group(2))
-                if (
-                    batch_start is None
-                    or batch_start > batch_end
+                if batch_start is None or batch_end is None:
+                    batch_start = batch_end = None
+                elif (
+                    batch_start > batch_end
                     or batch_end >= _YEAR_FLOOR  # "(1999-2023)" is a year span
                     or batch_end - batch_start + 1 > _MAX_BATCH_SPAN
                 ):

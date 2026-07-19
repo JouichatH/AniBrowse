@@ -257,7 +257,7 @@ def resolve_first(
     def _drain():
         rest: List[Server] = []
         try:
-            rest = list(iterator)
+            rest = list(iterator or [])
         except Exception as e:  # noqa: BLE001 - background drain must not raise
             logger.debug("draining rest failed for ep %s: %s", episode, e)
         finally:
@@ -307,7 +307,7 @@ def _warm_if_torrent(servers) -> None:
     try:
         link = servers[0].links[0].link
         if link.startswith("magnet:"):
-            from ....libs.player.mpv.player import warm_torrent_stream
+            from .....libs.player.mpv.player import warm_torrent_stream
 
             warm_torrent_stream(link)
     except Exception as e:  # noqa: BLE001 - prefetch must never raise

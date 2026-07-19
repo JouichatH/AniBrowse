@@ -118,16 +118,17 @@ def test_downloads_menu_empty_guides_to_download(cfg, registry):
     )
 
     sel = FakeSelector([pick("Downloads")])
+    feedback = FakeFeedback()
     ctx = make_context(
         config=cfg,
         selector=sel,
         media_api=FakeApiClient(),
         media_registry=registry,
-        feedback=FakeFeedback(),
+        feedback=feedback,
     )
     drive(ctx, make_state("main"))
 
-    infos = [m for m in ctx._feedback.messages if m[0] == "info"]
+    infos = [m for m in feedback.messages if m[0] == "info"]
     assert any("empty" in m[1].lower() for m in infos)
     assert any("'Download'" in (m[2] or "") for m in infos)
     # The old category clones must be gone from every prompt shown.
