@@ -397,7 +397,9 @@ def _console_write_windows(data):
     import ctypes
     from ctypes import wintypes
 
-    k = ctypes.WinDLL("kernel32", use_last_error=True)
+    # Windows-only helper (callers gate on os.name == "nt", which pyright
+    # doesn't narrow); on POSIX stubs ctypes has no WinDLL.
+    k = ctypes.WinDLL("kernel32", use_last_error=True)  # pyright: ignore[reportAttributeAccessIssue]
     k.CreateFileW.restype = wintypes.HANDLE
     k.CreateFileW.argtypes = [
         wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID,
