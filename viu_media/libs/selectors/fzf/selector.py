@@ -66,11 +66,27 @@ class FzfSelector(BaseSelector):
             # menu. Signal the session loop to go back a level (exit at the root)
             # instead of the caller silently reloading the same menu (a dead end).
             raise NavigationAbort()
+        self._raise_on_fzf_error(result.returncode)
         if result.returncode != 0:
-            # No match (e.g. Enter on an unmatched query) or a benign error: no
-            # selection, but stay on the current menu.
+            # No match (e.g. Enter on an unmatched query): no selection, but
+            # stay on the current menu.
             return None
         return result.stdout.strip()
+
+    @staticmethod
+    def _raise_on_fzf_error(returncode: int):
+        """fzf exit 2 = it rejected its own invocation (bad option/action).
+
+        Distro fzf builds are often old (Ubuntu 24.04 LTS ships 0.44) and abort
+        instantly on opts they don't know; treating that as "no selection" made
+        every menu relaunch fzf into the same failure, an infinite error loop.
+        """
+        if returncode == 2:
+            raise AniBrowseError(
+                "fzf rejected its options (see the fzf error above). Your fzf "
+                "is likely too old for the configured opts - update fzf, or "
+                "trim the [fzf] opts entry in the config."
+            )
 
     def choose_multiple(self, prompt, choices, preview=None):
         """Enhanced multi-selection using fzf's --multi flag."""
@@ -98,6 +114,7 @@ class FzfSelector(BaseSelector):
         )
         if result.returncode == 130:
             raise NavigationAbort()
+        self._raise_on_fzf_error(result.returncode)
         if result.returncode != 0:
             return []
 
@@ -188,6 +205,7 @@ class FzfSelector(BaseSelector):
             encoding="utf-8",
             env=detect.get_clean_env(),
         )
+        self._raise_on_fzf_error(result.returncode)
         if result.returncode != 0:
             return None
         return result.stdout.strip()
