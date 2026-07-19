@@ -270,12 +270,17 @@ def _sixel_overlay(file_path):
         token_file.write_text(token_id, encoding="utf-8")
     except OSError:
         return False
+    # Resolve OUR fzf (an ancestor of this preview process) here, while the
+    # parent chain is still alive, and hand its pid to the detached drawer.
+    # The drawer must not scan by name: any stale fzf.exe lingering from a
+    # dead session is found first and the image lands on an invisible console.
+    fzf_pid = _fzf_ancestor_pid() or 0
     try:
         subprocess.Popen(
             [
                 _overlay_python(), os.path.abspath(__file__), _OVERLAY_SENTINEL,
                 file_path, str(top), str(left), str(width), str(rows),
-                token_id, str(token_file),
+                token_id, str(token_file), str(fzf_pid),
             ],
             close_fds=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL, **_no_window_kwargs(),
@@ -293,6 +298,7 @@ def _overlay_draw(argv):
     try:
         image, top, left, cols, rows, token_id, token_file = argv[:7]
         top, left, cols, rows = int(top), int(left), int(cols), int(rows)
+        fzf_pid = int(argv[7]) if len(argv) > 7 else 0
     except (ValueError, IndexError):
         return
     time.sleep(0.20)  # settle: draw only once fzf has repainted / scrolling paused
@@ -315,12 +321,12 @@ def _overlay_draw(argv):
     parts.append(("\x1b[%d;%dH" % (top, left)).encode())  # position, then draw
     parts.append(sixel)
     parts.append(b"\x1b8")  # restore cursor
-    _console_write(b"".join(parts))
+    _console_write(b"".join(parts), fzf_pid)
 
 
-def _console_write(data):
+def _console_write(data, fzf_pid=0):
     if os.name == "nt":
-        _console_write_windows(data)
+        _console_write_windows(data, fzf_pid)
         return
     try:
         with open("/dev/tty", "wb") as tty:
@@ -330,7 +336,7 @@ def _console_write(data):
         pass
 
 
-def _console_write_windows(data):
+def _console_write_windows(data, fzf_pid=0):
     import ctypes
     from ctypes import wintypes
 
@@ -342,7 +348,7 @@ def _console_write_windows(data):
         wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID,
         wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE,
     ]
-    pid = _find_fzf_pid(k)
+    pid = fzf_pid or _find_fzf_pid(k)
     if not pid:
         return
     k.FreeConsole()
@@ -361,7 +367,8 @@ def _console_write_windows(data):
     k.CloseHandle(handle)
 
 
-def _find_fzf_pid(k):
+def _process_snapshot(k):
+    """[(pid, ppid, exe_name_lower)] for all processes, via Toolhelp32."""
     import ctypes
     from ctypes import wintypes
 
@@ -379,21 +386,58 @@ def _find_fzf_pid(k):
     snap = k.CreateToolhelp32Snapshot(0x00000002, 0)  # TH32CS_SNAPPROCESS
     invalid = ctypes.c_void_p(-1).value
     if not snap or snap == invalid:
-        return None
+        return []
     entry = PROCESSENTRY32W()
     entry.dwSize = ctypes.sizeof(PROCESSENTRY32W)
-    pid = None
+    rows = []
     try:
         if k.Process32FirstW(snap, ctypes.byref(entry)):
             while True:
-                if entry.szExeFile.lower() == "fzf.exe":
-                    pid = entry.th32ProcessID
-                    break
+                rows.append(
+                    (entry.th32ProcessID, entry.th32ParentProcessID,
+                     entry.szExeFile.lower())
+                )
                 if not k.Process32NextW(snap, ctypes.byref(entry)):
                     break
     finally:
         k.CloseHandle(snap)
-    return pid
+    return rows
+
+
+def _fzf_ancestor_pid():
+    """Pid of the fzf.exe THIS preview process descends from (None if unknown).
+
+    Must be called from the fzf-spawned preview process, while the parent
+    chain is alive - the detached drawer's parent is already gone by the
+    time it runs, so the resolution happens here and travels via argv.
+    """
+    if os.name != "nt":
+        return None
+    import ctypes
+
+    k = ctypes.WinDLL("kernel32", use_last_error=True)  # pyright: ignore[reportAttributeAccessIssue]
+    table = {pid: (ppid, name) for pid, ppid, name in _process_snapshot(k)}
+    pid = os.getpid()
+    for _ in range(15):  # python <- cmd/sh <- fzf, with margin for shims
+        info = table.get(pid)
+        if not info:
+            return None
+        ppid = info[0]
+        parent = table.get(ppid)
+        if not parent:
+            return None
+        if parent[1] == "fzf.exe":
+            return ppid
+        pid = ppid
+    return None
+
+
+def _find_fzf_pid(k):
+    """Last-resort fallback: first fzf.exe by scan (wrong if stale fzf linger)."""
+    for pid, _ppid, name in _process_snapshot(k):
+        if name == "fzf.exe":
+            return pid
+    return None
 
 
 def fzf_image_preview(file_path: str):
