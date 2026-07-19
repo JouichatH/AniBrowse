@@ -14,10 +14,11 @@ The installers do this automatically after installing the app.
 
 from __future__ import annotations
 
+import json
 import shutil
-import subprocess
 import sys
 import tempfile
+import urllib.request
 import zipfile
 from pathlib import Path
 
@@ -107,6 +108,28 @@ def _patch_allanime_ranking(dst: Path) -> None:
         )
 
 
+def _download_wheel(tmpdir: Path) -> Path | None:
+    """Download the upstream wheel from PyPI with the stdlib only.
+
+    Deliberately NOT `pip download`: venvs created by uv (the Windows
+    installer) ship without pip, so shelling out to pip broke there. The
+    wheel's direct URL from PyPI's JSON API is all we need.
+    """
+    meta_url = f"https://pypi.org/pypi/viu-media/{UPSTREAM_VERSION}/json"
+    with urllib.request.urlopen(meta_url, timeout=30) as r:
+        meta = json.load(r)
+    wheel = next(
+        (u for u in meta.get("urls", []) if u.get("packagetype") == "bdist_wheel"),
+        None,
+    )
+    if not wheel:
+        return None
+    out = tmpdir / wheel["filename"]
+    with urllib.request.urlopen(wheel["url"], timeout=120) as r, open(out, "wb") as fh:
+        shutil.copyfileobj(r, fh)
+    return out
+
+
 def _target_dir() -> Path:
     """The installed viu_media provider dir (works for editable + regular installs)."""
     import viu_media.libs.provider.anime as anime_pkg
@@ -134,24 +157,18 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         tmpdir = Path(tmp)
         try:
-            subprocess.run(
-                [
-                    sys.executable, "-m", "pip", "download",
-                    f"viu-media=={UPSTREAM_VERSION}",
-                    "--no-deps", "--only-binary", ":all:", "-d", str(tmpdir),
-                ],
-                check=True,
+            wheel_path = _download_wheel(tmpdir)
+        except Exception as e:  # noqa: BLE001 - any network/parse failure -> actionable msg
+            print(f"error: failed to download the viu-media wheel ({e}).", file=sys.stderr)
+            return 1
+        if not wheel_path:
+            print(
+                f"error: no wheel on PyPI for viu-media=={UPSTREAM_VERSION}.",
+                file=sys.stderr,
             )
-        except subprocess.CalledProcessError:
-            print("error: failed to download the viu-media wheel.", file=sys.stderr)
             return 1
 
-        wheels = list(tmpdir.glob("viu_media-*.whl")) or list(tmpdir.glob("viu*.whl"))
-        if not wheels:
-            print("error: no wheel downloaded.", file=sys.stderr)
-            return 1
-
-        with zipfile.ZipFile(wheels[0]) as zf:
+        with zipfile.ZipFile(wheel_path) as zf:
             names = zf.namelist()
             for prov in PROVIDERS:
                 prefix = f"{PKG_PREFIX}{prov}/"
