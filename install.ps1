@@ -25,9 +25,17 @@ if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
 }
 
 # 2. Runtime tools ----------------------------------------------------------
-Say "`nInstalling runtime tools (python, node, mpv, fzf, chafa, pipx)..."
-scoop bucket add extras *> $null
+Say "`nInstalling runtime tools (git, python, node, mpv, fzf, chafa, pipx)..."
+# git must come first and via the main bucket: fresh machines have none, and
+# Scoop itself needs git to add buckets (mpv lives in the 'extras' bucket).
+# The clone step below needs git too.
+scoop install git
+scoop bucket add extras
 scoop install python nodejs mpv fzf chafa pipx
+# Make the freshly-installed shims (git, pipx, ...) usable in THIS session -
+# scoop puts them on the user PATH, but the current process predates that.
+$shims = Join-Path $env:USERPROFILE 'scoop\shims'
+if ($env:Path -notlike "*$shims*") { $env:Path = "$shims;$env:Path" }
 
 # 3. Get the repo (use local copy if run from a clone, else clone it) --------
 if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot 'pyproject.toml'))) {
