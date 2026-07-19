@@ -58,6 +58,17 @@ if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot 'pyproject.toml'))) {
 #    its own managed interpreter - we pin the app to a known-good 3.12.
 #    Extras baked in: thefuzz (fuzzy titles) + lxml (fast HTML parsing).
 Say "`nInstalling ani-browse (isolated via uv tool)..."
+# A running app locks files in its venv, making uv's reinstall die halfway
+# with "Access denied" and leaving a broken environment. Catch it up front:
+# the app runs as the venv's python.exe, so match processes by install path.
+$toolsDir = (cmd /c "uv tool dir 2>nul").Trim()
+if ($toolsDir) {
+    $locked = Get-Process | Where-Object { $_.Path -and $_.Path.StartsWith($toolsDir) }
+    if ($locked) {
+        Say "ani-browse appears to be running (close the app, any mpv/WebTorrent windows, then re-run this installer)." 'Yellow'
+        exit 1
+    }
+}
 uv tool install --force --python 3.12 --with thefuzz --with lxml "$repo"
 # Put uv's executable dir on PATH (session + user), asking uv where it is:
 # scoop's uv relocates it (scoop\persist\uv\tools\shims), so don't guess.
