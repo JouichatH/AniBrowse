@@ -33,6 +33,22 @@ CONFIG_HEADER = f"""
 # ==============================================================================
 """.lstrip()
 
+# Fields whose default is DETECTED from the running terminal (fzf on PATH,
+# sixel/kitty support, ...). Writing the detected value into config.toml would
+# freeze whatever terminal the FIRST run happened in — e.g. a first launch in
+# the installer's plain-conhost window would pin preview = "none" forever, even
+# though later launches in Windows Terminal render images fine. Emitting them
+# commented-out keeps them re-detected at every launch; uncommenting pins them.
+ENV_DETECTED_FIELDS = {
+    ("general", "selector"),
+    ("general", "preview"),
+    ("general", "image_renderer"),
+}
+
+ENV_DETECTED_NOTE = (
+    "Auto-detected from your terminal at each launch. Uncomment to pin a value."
+)
+
 CONFIG_FOOTER = f"""
 # ==============================================================================
 #
@@ -101,12 +117,32 @@ def generate_config_toml_from_app_model(app_model: AppConfig) -> str:
 
             if field_value is None:
                 config_content_parts.append(f"# {field_name} =")
+            elif (section_name, field_name) in ENV_DETECTED_FIELDS and (
+                field_value == _detected_default(section_model, field_name)
+            ):
+                # The value is just what detection produced right now, not an
+                # explicit user choice - keep it re-detected at every launch.
+                value_str = _format_toml_value(field_value)
+                config_content_parts.append(f"# {ENV_DETECTED_NOTE}")
+                config_content_parts.append(f"# {field_name} = {value_str}")
             else:
                 value_str = _format_toml_value(field_value)
                 config_content_parts.append(f"{field_name} = {value_str}")
 
     config_content_parts.extend(["\n", CONFIG_FOOTER])
     return "\n".join(config_content_parts)
+
+
+def _detected_default(section_model: Any, field_name: str) -> Any:
+    """The value detection would produce right now for an env-detected field.
+
+    Returns a sentinel that equals nothing when the field has no factory, so
+    callers fall through to writing the value out (pinning it).
+    """
+    field = type(section_model).model_fields.get(field_name)
+    if field is not None and field.default_factory is not None:
+        return field.default_factory()  # type: ignore[call-arg]
+    return object()
 
 
 def _format_toml_value(value: Any) -> str:

@@ -51,6 +51,32 @@ def test_modified_scalar_values_roundtrip(tmp_path):
     assert loaded == original
 
 
+def test_env_detected_fields_are_commented_out(tmp_path):
+    """selector / preview / image_renderer must NOT be frozen into the file.
+
+    Writing the detected value would pin whatever terminal the first run
+    happened in (e.g. preview = "none" from the installer's conhost window).
+    Left commented, the loader's default_factory re-detects them every launch.
+    """
+    toml_text = generate_config_toml_from_app_model(AppConfig())
+    parsed = tomllib.loads(toml_text)
+    for field in ("selector", "preview", "image_renderer"):
+        assert field not in parsed["general"], field
+        assert f"# {field} = " in toml_text, field
+
+
+def test_explicit_env_detected_choice_is_pinned(tmp_path):
+    """A value that differs from live detection is a user choice - keep it."""
+    original = AppConfig()
+    pinned = "text" if original.general.preview != "text" else "image"
+    original.general.preview = pinned
+    toml_text = generate_config_toml_from_app_model(original)
+    parsed = tomllib.loads(toml_text)
+    assert parsed["general"]["preview"] == pinned
+    loaded = _roundtrip(original, tmp_path)
+    assert loaded.general.preview == pinned
+
+
 def test_string_with_quotes_roundtrips(tmp_path):
     original = AppConfig()
     # A free-form string field stuffed with quotes/brackets - TOML escaping trap.
