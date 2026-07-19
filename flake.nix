@@ -68,8 +68,8 @@
 
           meta = {
             description = "Your browser anime experience from the terminal";
-            homepage = "https://github.com/JouichatH/Ani-Browse";
-            changelog = "https://github.com/JouichatH/Ani-Browse/releases/tag/v${version}";
+            homepage = "https://github.com/JouichatH/AniBrowse";
+            changelog = "https://github.com/JouichatH/AniBrowse/releases/tag/v${version}";
             mainProgram = "ani-browse";
             license = lib.licenses.unlicense;
             maintainers = with lib.maintainers; [ theobori ];

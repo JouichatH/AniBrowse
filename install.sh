@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ani-browse installer for Linux / macOS (fork of JouichatH/ani-browse).
+# ani-browse installer for Linux / macOS (fork of JouichatH/AniBrowse).
 # Installs runtime tools via your package manager, the ani-browse app (isolated
 # via pipx), and webtorrent-cli for torrent streaming. Safe to re-run.
 set -euo pipefail

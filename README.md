@@ -29,7 +29,7 @@ Once it's installed, you don't need any technical knowledge: **arrow keys** to m
 2. Copy the line below. **Right-click** inside the PowerShell window to paste it, then press **Enter**:
 
    ```powershell
-   irm https://raw.githubusercontent.com/JouichatH/ani-browse/master/install.ps1 | iex
+   irm https://raw.githubusercontent.com/JouichatH/AniBrowse/master/install.ps1 | iex
    ```
 
 3. Wait a few minutes while it installs everything — you'll see progress messages. (It's safe to run again if anything gets interrupted.)
@@ -46,8 +46,8 @@ First make sure **git** is installed (on macOS, running `git` the first time off
 2. Copy and paste these lines one at a time, pressing **Enter** after each:
 
    ```bash
-   git clone https://github.com/JouichatH/ani-browse.git
-   cd ani-browse
+   git clone https://github.com/JouichatH/AniBrowse.git
+   cd AniBrowse
    ./install.sh
    ```
 
@@ -102,9 +102,9 @@ That's everything you need to start. Settings, downloads, and power-user command
 </p>
 <div align="center">
 
-[![Tests](https://img.shields.io/github/actions/workflow/status/JouichatH/ani-browse/test.yml?label=Tests)](https://github.com/JouichatH/ani-browse/actions)
-[![Issues](https://img.shields.io/github/issues/JouichatH/ani-browse)](https://github.com/JouichatH/ani-browse/issues)
-[![License](https://img.shields.io/github/license/JouichatH/ani-browse)](https://github.com/JouichatH/ani-browse/blob/master/LICENSE)
+[![Tests](https://img.shields.io/github/actions/workflow/status/JouichatH/AniBrowse/test.yml?label=Tests)](https://github.com/JouichatH/AniBrowse/actions)
+[![Issues](https://img.shields.io/github/issues/JouichatH/AniBrowse)](https://github.com/JouichatH/AniBrowse/issues)
+[![License](https://img.shields.io/github/license/JouichatH/AniBrowse)](https://github.com/JouichatH/AniBrowse/blob/master/LICENSE)
 
 </div>
 
@@ -175,8 +175,8 @@ fetch the provider scrapers, and set up mpv / fzf / chafa / webtorrent.
 To install manually instead:
 
 ```bash
-git clone https://github.com/JouichatH/ani-browse.git
-cd ani-browse
+git clone https://github.com/JouichatH/AniBrowse.git
+cd AniBrowse
 pipx install .                     # installs the `ani-browse` command (isolated)
 python scripts/fetch_providers.py  # fetch the provider scrapers (run with the app's Python)
 ani-browse --version

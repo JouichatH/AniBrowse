@@ -1,4 +1,4 @@
-# ani-browse one-command installer for Windows (fork of JouichatH/ani-browse).
+# ani-browse one-command installer for Windows (fork of JouichatH/AniBrowse).
 #
 # Installs everything needed for a reproducible setup: a no-admin package
 # manager (Scoop), the runtime tools (python, node, mpv, fzf, chafa), the
@@ -7,10 +7,10 @@
 #
 # Run from a clone:                    .\install.ps1
 # Or one-line (clones automatically):
-#   irm https://raw.githubusercontent.com/JouichatH/ani-browse/master/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/JouichatH/AniBrowse/master/install.ps1 | iex
 
 $ErrorActionPreference = 'Stop'
-$RepoUrl = 'https://github.com/JouichatH/ani-browse'
+$RepoUrl = 'https://github.com/JouichatH/AniBrowse'
 function Say($m, $c = 'Green') { Write-Host $m -ForegroundColor $c }
 
 Say "`n=== ani-browse installer ===`n"
