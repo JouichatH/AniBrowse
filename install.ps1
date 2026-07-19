@@ -1,9 +1,9 @@
 # ani-browse one-command installer for Windows (fork of JouichatH/AniBrowse).
 #
 # Installs everything needed for a reproducible setup: a no-admin package
-# manager (Scoop), the runtime tools (python, node, mpv, fzf, chafa), the
-# ani-browse app itself (isolated via pipx), and webtorrent-cli for torrent
-# streaming. Safe to re-run.
+# manager (Scoop), the runtime tools (git, python, node, mpv, fzf, chafa), the
+# ani-browse app itself (isolated via `uv tool`), and webtorrent-cli for
+# torrent streaming. Safe to re-run.
 #
 # Run from a clone:                    .\install.ps1
 # Or one-line (clones automatically):
@@ -25,13 +25,13 @@ if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
 }
 
 # 2. Runtime tools ----------------------------------------------------------
-Say "`nInstalling runtime tools (git, python, node, mpv, fzf, chafa, pipx)..."
+Say "`nInstalling runtime tools (git, python, node, mpv, fzf, chafa, uv)..."
 # git must come first and via the main bucket: fresh machines have none, and
 # Scoop itself needs git to add buckets (mpv lives in the 'extras' bucket).
 # The clone step below needs git too.
 scoop install git
 scoop bucket add extras
-scoop install python nodejs mpv fzf chafa pipx
+scoop install python nodejs mpv fzf chafa uv
 # Make the freshly-installed shims (git, pipx, ...) usable in THIS session -
 # scoop puts them on the user PATH, but the current process predates that.
 $shims = Join-Path $env:USERPROFILE 'scoop\shims'
@@ -52,18 +52,21 @@ if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot 'pyproject.toml'))) {
     }
 }
 
-# 4. Install the app, isolated (avoids conflicts with any base/anaconda env) --
-Say "`nInstalling ani-browse (isolated via pipx)..."
-pipx ensurepath *> $null
-pipx install --force "$repo"
-# Nice-to-have extras: fuzzy title matching + fast HTML parsing.
-Say "Adding optional extras (thefuzz, lxml)..."
-try { pipx inject viu-media thefuzz lxml *> $null } catch { Write-Host "  (extras skipped: $_)" -ForegroundColor Yellow }
+# 4. Install the app, isolated (avoids conflicts with any base/anaconda env).
+#    uv (not pipx): Scoop's pipx pyz crashes on the Python Scoop now ships
+#    (3.14, missing colorama), while uv is a single static binary that brings
+#    its own managed interpreter - we pin the app to a known-good 3.12.
+#    Extras baked in: thefuzz (fuzzy titles) + lxml (fast HTML parsing).
+Say "`nInstalling ani-browse (isolated via uv tool)..."
+uv tool install --force --python 3.12 --with thefuzz --with lxml "$repo"
+uv tool update-shell *> $null
+$uvBin = Join-Path $env:USERPROFILE '.local\bin'
+if ($env:Path -notlike "*$uvBin*") { $env:Path = "$uvBin;$env:Path" }
 
 # 4b. Fetch the provider scrapers (not vendored in this repo; see
 #     scripts/fetch_providers.py) into the isolated app environment.
 Say "Fetching provider scrapers from the viu-media wheel..."
-$appPy = Join-Path (pipx environment --value PIPX_LOCAL_VENVS) 'viu-media\Scripts\python.exe'
+$appPy = Join-Path "$(uv tool dir)".Trim() 'viu-media\Scripts\python.exe'
 if (Test-Path $appPy) {
     & $appPy (Join-Path $repo 'scripts\fetch_providers.py')
 } else {

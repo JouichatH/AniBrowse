@@ -36,8 +36,13 @@ if ($userPath -notlike "*$npmPrefix*") {
     Say "npm global bin already on PATH."
 }
 
-# Verify (use the session PATH we just extended)
-$env:Path = "$env:Path;$npmPrefix"
-$ver = (& "$npmPrefix\webtorrent" --version 2>&1 | Select-Object -First 1)
-if ($LASTEXITCODE -eq 0) { Say "[OK] webtorrent $ver" }
-else { Write-Host "[!] webtorrent installed but did not run cleanly. Open a new terminal and try 'webtorrent --version'." -ForegroundColor Yellow }
+# Verify. Use webtorrent.cmd explicitly: the extensionless `webtorrent` next
+# to it is a unix shell script, and invoking it makes PowerShell try to "open
+# a document" (fatal when the installer runs via `irm | iex`).
+$wtCmd = Join-Path $npmPrefix 'webtorrent.cmd'
+try {
+    $ver = (& $wtCmd --version | Select-Object -First 1)
+    Say "[OK] webtorrent $ver"
+} catch {
+    Write-Host "[!] webtorrent installed but did not run cleanly. Open a new terminal and try 'webtorrent --version'." -ForegroundColor Yellow
+}
