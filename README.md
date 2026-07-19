@@ -54,6 +54,8 @@ First make sure **git** is installed (on macOS, running `git` the first time off
 3. Wait for it to finish — it sets up the app plus the media player (`mpv`), the menu tool (`fzf`), and the torrent helper.
 4. Open a **new terminal**, type **`ani-browse`**, and press **Enter**. 🎉
 
+> **If it says `command not found`:** run `export PATH="$HOME/.local/bin:$PATH"` and try again (that's where the installer puts the app; new terminals normally pick it up automatically).
+
 > **A note on torrents:** when a new episode is only available via torrent, ani-browse streams it over BitTorrent, which briefly uploads (seeds) while you watch. Using a **VPN** is advisable. This only happens for the torrent fallback.
 
 ## First time using it
