@@ -3,6 +3,7 @@ from typing import Callable, Dict, Literal, Union
 from .....core.exceptions import NavigationAbort
 from ...session import Context, session
 from ...state import InternalDirective, MenuName, State
+from ._prompts import sub_choose
 
 MenuAction = Callable[[], Union[State, InternalDirective]]
 
@@ -257,8 +258,8 @@ def _change_provider(ctx: Context, state: State) -> MenuAction:
     def action():
         from .....libs.provider.anime.types import ProviderName
 
-        new_provider = ctx.selector.choose(
-            "Select Provider", [provider.value for provider in ProviderName]
+        new_provider = sub_choose(
+            ctx.selector, "Select Provider", [provider.value for provider in ProviderName]
         )
         if not new_provider:
             return InternalDirective.RELOAD
@@ -324,7 +325,9 @@ def _change_server(ctx: Context, state: State) -> MenuAction:
             (f"{name}  (current)" if name == current else name): name
             for name in server_map
         }
-        picked = selector.choose("Select a different server:", list(labels.keys()))
+        # Nested prompt: Esc must cancel back to "What's next?" - letting the
+        # abort propagate would pop into the servers pass-through and REPLAY.
+        picked = sub_choose(selector, "Select a different server:", list(labels.keys()))
         if not picked:
             return InternalDirective.RELOAD
         chosen = labels[picked]
@@ -356,7 +359,8 @@ def _change_quality(ctx: Context, state: State) -> MenuAction:
             feedback.error("Player state is incomplete. Returning.")
             return InternalDirective.BACK
 
-        new_quality = selector.choose(
+        new_quality = sub_choose(
+            selector,
             "Select a different quality:",
             [link.quality for link in state.provider.server.links],
         )

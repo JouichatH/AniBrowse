@@ -14,6 +14,7 @@ from .....libs.player.params import PlayerParams
 from ...session import Context, session
 from ...state import InternalDirective, MediaApiState, MenuName, State
 from ._cursor import remembered_choose
+from ._prompts import sub_choose, sub_choose_multiple
 
 MenuAction = Callable[[], State | InternalDirective]
 
@@ -240,8 +241,10 @@ def _manage_user_media_list(ctx: Context, state: State) -> MenuAction:
         if not media_item:
             return InternalDirective.RELOAD
 
-        status = ctx.selector.choose(
-            "Select list status", choices=[t.value for t in UserMediaListStatus]
+        status = sub_choose(
+            ctx.selector,
+            "Select list status",
+            choices=[t.value for t in UserMediaListStatus],
         )
         if status:
             # Local-first: the on-disk registry is the source of truth and
@@ -298,13 +301,15 @@ def _manage_user_media_list_in_bulk(ctx: Context, state: State) -> MenuAction:
                     list(choice_map.keys()),
                     ctx.config,
                 )
-                selected_titles = ctx.selector.choose_multiple(
+                selected_titles = sub_choose_multiple(
+                    ctx.selector,
                     "Select anime to manage",
                     list(choice_map.keys()),
                     preview=preview_command,
                 )
         else:
-            selected_titles = ctx.selector.choose_multiple(
+            selected_titles = sub_choose_multiple(
+                ctx.selector,
                 "Select anime to manage",
                 list(choice_map.keys()),
             )
@@ -313,8 +318,10 @@ def _manage_user_media_list_in_bulk(ctx: Context, state: State) -> MenuAction:
             return InternalDirective.RELOAD
         anime_to_update_status = [choice_map[title] for title in selected_titles]
 
-        status = ctx.selector.choose(
-            "Select list status", choices=[t.value for t in UserMediaListStatus]
+        status = sub_choose(
+            ctx.selector,
+            "Select list status",
+            choices=[t.value for t in UserMediaListStatus],
         )
         if not status:
             feedback.warning("No status selected. Aborting bulk action.")
@@ -348,8 +355,8 @@ def _change_provider(ctx: Context, state: State) -> MenuAction:
     def action():
         from .....libs.provider.anime.types import ProviderName
 
-        new_provider = ctx.selector.choose(
-            "Select Provider", [provider.value for provider in ProviderName]
+        new_provider = sub_choose(
+            ctx.selector, "Select Provider", [provider.value for provider in ProviderName]
         )
         if not new_provider:  # backed out of the picker: keep the current one
             return InternalDirective.RELOAD
