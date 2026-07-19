@@ -41,8 +41,12 @@ if ($userPath -notlike "*$npmPrefix*") {
 # a document" (fatal when the installer runs via `irm | iex`).
 $wtCmd = Join-Path $npmPrefix 'webtorrent.cmd'
 try {
-    $ver = (& $wtCmd --version | Select-Object -First 1)
-    Say "[OK] webtorrent $ver"
+    # Capture ALL output, then take the first line. Piping the live command
+    # into `Select-Object -First 1` closes the pipe early and node dies with
+    # EPIPE (exit 1) after printing - that stale $LASTEXITCODE then fails
+    # CI-style callers that check it, even though the install succeeded.
+    $verLines = @(& $wtCmd --version)
+    Say "[OK] webtorrent $($verLines[0])"
 } catch {
     Write-Host "[!] webtorrent installed but did not run cleanly. Open a new terminal and try 'webtorrent --version'." -ForegroundColor Yellow
 }
