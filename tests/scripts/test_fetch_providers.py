@@ -71,6 +71,203 @@ def test_patch_skips_unknown_shape():
     assert new_text == foreign
 
 
+# ---------------------------------------------------------------------------
+# aaReq handshake patch
+# ---------------------------------------------------------------------------
+
+# Slim stand-ins for the upstream 3.5.0 files, containing every anchor the
+# handshake patch keys on. Keep in step with UPSTREAM_VERSION.
+PRISTINE_CONSTANTS = '''\
+PERSISTED_QUERY_SHA256 = (
+    "d405d0edd690624b66baba3068e0edc3ac90f1597d898a1ec8db4e5c43c00fec"
+)
+TOBEPARSED_DECRYPTION_SEED = "Xot36i3lK3:v1"
+
+# search constants
+DEFAULT_COUNTRY_OF_ORIGIN = "all"
+'''
+
+PRISTINE_UTILS = '''\
+import functools
+import hashlib
+import json
+import logging
+import os
+import re
+from base64 import b64decode
+from itertools import cycle
+from typing import Any
+
+from Cryptodome.Cipher import AES
+
+logger = logging.getLogger(__name__)
+
+# Dictionary to map hex values to characters
+hex_to_char = {
+    "01": "9",
+}
+
+
+def decode_tobeparsed(payload: str, key_seed: str) -> dict[str, Any]:
+    base64_padding = (-len(payload)) % 4
+    encrypted_payload = b64decode(payload + ("=" * base64_padding))
+    iv = encrypted_payload[1:13]
+    ciphertext = encrypted_payload[13:-16]
+    decryption_key = hashlib.sha256(key_seed.encode("utf-8")).digest()
+
+    plain_text = AES.new(
+        decryption_key,
+        AES.MODE_CTR,
+        nonce=iv,
+        initial_value=2,
+    ).decrypt(ciphertext)
+
+    return json.loads(plain_text.decode("utf-8"))
+'''
+
+PRISTINE_PROVIDER = '''\
+from .constants import (
+    ANIME_GQL,
+    API_EPISODE_HEADERS,
+    API_GRAPHQL_ENDPOINT,
+    API_GRAPHQL_HEADERS,
+    API_GRAPHQL_REFERER,
+    EPISODE_GQL,
+    PERSISTED_QUERY_SHA256,
+    SEARCH_GQL,
+    TOBEPARSED_DECRYPTION_SEED,
+)
+from .utils import decode_tobeparsed
+
+
+class AllAnime:
+    def _extract_episode_from_payload(self, payload):
+        encoded_payload = payload.get("tobeparsed")
+        parsed_payload = decode_tobeparsed(encoded_payload, TOBEPARSED_DECRYPTION_SEED)
+        return parsed_payload.get("episode")
+
+    def _get_episode_payload(self, params):
+        persisted_query_response = self.client.get(
+            "endpoint",
+            params={
+                "extensions": dumps(
+                    {
+                        "persistedQuery": {
+                            "version": 1,
+                            "sha256Hash": PERSISTED_QUERY_SHA256,
+                        }
+                    },
+                    separators=(",", ":"),
+                ),
+            },
+        )
+'''
+
+
+def test_handshake_patch_applies_to_all_files():
+    for name, pristine in [
+        ("constants.py", PRISTINE_CONSTANTS),
+        ("utils.py", PRISTINE_UTILS),
+        ("provider.py", PRISTINE_PROVIDER),
+    ]:
+        new_text, status = fp.apply_handshake_patch(name, pristine)
+        assert status == "patched", name
+        assert fp.HANDSHAKE_SENTINELS[name] in new_text, name
+
+
+def test_handshake_patch_is_idempotent():
+    once, s1 = fp.apply_handshake_patch("utils.py", PRISTINE_UTILS)
+    assert s1 == "patched"
+    twice, s2 = fp.apply_handshake_patch("utils.py", once)
+    assert s2 == "already"
+    assert twice == once
+
+
+def test_handshake_patch_skips_unknown_shape():
+    # A future upstream whose text no longer matches ANY anchor must be left
+    # untouched — never half-patched.
+    foreign = PRISTINE_UTILS.replace("def decode_tobeparsed", "def decode_blob")
+    new_text, status = fp.apply_handshake_patch("utils.py", foreign)
+    assert status == "skipped"
+    assert new_text == foreign
+    # unknown filename is also a skip
+    _, status = fp.apply_handshake_patch("mappers.py", "whatever")
+    assert status == "skipped"
+
+
+def test_handshake_patch_recognizes_hand_fixed_copy():
+    # The fork's development copy already carries the fix (without any marker
+    # comment); the sentinel must classify it as "already", not corrupt it.
+    fixed = "ALLANIME_KEY = \"abc\"\n"
+    same, status = fp.apply_handshake_patch("constants.py", fixed)
+    assert status == "already"
+    assert same == fixed
+
+
+def test_patched_get_aa_req_produces_valid_token():
+    """Execute the patched utils.py: the aaReq token must decrypt back to the
+    signed payload with the published key (AES-256-GCM round-trip)."""
+    import sys
+    import types
+
+    patched, status = fp.apply_handshake_patch("utils.py", PRISTINE_UTILS)
+    assert status == "patched"
+
+    consts, status = fp.apply_handshake_patch("constants.py", PRISTINE_CONSTANTS)
+    assert status == "patched"
+    const_ns: dict = {}
+    exec(compile(consts, "<constants>", "exec"), const_ns)
+
+    fake_constants = types.ModuleType("_fake_allanime_constants")
+    for k in (
+        "ALLANIME_BUILD_ID",
+        "ALLANIME_EPOCH",
+        "ALLANIME_KEY",
+        "PERSISTED_QUERY_SHA256",
+    ):
+        setattr(fake_constants, k, const_ns[k])
+    src = patched.replace(
+        "from .constants import ALLANIME_BUILD_ID, ALLANIME_EPOCH, ALLANIME_KEY, PERSISTED_QUERY_SHA256",
+        "from _fake_allanime_constants import ALLANIME_BUILD_ID, ALLANIME_EPOCH, ALLANIME_KEY, PERSISTED_QUERY_SHA256",
+    )
+    sys.modules["_fake_allanime_constants"] = fake_constants
+    try:
+        ns: dict = {}
+        exec(compile(src, "<patched-utils>", "exec"), ns)
+
+        import json as _json
+        from base64 import b64decode as _b64decode
+
+        from Cryptodome.Cipher import AES as _AES
+
+        token = ns["get_aa_req"]()
+        raw = _b64decode(token)
+        assert raw[0:1] == b"\x01"
+        iv, ciphertext, tag = raw[1:13], raw[13:-16], raw[-16:]
+        cipher = _AES.new(
+            bytes.fromhex(const_ns["ALLANIME_KEY"]), _AES.MODE_GCM, nonce=iv
+        )
+        payload = _json.loads(cipher.decrypt_and_verify(ciphertext, tag))
+        assert payload["epoch"] == const_ns["ALLANIME_EPOCH"]
+        assert payload["buildId"] == str(const_ns["ALLANIME_BUILD_ID"])
+        assert payload["qh"] == const_ns["PERSISTED_QUERY_SHA256"]
+        assert payload["ts"] % (300 * 1000) == 0
+
+        # decode_tobeparsed now takes the hex key directly (CTR round-trip).
+        key_hex = const_ns["ALLANIME_KEY"]
+        iv12 = b"\x00" * 12
+        blob = _json.dumps({"episode": {"n": 1}}).encode()
+        ct = _AES.new(
+            bytes.fromhex(key_hex), _AES.MODE_CTR, nonce=iv12, initial_value=2
+        ).encrypt(blob)
+        from base64 import b64encode as _b64encode
+
+        envelope = _b64encode(b"\x01" + iv12 + ct + b"\x00" * 16).decode()
+        assert ns["decode_tobeparsed"](envelope, key_hex) == {"episode": {"n": 1}}
+    finally:
+        sys.modules.pop("_fake_allanime_constants", None)
+
+
 def test_patched_body_ranks_best_first():
     """Execute the patched episode_streams to prove best-first + dedupe order."""
     patched, _ = fp.apply_ranking_patch(PRISTINE)

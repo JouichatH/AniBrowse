@@ -32,8 +32,9 @@ PKG_PREFIX = "viu_media/libs/provider/anime/"
 #
 # The provider scrapers are fetched from the upstream wheel and NOT vendored in
 # the public repo, so fork-owned edits to them can't live as committed source.
-# Instead we reproduce the one ranking edit here as an idempotent, marker-guarded,
-# version-pinned text patch applied right after fetch. Each provider is expected
+# Instead we reproduce each fork edit here (this ranking patch and the aaReq
+# handshake patch above) as idempotent, version-pinned text patches applied
+# right after fetch. Each provider is expected
 # to yield servers best-first with honest quality; allanime's raw `sourceUrls`
 # order is arbitrary, so we dedupe by sourceName and sort by allanime's own
 # `priority` float (descending). This makes `all_servers[0]` and
@@ -86,6 +87,211 @@ def apply_ranking_patch(text: str) -> tuple[str, str]:
     if _RANKING_ANCHOR not in text:
         return text, "skipped"
     return text.replace(_RANKING_ANCHOR, _RANKING_REPLACEMENT, 1), "patched"
+
+
+# ---------------------------------------------------------------------------
+# allanime aaReq handshake patch (ported from pystardust/ani-cli's `fix` branch,
+# live-verified 2026-07-17; see the fork's provider-fix notes).
+#
+# Upstream viu-media 3.5.0 (the wheel we fetch) predates allanime's server-side
+# anti-scrape gate: without a signed `aaReq` token in the source request the API
+# answers AA_CRYPTO_MISSING and every episode resolves to zero servers, so the
+# app silently lives on the nyaa fallback. Like the ranking patch, the fix is a
+# set of anchored, all-or-nothing text edits applied right after fetch: if any
+# anchor is missing (unknown upstream shape) the file is left untouched.
+#
+# Idempotency is keyed on the patched code itself (sentinels below) rather than
+# a marker comment so the patched result stays byte-identical to the fork's
+# hand-fixed development copy.
+#
+# TREADMILL NOTE: ALLANIME_KEY / ALLANIME_EPOCH / ALLANIME_BUILD_ID rot
+# periodically. When streams break again with AA_CRYPTO_MISSING, re-sync the
+# three values from ani-cli's `fix` branch (raw.githubusercontent.com/
+# pystardust/ani-cli/fix/ani-cli, the get_aa_req section) and update them here.
+HANDSHAKE_SENTINELS = {
+    "constants.py": "ALLANIME_KEY =",
+    "utils.py": "def get_aa_req",
+    "provider.py": "get_aa_req",
+}
+
+_HANDSHAKE_EDITS: dict[str, list[tuple[str, str]]] = {
+    "constants.py": [
+        (
+            '''\
+TOBEPARSED_DECRYPTION_SEED = "Xot36i3lK3:v1"
+
+# search constants''',
+            '''\
+# DEPRECATED: the source blob is no longer keyed with sha256(seed); it now uses
+# ALLANIME_KEY directly. Kept for reference only.
+TOBEPARSED_DECRYPTION_SEED = "Xot36i3lK3:v1"
+
+# aaReq crypto-signature values required by the allanime source endpoint.
+# These rot periodically (the "crypto treadmill") — track pystardust/ani-cli's
+# `fix` branch get_aa_req()/constants when source fetches start failing with
+# AA_CRYPTO_MISSING and update all three.
+ALLANIME_KEY = "cf4777b5778aeadc9449e12769ea545d00c43cd8ff65d482364586cde204f359"
+ALLANIME_EPOCH = 4130
+ALLANIME_BUILD_ID = 41
+
+# search constants''',
+        ),
+    ],
+    "utils.py": [
+        (
+            '''\
+import logging
+import os
+import re
+from base64 import b64decode
+from itertools import cycle''',
+            '''\
+import logging
+import os
+import re
+import time
+from base64 import b64decode, b64encode
+from itertools import cycle''',
+        ),
+        (
+            '''\
+from Cryptodome.Cipher import AES
+
+logger = logging.getLogger(__name__)
+
+# Dictionary to map hex values to characters''',
+            '''\
+from Cryptodome.Cipher import AES
+
+from .constants import ALLANIME_BUILD_ID, ALLANIME_EPOCH, ALLANIME_KEY, PERSISTED_QUERY_SHA256
+
+logger = logging.getLogger(__name__)
+
+
+def get_aa_req() -> str:
+    """Build the signed ``aaReq`` token the allanime source endpoint now requires.
+
+    Mirrors get_aa_req() from pystardust/ani-cli's `fix` branch (v4.15.0):
+    a 5-minute-bucketed timestamp is signed via AES-256-GCM and packaged as
+    base64(0x01 || iv || ciphertext || tag). Without it the API returns
+    AA_CRYPTO_MISSING and no sources.
+    """
+    ts = (int(time.time()) // 300) * 300 * 1000
+    qh = PERSISTED_QUERY_SHA256
+    payload = json.dumps(
+        {
+            "v": 1,
+            "ts": ts,
+            "epoch": ALLANIME_EPOCH,
+            "buildId": str(ALLANIME_BUILD_ID),
+            "qh": qh,
+        },
+        separators=(",", ":"),
+    ).encode()
+    iv = hashlib.sha256(
+        f"{ALLANIME_EPOCH}:{ALLANIME_BUILD_ID}:{qh}:{ts}".encode()
+    ).digest()[:12]
+    cipher = AES.new(bytes.fromhex(ALLANIME_KEY), AES.MODE_GCM, nonce=iv)
+    ciphertext, tag = cipher.encrypt_and_digest(payload)
+    return b64encode(b"\\x01" + iv + ciphertext + tag).decode()
+
+# Dictionary to map hex values to characters''',
+        ),
+        (
+            "def decode_tobeparsed(payload: str, key_seed: str) -> dict[str, Any]:\n",
+            '''\
+def decode_tobeparsed(payload: str, key_hex: str) -> dict[str, Any]:
+    # The source blob is now keyed with the rotating ALLANIME_KEY (same key as
+    # the aaReq signature) rather than sha256(seed). Envelope is
+    # 0x01 || iv(12) || ciphertext || tag(16), decrypted with AES-256-CTR
+    # (counter = iv || 0x00000002).
+''',
+        ),
+        (
+            '    decryption_key = hashlib.sha256(key_seed.encode("utf-8")).digest()',
+            "    decryption_key = bytes.fromhex(key_hex)",
+        ),
+    ],
+    "provider.py": [
+        (
+            "from .constants import (\n    ANIME_GQL,",
+            "from .constants import (\n    ALLANIME_KEY,\n    ANIME_GQL,",
+        ),
+        (
+            "    SEARCH_GQL,\n    TOBEPARSED_DECRYPTION_SEED,\n)",
+            "    SEARCH_GQL,\n)",
+        ),
+        (
+            "from .utils import decode_tobeparsed\n",
+            "from .utils import decode_tobeparsed, get_aa_req\n",
+        ),
+        (
+            "decode_tobeparsed(encoded_payload, TOBEPARSED_DECRYPTION_SEED)",
+            "decode_tobeparsed(encoded_payload, ALLANIME_KEY)",
+        ),
+        (
+            '''\
+                            "sha256Hash": PERSISTED_QUERY_SHA256,
+                        }
+                    },''',
+            '''\
+                            "sha256Hash": PERSISTED_QUERY_SHA256,
+                        },
+                        "aaReq": get_aa_req(),
+                    },''',
+        ),
+    ],
+}
+
+
+def apply_handshake_patch(filename: str, text: str) -> tuple[str, str]:
+    """Apply the aaReq handshake patch to one allanime source file's text.
+
+    Pure and idempotent, mirroring ``apply_ranking_patch``. Returns
+    ``(new_text, status)`` where status is ``"already"``, ``"skipped"``
+    (unknown file or any anchor missing — nothing is half-applied), or
+    ``"patched"``.
+    """
+    edits = _HANDSHAKE_EDITS.get(filename)
+    sentinel = HANDSHAKE_SENTINELS.get(filename)
+    if edits is None or sentinel is None:
+        return text, "skipped"
+    if sentinel in text:
+        return text, "already"
+    if any(anchor not in text for anchor, _ in edits):
+        return text, "skipped"
+    for anchor, replacement in edits:
+        text = text.replace(anchor, replacement, 1)
+    return text, "patched"
+
+
+def _patch_allanime_handshake(dst: Path) -> None:
+    """Idempotently patch the fetched allanime provider for the aaReq handshake."""
+    allanime = dst / "allanime"
+    if not (allanime / "provider.py").exists():
+        return
+    for filename in _HANDSHAKE_EDITS:
+        target = allanime / filename
+        if not target.exists():
+            print(
+                f"  warning: allanime/{filename} missing; handshake patch NOT applied.",
+                file=sys.stderr,
+            )
+            continue
+        original = target.read_text(encoding="utf-8")
+        new_text, status = apply_handshake_patch(filename, original)
+        if status == "patched":
+            target.write_text(new_text, encoding="utf-8")
+            print(f"  patched allanime/{filename}: aaReq handshake applied")
+        elif status == "already":
+            print(f"  allanime/{filename}: handshake patch already present")
+        else:  # skipped
+            print(
+                f"  warning: allanime/{filename} did not match the pinned "
+                f"viu-media=={UPSTREAM_VERSION} shape; handshake patch NOT "
+                "applied — allanime sources will fail with AA_CRYPTO_MISSING.",
+                file=sys.stderr,
+            )
 
 
 def _patch_allanime_ranking(dst: Path) -> None:
@@ -148,8 +354,10 @@ def main() -> int:
     missing = [p for p in PROVIDERS if not (dst / p / "provider.py").exists()]
     if not missing:
         print(f"Providers already present in {dst} — nothing to fetch.")
-        # Still (idempotently) ensure the ranking patch is applied to a
-        # pre-existing install.
+        # Still (idempotently) ensure the fork patches are applied to a
+        # pre-existing install (this also repairs installs fetched before a
+        # patch existed — e.g. the aaReq handshake fix).
+        _patch_allanime_handshake(dst)
         _patch_allanime_ranking(dst)
         return 0
 
@@ -183,6 +391,7 @@ def main() -> int:
                         shutil.copyfileobj(src, fh)
                 print(f"  installed provider: {prov}")
 
+    _patch_allanime_handshake(dst)
     _patch_allanime_ranking(dst)
     print(f"Done. Providers installed into {dst}")
     return 0
