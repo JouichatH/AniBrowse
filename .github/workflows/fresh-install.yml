@@ -1,0 +1,149 @@
+# Simulates a brand-new Windows machine: runs install.ps1 end-to-end, then
+# asserts the things that broke on real fresh installs — providers fetched WITH
+# the fork patches (aaReq handshake + ranking), and first-run config generation
+# that re-detects terminal capabilities instead of freezing them.
+name: Fresh Install (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - install.ps1
+      - scripts/**
+      - viu_media/cli/config/**
+      - viu_media/core/config/**
+      - .github/workflows/fresh-install.yml
+  pull_request:
+    branches: [master]
+    paths:
+      - install.ps1
+      - scripts/**
+      - viu_media/cli/config/**
+      - viu_media/core/config/**
+      - .github/workflows/fresh-install.yml
+
+jobs:
+  fresh-install:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      # Scoop's installer refuses elevated shells (GitHub runners are admin)
+      # unless -RunAsAdmin. Pre-install it that way; install.ps1 then detects
+      # it and proceeds exactly as on a user machine.
+      - name: Pre-install Scoop (runner is admin)
+        shell: powershell
+        run: |
+          Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+          iex "& {$(irm get.scoop.sh)} -RunAsAdmin"
+          "$env:USERPROFILE\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Run the installer
+        shell: powershell
+        run: .\install.ps1
+
+      - name: Locate the installed app
+        id: app
+        shell: powershell
+        run: |
+          $env:Path = "$env:USERPROFILE\scoop\shims;$env:Path"
+          $toolsDir = (cmd /c "uv tool dir 2>nul").Trim()
+          $appPy = Join-Path $toolsDir 'viu-media\Scripts\python.exe'
+          if (-not (Test-Path $appPy)) { Write-Error "app python not found at $appPy"; exit 1 }
+          "appPy=$appPy" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $uvBin = (cmd /c "uv tool dir --bin 2>nul").Trim()
+          $uvBin | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: App entrypoint runs
+        shell: powershell
+        run: |
+          ani-browse --version
+          ani-browse --no-config doctor
+
+      - name: Providers fetched and fork-patched
+        shell: powershell
+        run: |
+          $appPy = "${{ steps.app.outputs.appPy }}"
+          & $appPy -c @'
+          import sys
+          from pathlib import Path
+          import viu_media.libs.provider.anime as pkg
+
+          root = Path(pkg.__path__[0])
+          failures = []
+          for prov in ("allanime", "animepahe", "animeunity"):
+              if not (root / prov / "provider.py").exists():
+                  failures.append(f"{prov}: provider.py missing (fetch_providers did not run?)")
+
+          provider_text = (root / "allanime" / "provider.py").read_text(encoding="utf-8")
+          utils_text = (root / "allanime" / "utils.py").read_text(encoding="utf-8")
+          if "get_aa_req" not in provider_text or "def get_aa_req" not in utils_text:
+              failures.append("allanime: aaReq handshake patch MISSING -> AA_CRYPTO_MISSING, permanent nyaa fallback")
+          if "[ani-browse:ranking-patch]" not in provider_text:
+              failures.append("allanime: best-first ranking patch missing")
+
+          from viu_media.libs.provider.anime.allanime.utils import get_aa_req
+          token = get_aa_req()
+          if len(token) < 50:
+              failures.append(f"get_aa_req produced a suspicious token: {token!r}")
+
+          from viu_media.libs.provider.anime.provider import create_provider
+          from viu_media.libs.provider.anime.types import ProviderName
+          create_provider(ProviderName.ALLANIME)
+
+          if failures:
+              print("\n".join(failures))
+              sys.exit(1)
+          print("providers OK: fetched, handshake + ranking patches present, importable")
+          '@
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: First-run config re-detects the terminal
+        shell: powershell
+        run: |
+          $appPy = "${{ steps.app.outputs.appPy }}"
+          & $appPy -c @'
+          import os
+
+          # Simulate the classic failure: first run inside plain conhost
+          # (no modern-host env markers, so no sixel support detected).
+          for marker in ("WT_SESSION", "TERM_PROGRAM", "ConEmuANSI",
+                         "ALACRITTY_WINDOW_ID", "WEZTERM_PANE",
+                         "KITTY_WINDOW_ID", "TERM"):
+              os.environ.pop(marker, None)
+
+          from viu_media.core.config import AppConfig
+          from viu_media.cli.config.generate import generate_config_toml_from_app_model
+
+          conhost_cfg = AppConfig()
+          assert conhost_cfg.general.preview == "none", conhost_cfg.general.preview
+          toml_text = generate_config_toml_from_app_model(conhost_cfg)
+
+          # The detected values must be written COMMENTED, so a later launch in
+          # Windows Terminal re-detects and gets image previews back.
+          import tomllib
+          parsed = tomllib.loads(toml_text)
+          for field in ("selector", "preview", "image_renderer"):
+              assert field not in parsed["general"], f"{field} was frozen into config.toml"
+              assert f"# {field} = " in toml_text, f"{field} not even present as a comment"
+
+          # And a Windows Terminal session must detect full previews.
+          os.environ["WT_SESSION"] = "ci-simulated"
+          wt_cfg = AppConfig()
+          assert wt_cfg.general.preview == "full", wt_cfg.general.preview
+          assert wt_cfg.general.image_renderer == "system-sixels"
+          print("config OK: env-detected fields stay dynamic across terminals")
+          '@
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # Real network probe against allanime. Best-effort: datacenter IPs may be
+      # blocked upstream, so this must never fail the workflow — but when it
+      # works it proves the full fetch->patch->stream-resolve chain.
+      - name: Live allanime stream resolve (best-effort)
+        continue-on-error: true
+        shell: powershell
+        run: |
+          $appPy = "${{ steps.app.outputs.appPy }}"
+          & $appPy scripts\probe_launch_timing.py --provider allanime --query "One Piece" --episode 1
