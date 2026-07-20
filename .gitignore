@@ -225,3 +225,6 @@ result
 *.mkv
 *.mp4
 *.torrent
+
+# wheel cache for dev/regen_handshake_patch.py
+/dev/.wheel_allanime/

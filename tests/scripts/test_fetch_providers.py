@@ -146,10 +146,18 @@ class AllAnime:
         parsed_payload = decode_tobeparsed(encoded_payload, TOBEPARSED_DECRYPTION_SEED)
         return parsed_payload.get("episode")
 
-    def _get_episode_payload(self, params):
+    def _get_episode_payload(self, params: EpisodeStreamsParams) -> AllAnimeEpisode | None:
         persisted_query_response = self.client.get(
-            "endpoint",
+            API_GRAPHQL_ENDPOINT,
             params={
+                "variables": dumps(
+                    {
+                        "showId": params.anime_id,
+                        "translationType": params.translation_type,
+                        "episodeString": params.episode,
+                    },
+                    separators=(",", ":"),
+                ),
                 "extensions": dumps(
                     {
                         "persistedQuery": {
@@ -160,7 +168,25 @@ class AllAnime:
                     separators=(",", ":"),
                 ),
             },
+            headers={**API_GRAPHQL_HEADERS, **API_EPISODE_HEADERS},
         )
+        persisted_query_response.raise_for_status()
+
+        if episode := self._extract_episode_from_payload(persisted_query_response.json()):
+            return episode
+
+        episode_response = execute_graphql(
+            API_GRAPHQL_ENDPOINT,
+            self.client,
+            EPISODE_GQL,
+            variables={
+                "showId": params.anime_id,
+                "translationType": params.translation_type,
+                "episodeString": params.episode,
+            },
+            headers=API_GRAPHQL_HEADERS,
+        )
+        return self._extract_episode_from_payload(episode_response.json())
 '''
 
 
@@ -204,68 +230,94 @@ def test_handshake_patch_recognizes_hand_fixed_copy():
     assert same == fixed
 
 
-def test_patched_get_aa_req_produces_valid_token():
-    """Execute the patched utils.py: the aaReq token must decrypt back to the
-    signed payload with the published key (AES-256-GCM round-trip)."""
+def _exec_patched_utils() -> tuple[dict, dict]:
+    """Execute the patched utils.py against the patched constants.py.
+
+    Returns (utils_namespace, constants_namespace). The relative constants
+    import is rewritten to a fake module fed from the executed constants.
+    """
     import sys
     import types
 
     patched, status = fp.apply_handshake_patch("utils.py", PRISTINE_UTILS)
     assert status == "patched"
-
     consts, status = fp.apply_handshake_patch("constants.py", PRISTINE_CONSTANTS)
     assert status == "patched"
     const_ns: dict = {}
     exec(compile(consts, "<constants>", "exec"), const_ns)
 
     fake_constants = types.ModuleType("_fake_allanime_constants")
-    for k in (
-        "ALLANIME_BUILD_ID",
-        "ALLANIME_EPOCH",
-        "ALLANIME_KEY",
-        "PERSISTED_QUERY_SHA256",
-    ):
+    for k in ("FALLBACK_KEYGEN", "KEYGEN_URLS"):
         setattr(fake_constants, k, const_ns[k])
     src = patched.replace(
-        "from .constants import ALLANIME_BUILD_ID, ALLANIME_EPOCH, ALLANIME_KEY, PERSISTED_QUERY_SHA256",
-        "from _fake_allanime_constants import ALLANIME_BUILD_ID, ALLANIME_EPOCH, ALLANIME_KEY, PERSISTED_QUERY_SHA256",
+        "from .constants import FALLBACK_KEYGEN, KEYGEN_URLS",
+        "from _fake_allanime_constants import FALLBACK_KEYGEN, KEYGEN_URLS",
     )
     sys.modules["_fake_allanime_constants"] = fake_constants
     try:
         ns: dict = {}
         exec(compile(src, "<patched-utils>", "exec"), ns)
-
-        import json as _json
-        from base64 import b64decode as _b64decode
-
-        from Cryptodome.Cipher import AES as _AES
-
-        token = ns["get_aa_req"]()
-        raw = _b64decode(token)
-        assert raw[0:1] == b"\x01"
-        iv, ciphertext, tag = raw[1:13], raw[13:-16], raw[-16:]
-        cipher = _AES.new(
-            bytes.fromhex(const_ns["ALLANIME_KEY"]), _AES.MODE_GCM, nonce=iv
-        )
-        payload = _json.loads(cipher.decrypt_and_verify(ciphertext, tag))
-        assert payload["epoch"] == const_ns["ALLANIME_EPOCH"]
-        assert payload["buildId"] == str(const_ns["ALLANIME_BUILD_ID"])
-        assert payload["qh"] == const_ns["PERSISTED_QUERY_SHA256"]
-        assert payload["ts"] % (300 * 1000) == 0
-
-        # decode_tobeparsed now takes the hex key directly (CTR round-trip).
-        key_hex = const_ns["ALLANIME_KEY"]
-        iv12 = b"\x00" * 12
-        blob = _json.dumps({"episode": {"n": 1}}).encode()
-        ct = _AES.new(
-            bytes.fromhex(key_hex), _AES.MODE_CTR, nonce=iv12, initial_value=2
-        ).encrypt(blob)
-        from base64 import b64encode as _b64encode
-
-        envelope = _b64encode(b"\x01" + iv12 + ct + b"\x00" * 16).decode()
-        assert ns["decode_tobeparsed"](envelope, key_hex) == {"episode": {"n": 1}}
     finally:
         sys.modules.pop("_fake_allanime_constants", None)
+    return ns, const_ns
+
+
+def test_patched_get_aa_req_produces_valid_token():
+    """The aaReq token must decrypt back to the signed payload (2026-07-20
+    format: no buildId, iv from epoch:qh:ts) with the keygen's key."""
+    import json as _json
+    from base64 import b64decode as _b64decode
+
+    from Cryptodome.Cipher import AES as _AES
+
+    ns, const_ns = _exec_patched_utils()
+    keygen = const_ns["FALLBACK_KEYGEN"]
+
+    token = ns["get_aa_req"](keygen)
+    raw = _b64decode(token)
+    assert raw[0:1] == b"\x01"
+    iv, ciphertext, tag = raw[1:13], raw[13:-16], raw[-16:]
+    cipher = _AES.new(bytes.fromhex(keygen["key"]), _AES.MODE_GCM, nonce=iv)
+    payload = _json.loads(cipher.decrypt_and_verify(ciphertext, tag))
+    assert payload["epoch"] == keygen["epoch"]
+    assert payload["qh"] == keygen["query_hash"]
+    assert "buildId" not in payload
+    assert payload["ts"] % (300 * 1000) == 0
+    # iv is derived, not random: sha256("epoch:qh:ts")[:12]
+    import hashlib as _hashlib
+
+    expected_iv = _hashlib.sha256(
+        f"{keygen['epoch']}:{keygen['query_hash']}:{payload['ts']}".encode()
+    ).digest()[:12]
+    assert iv == expected_iv
+
+
+def test_patched_decode_tobeparsed_tries_both_keys():
+    """decode_tobeparsed authenticates with the rotating key OR the legacy
+    sha256(static seed) key, and rejects blobs matching neither."""
+    import hashlib as _hashlib
+    import json as _json
+    from base64 import b64encode as _b64encode
+
+    import pytest
+    from Cryptodome.Cipher import AES as _AES
+
+    ns, const_ns = _exec_patched_utils()
+    keygen = const_ns["FALLBACK_KEYGEN"]
+    blob = _json.dumps({"episode": {"n": 1}}).encode()
+    iv12 = b"\x00" * 12
+
+    def envelope(key: bytes) -> str:
+        ct, tag = _AES.new(key, _AES.MODE_GCM, nonce=iv12).encrypt_and_digest(blob)
+        return _b64encode(b"\x01" + iv12 + ct + tag).decode()
+
+    rotating = bytes.fromhex(keygen["key"])
+    legacy = _hashlib.sha256(keygen["static_key"].encode()).digest()
+    for key in (rotating, legacy):
+        assert ns["decode_tobeparsed"](envelope(key), keygen) == {"episode": {"n": 1}}
+
+    with pytest.raises(ValueError):
+        ns["decode_tobeparsed"](envelope(b"\x42" * 32), keygen)
 
 
 def test_patched_body_ranks_best_first():

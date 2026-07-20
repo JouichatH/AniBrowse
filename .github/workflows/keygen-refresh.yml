@@ -1,0 +1,38 @@
+# Keeps keygen/allanime.json in sync with allanime's rotating crypto values
+# (the "treadmill"). Installs fetch this file at runtime, so a refreshed commit
+# heals every install on its next launch - no code changes, no reinstall.
+# Extraction may fail when the site's Cloudflare challenges the runner; the
+# old values are then simply kept.
+name: Refresh allanime keygen
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  keygen:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Extract current values from the live site
+        id: extract
+        continue-on-error: true
+        run: python scripts/allanime_keygen.py
+      - name: Commit refreshed values
+        if: steps.extract.outcome == 'success'
+        run: |
+          if git diff --quiet keygen/allanime.json; then
+            echo "values unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add keygen/allanime.json
+          git commit -m "keygen: refresh allanime crypto values (scheduled)"
+          git push
