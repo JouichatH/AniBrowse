@@ -47,6 +47,27 @@ def _yes(ok: bool) -> str:
     return "[green]yes[/]" if ok else "[red]NO[/]"
 
 
+def _windows_terminal_version() -> str:
+    """Installed Windows Terminal package version, or '' if undetermined."""
+    import subprocess
+
+    try:
+        out = subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                "(Get-AppxPackage Microsoft.WindowsTerminal*).Version",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        ).stdout.strip()
+        return out.splitlines()[0].strip() if out else ""
+    except Exception:  # noqa: BLE001 - diagnostic only, never fail doctor
+        return ""
+
+
 @click.command(
     help="Diagnose this machine's ani-browse install (terminal, tools, providers, config).",
     short_help="Diagnose this install",
@@ -72,7 +93,49 @@ def doctor(config: "AppConfig") -> None:
         print("  legacy conhost: [red]YES - icons auto-disabled, use Windows Terminal[/]")
     else:
         print("  legacy conhost: [green]no[/]")
-    print(f"  sixel-capable (real image previews): {_yes(sixel)}")
+    print(f"  sixel-capable per env detection: {_yes(sixel)}")
+
+    # Env detection can't see the terminal VERSION: Windows Terminal renders
+    # sixel only from 1.22, but sets WT_SESSION on every version. Report the
+    # installed version and emit a real sixel block so the human can verify.
+    if sys.platform == "win32" and os.environ.get("WT_SESSION"):
+        wt_version = _windows_terminal_version()
+        if wt_version:
+            print(f"  Windows Terminal version: {wt_version}", end="")
+            major_minor = wt_version.split(".")[:2]
+            try:
+                too_old = (int(major_minor[0]), int(major_minor[1])) < (1, 22)
+            except (ValueError, IndexError):
+                too_old = False
+            if too_old:
+                print(
+                    "  [red](sixel needs >= 1.22 - cover images will be BLANK; "
+                    "update via 'winget upgrade Microsoft.WindowsTerminal' or the "
+                    "Microsoft Store)[/]"
+                )
+            else:
+                print("  [green](>= 1.22, sixel-era)[/]")
+        else:
+            print("  Windows Terminal version: [dim]could not determine[/]")
+    if sixel and sys.stdout.isatty():
+        # 48x12px block, colour-banded. Raw escape bytes on purpose - rich
+        # would mangle them. TTY-only: piped output would just show garbage.
+        sys.stdout.flush()
+        sys.stdout.write(
+            "\x1bPq"
+            "#0;2;85;30;30#0!48~-"
+            "#1;2;30;70;35#1!48~"
+            "\x1b\\\n"
+        )
+        sys.stdout.flush()
+        print(
+            "  sixel self-test: a small red/green block should appear just "
+            "above this line."
+        )
+        print(
+            "  [dim]No block -> this terminal ignores sixel; either update it or "
+            'set image_renderer = "chafa" in config.toml for symbol-art covers.[/]'
+        )
 
     # --- External tools ----------------------------------------------------
     print("\n[bold]External tools[/]")
