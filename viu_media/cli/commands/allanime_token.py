@@ -37,8 +37,10 @@ def allanime_token(headless: bool, timeout: int) -> None:
     )
     result = token_capture.capture_token(headless=headless, timeout=float(timeout))
     if result:
+        # Plain ASCII only - the classic Windows console (cp1252) can't encode
+        # symbols like a check mark and rich raises UnicodeEncodeError there.
         print(
-            f"[green]✓ allanime authorized.[/] Token captured from "
+            f"[green]allanime authorized.[/] Token captured from "
             f"[dim]{result.get('api_host')}[/]. Streaming will use it automatically."
         )
     else:
