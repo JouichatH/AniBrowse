@@ -32,6 +32,13 @@ from pathlib import Path
 FRONTEND_URL = "https://mkissa.to/"
 CDN_IMMUTABLE = "https://cdn.allanime.day/all/mk/_app/immutable/"
 STATIC_KEY = "Xot36i3lK3:v1"
+# The request/token must use the STABLE classic persisted-query hash; the live
+# JS advertises a per-client rotating hash that the API rejects with
+# PersistedQueryNotFound (ani-cli #1801). We pin it and ignore the extracted one.
+PINNED_QUERY_HASH = "d405d0edd690624b66baba3068e0edc3ac90f1597d898a1ec8db4e5c43c00fec"
+# buildId signed into the aaReq + sent as x-build-id. Rotates occasionally
+# (41 -> 44 -> 50); bump in step with ani-cli's fix branch when it changes.
+BUILD_ID = "50"
 BROWSER_UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
@@ -116,13 +123,13 @@ def fetch() -> dict:
         masks = re.findall(r"[0-9a-f]{64}", js)
         if len(masks) != 1:
             continue
-        query_hash = source_query_hash(js)
-        if not query_hash:
-            raise RuntimeError("could not resolve the sources query template")
+        # query_hash is pinned (not extracted): the extracted rotating hash is
+        # rejected by the API; only the classic PINNED_QUERY_HASH is accepted.
         return {
             "epoch": int(epoch),
             "key": derive_key(masks[0], part_b),
-            "query_hash": query_hash,
+            "query_hash": PINNED_QUERY_HASH,
+            "build_id": BUILD_ID,
             "static_key": STATIC_KEY,
         }
     raise RuntimeError("no crypto chunk with a single 64-hex mask found")
