@@ -69,7 +69,10 @@ if ($toolsDir) {
         exit 1
     }
 }
-uv tool install --force --python 3.12 --with thefuzz --with lxml "$repo"
+#    playwright: drives a local browser to authorize allanime streaming
+#    (see scripts/fetch_providers.py / token_capture); optional but bundled so
+#    allanime works out of the box - without it the app uses nyaa torrents.
+uv tool install --force --python 3.12 --with thefuzz --with lxml --with playwright "$repo"
 # Put uv's executable dir on PATH (session + user), asking uv where it is:
 # scoop's uv relocates it (scoop\persist\uv\tools\shims), so don't guess.
 # cmd /c so no native stderr reaches PowerShell - under Stop+redirection,
@@ -90,6 +93,13 @@ Say "Fetching provider scrapers from the viu-media wheel..."
 $appPy = Join-Path (cmd /c "uv tool dir 2>nul").Trim() 'viu-media\Scripts\python.exe'
 if (Test-Path $appPy) {
     & $appPy (Join-Path $repo 'scripts\fetch_providers.py')
+    # Chromium for the allanime token capture. Best-effort: allanime falls
+    # back to nyaa if this fails, so a hiccup must not abort the install.
+    Say "Installing the browser for allanime streaming (optional)..."
+    try { & $appPy -m playwright install chromium } catch {
+        Write-Host "  [!] Browser install skipped; allanime will use nyaa. Run later:" -ForegroundColor Yellow
+        Write-Host "      $appPy -m playwright install chromium" -ForegroundColor Yellow
+    }
 } else {
     Write-Host "  [!] Could not locate the app's Python; after install run:" -ForegroundColor Yellow
     Write-Host "      python $repo\scripts\fetch_providers.py" -ForegroundColor Yellow

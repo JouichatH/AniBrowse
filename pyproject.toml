@@ -37,6 +37,10 @@ notifications = [
 mpv = ["mpv>=1.0.7"]
 torrent = ["libtorrent>=2.0.11"]
 lxml = ["lxml>=6.0.0"]
+# Browser-driven allanime token capture (see libs/provider/anime/token_capture).
+# Optional: without it, allanime falls back to nyaa torrents. After installing,
+# run `playwright install chromium` (or have Google Chrome present).
+allanime-browser = ["playwright>=1.40"]
 discord = ["pypresence>=4.3.0"]
 download = ["pycryptodomex>=3.23.0", "yt-dlp>=2025.7.21"]
 torrents = ["libtorrent>=2.0.11"]

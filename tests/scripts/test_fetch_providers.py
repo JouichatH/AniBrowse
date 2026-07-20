@@ -125,78 +125,20 @@ def decode_tobeparsed(payload: str, key_seed: str) -> dict[str, Any]:
     return json.loads(plain_text.decode("utf-8"))
 '''
 
-PRISTINE_PROVIDER = '''\
-from .constants import (
-    ANIME_GQL,
-    API_EPISODE_HEADERS,
-    API_GRAPHQL_ENDPOINT,
-    API_GRAPHQL_HEADERS,
-    API_GRAPHQL_REFERER,
-    EPISODE_GQL,
-    PERSISTED_QUERY_SHA256,
-    SEARCH_GQL,
-    TOBEPARSED_DECRYPTION_SEED,
-)
-from .utils import decode_tobeparsed
 
 
-class AllAnime:
-    def _extract_episode_from_payload(self, payload):
-        encoded_payload = payload.get("tobeparsed")
-        parsed_payload = decode_tobeparsed(encoded_payload, TOBEPARSED_DECRYPTION_SEED)
-        return parsed_payload.get("episode")
+def _pristine_from_anchors(name: str) -> str:
+    """A minimal patchable input for a file: its own anchors concatenated.
 
-    def _get_episode_payload(self, params: EpisodeStreamsParams) -> AllAnimeEpisode | None:
-        persisted_query_response = self.client.get(
-            API_GRAPHQL_ENDPOINT,
-            params={
-                "variables": dumps(
-                    {
-                        "showId": params.anime_id,
-                        "translationType": params.translation_type,
-                        "episodeString": params.episode,
-                    },
-                    separators=(",", ":"),
-                ),
-                "extensions": dumps(
-                    {
-                        "persistedQuery": {
-                            "version": 1,
-                            "sha256Hash": PERSISTED_QUERY_SHA256,
-                        }
-                    },
-                    separators=(",", ":"),
-                ),
-            },
-            headers={**API_GRAPHQL_HEADERS, **API_EPISODE_HEADERS},
-        )
-        persisted_query_response.raise_for_status()
-
-        if episode := self._extract_episode_from_payload(persisted_query_response.json()):
-            return episode
-
-        episode_response = execute_graphql(
-            API_GRAPHQL_ENDPOINT,
-            self.client,
-            EPISODE_GQL,
-            variables={
-                "showId": params.anime_id,
-                "translationType": params.translation_type,
-                "episodeString": params.episode,
-            },
-            headers=API_GRAPHQL_HEADERS,
-        )
-        return self._extract_episode_from_payload(episode_response.json())
-'''
+    The patch is anchor->replacement; text containing each anchor verbatim is
+    therefore patchable, regardless of how the (regenerated) anchors evolve.
+    """
+    return "\n\n".join(anchor for anchor, _ in fp._HANDSHAKE_EDITS[name])
 
 
 def test_handshake_patch_applies_to_all_files():
-    for name, pristine in [
-        ("constants.py", PRISTINE_CONSTANTS),
-        ("utils.py", PRISTINE_UTILS),
-        ("provider.py", PRISTINE_PROVIDER),
-    ]:
-        new_text, status = fp.apply_handshake_patch(name, pristine)
+    for name in ("constants.py", "utils.py", "provider.py"):
+        new_text, status = fp.apply_handshake_patch(name, _pristine_from_anchors(name))
         assert status == "patched", name
         assert fp.HANDSHAKE_SENTINELS[name] in new_text, name
 

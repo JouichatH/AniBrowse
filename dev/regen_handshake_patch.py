@@ -112,12 +112,15 @@ def build_edits(wheel: dict[str, str], local: dict[str, str]) -> dict[str, list[
     # provider.py
     prov_import_anchor = slice_between(w_prov, "from .constants import (", ")\n", True)
     prov_import_repl = slice_between(l_prov, "from .constants import (", ")\n", True)
+    # One wide slice from the first patched method through the last covers every
+    # body change (decode comment, new _persisted_episode_query, rewritten
+    # _get_episode_payload) as a single anchored replacement.
     payload_terminator = "return self._extract_episode_from_payload(episode_response.json())"
-    prov_payload_anchor = slice_between(
-        w_prov, "    def _get_episode_payload", payload_terminator, True
+    prov_body_anchor = slice_between(
+        w_prov, "    def _extract_episode_from_payload", payload_terminator, True
     )
-    prov_payload_repl = slice_between(
-        l_prov, "    def _persisted_episode_query", payload_terminator, True
+    prov_body_repl = slice_between(
+        l_prov, "    def _extract_episode_from_payload", payload_terminator, True
     )
 
     return {
@@ -133,11 +136,7 @@ def build_edits(wheel: dict[str, str], local: dict[str, str]) -> dict[str, list[
                 "from .utils import decode_tobeparsed\n",
                 "from .utils import decode_tobeparsed, fetch_keygen, get_aa_req\n",
             ),
-            (
-                "decode_tobeparsed(encoded_payload, TOBEPARSED_DECRYPTION_SEED)",
-                "decode_tobeparsed(encoded_payload)",
-            ),
-            (prov_payload_anchor, prov_payload_repl),
+            (prov_body_anchor, prov_body_repl),
         ],
     }
 

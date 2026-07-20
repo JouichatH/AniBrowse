@@ -104,8 +104,10 @@ def fetch() -> dict:
     aa = json.loads(m.group(1))
     part_b, epoch = aa["partB"], aa["epoch"]
 
-    app = re.search(r"_app/immutable/(entry/app\.[^\"']+\.js)", html).group(1)
-    app_js = _get(CDN_IMMUTABLE + app)
+    app_m = re.search(r"_app/immutable/(entry/app\.[^\"']+\.js)", html)
+    if not app_m:
+        raise RuntimeError("could not find the app bundle in the frontend HTML")
+    app_js = _get(CDN_IMMUTABLE + app_m.group(1))
     imports = re.findall(r"\s*[\"']\.\./(chunks/[A-Za-z0-9_\-]+\.js)[\"']", app_js)
     for chunk in imports:
         js = _get(CDN_IMMUTABLE + chunk)
