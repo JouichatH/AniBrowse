@@ -78,6 +78,11 @@ def test_patch_skips_unknown_shape():
 # Slim stand-ins for the upstream 3.5.0 files, containing every anchor the
 # handshake patch keys on. Keep in step with UPSTREAM_VERSION.
 PRISTINE_CONSTANTS = '''\
+API_EPISODE_HEADERS = {
+    "Referer": "https://youtu-chan.com",
+    "Origin": "https://youtu-chan.com",
+}
+
 PERSISTED_QUERY_SHA256 = (
     "d405d0edd690624b66baba3068e0edc3ac90f1597d898a1ec8db4e5c43c00fec"
 )
@@ -189,11 +194,17 @@ def _exec_patched_utils() -> tuple[dict, dict]:
     exec(compile(consts, "<constants>", "exec"), const_ns)
 
     fake_constants = types.ModuleType("_fake_allanime_constants")
-    for k in ("FALLBACK_KEYGEN", "KEYGEN_URLS"):
+    for k in ("ALLANIME_BUILD_ID", "FALLBACK_KEYGEN", "KEYGEN_URLS", "PERSISTED_QUERY_SHA256"):
         setattr(fake_constants, k, const_ns[k])
     src = patched.replace(
-        "from .constants import FALLBACK_KEYGEN, KEYGEN_URLS",
-        "from _fake_allanime_constants import FALLBACK_KEYGEN, KEYGEN_URLS",
+        "from .constants import (\n"
+        "    ALLANIME_BUILD_ID,\n"
+        "    FALLBACK_KEYGEN,\n"
+        "    KEYGEN_URLS,\n"
+        "    PERSISTED_QUERY_SHA256,\n"
+        ")",
+        "from _fake_allanime_constants import "
+        "ALLANIME_BUILD_ID, FALLBACK_KEYGEN, KEYGEN_URLS, PERSISTED_QUERY_SHA256",
     )
     sys.modules["_fake_allanime_constants"] = fake_constants
     try:
@@ -205,8 +216,9 @@ def _exec_patched_utils() -> tuple[dict, dict]:
 
 
 def test_patched_get_aa_req_produces_valid_token():
-    """The aaReq token must decrypt back to the signed payload (2026-07-20
-    format: no buildId, iv from epoch:qh:ts) with the keygen's key."""
+    """The aaReq token must decrypt back to the signed payload (ani-cli #1801
+    format: payload carries buildId, iv from epoch:buildId:qh:ts, qh pinned to
+    PERSISTED_QUERY_SHA256) with the keygen's key."""
     import json as _json
     from base64 import b64decode as _b64decode
 
@@ -214,6 +226,8 @@ def test_patched_get_aa_req_produces_valid_token():
 
     ns, const_ns = _exec_patched_utils()
     keygen = const_ns["FALLBACK_KEYGEN"]
+    pinned_qh = const_ns["PERSISTED_QUERY_SHA256"]
+    build_id = str(keygen["build_id"])
 
     token = ns["get_aa_req"](keygen)
     raw = _b64decode(token)
@@ -222,14 +236,14 @@ def test_patched_get_aa_req_produces_valid_token():
     cipher = _AES.new(bytes.fromhex(keygen["key"]), _AES.MODE_GCM, nonce=iv)
     payload = _json.loads(cipher.decrypt_and_verify(ciphertext, tag))
     assert payload["epoch"] == keygen["epoch"]
-    assert payload["qh"] == keygen["query_hash"]
-    assert "buildId" not in payload
+    assert payload["qh"] == pinned_qh
+    assert payload["buildId"] == build_id
     assert payload["ts"] % (300 * 1000) == 0
-    # iv is derived, not random: sha256("epoch:qh:ts")[:12]
+    # iv is derived, not random: sha256("epoch:buildId:qh:ts")[:12]
     import hashlib as _hashlib
 
     expected_iv = _hashlib.sha256(
-        f"{keygen['epoch']}:{keygen['query_hash']}:{payload['ts']}".encode()
+        f"{keygen['epoch']}:{build_id}:{pinned_qh}:{payload['ts']}".encode()
     ).digest()[:12]
     assert iv == expected_iv
 

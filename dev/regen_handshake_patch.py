@@ -32,10 +32,24 @@ UPSTREAM_VERSION = "3.5.0"
 BEGIN = "# --- BEGIN GENERATED HANDSHAKE EDITS (dev/regen_handshake_patch.py) ---"
 END = "# --- END GENERATED HANDSHAKE EDITS ---"
 
+# Files patched from the upstream wheel, as paths relative to the allanime/
+# package. Nested paths (extractors/…) are cached under a flattened name.
+PATCHED_FILES = ("constants.py", "utils.py", "provider.py", "extractors/extractor.py")
+
+
+def _cache_name(rel: str) -> str:
+    return rel.replace("/", "__")
+
 
 def wheel_files() -> dict[str, str]:
-    if WHEEL_CACHE.exists():
-        return {p.name: p.read_text(encoding="utf-8") for p in WHEEL_CACHE.glob("*.py")}
+    prefix = "viu_media/libs/provider/anime/allanime/"
+    if WHEEL_CACHE.exists() and all(
+        (WHEEL_CACHE / _cache_name(rel)).exists() for rel in PATCHED_FILES
+    ):
+        return {
+            rel: (WHEEL_CACHE / _cache_name(rel)).read_text(encoding="utf-8")
+            for rel in PATCHED_FILES
+        }
     meta = json.load(
         urllib.request.urlopen(
             f"https://pypi.org/pypi/viu-media/{UPSTREAM_VERSION}/json", timeout=30
@@ -46,20 +60,18 @@ def wheel_files() -> dict[str, str]:
     zf = zipfile.ZipFile(io.BytesIO(data))
     WHEEL_CACHE.mkdir(exist_ok=True)
     out: dict[str, str] = {}
-    prefix = "viu_media/libs/provider/anime/allanime/"
-    for n in zf.namelist():
-        if n.startswith(prefix) and n.endswith(".py") and "/" not in n[len(prefix):]:
-            text = zf.read(n).decode("utf-8")
-            (WHEEL_CACHE / n.split("/")[-1]).write_text(text, encoding="utf-8", newline="")
-            out[n.split("/")[-1]] = text
+    for rel in PATCHED_FILES:
+        text = zf.read(prefix + rel).decode("utf-8")
+        (WHEEL_CACHE / _cache_name(rel)).write_text(text, encoding="utf-8", newline="")
+        out[rel] = text
     return out
 
 
 def local_files() -> dict[str, str]:
     # Normalize CRLF (git-bash/Windows editors) to LF to match wheel text.
     return {
-        name: (LOCAL / name).read_text(encoding="utf-8").replace("\r\n", "\n")
-        for name in ("constants.py", "utils.py", "provider.py")
+        rel: (LOCAL / rel).read_text(encoding="utf-8").replace("\r\n", "\n")
+        for rel in PATCHED_FILES
     }
 
 
@@ -77,7 +89,23 @@ def build_edits(wheel: dict[str, str], local: dict[str, str]) -> dict[str, list[
     """
     w_utils, l_utils = wheel["utils.py"], local["utils.py"]
     w_prov, l_prov = wheel["provider.py"], local["provider.py"]
-    l_const = local["constants.py"]
+    w_extr, l_extr = wheel["extractors/extractor.py"], local["extractors/extractor.py"]
+    w_const, l_const = wheel["constants.py"], local["constants.py"]
+
+    # constants.py: API_EPISODE_HEADERS - the source request needs Origin set to
+    # the mkissa frontend (with Referer youtu-chan) plus an x-build-id header.
+    epheaders_anchor = slice_between(w_const, "API_EPISODE_HEADERS = {", "}", True)
+    epheaders_repl = slice_between(l_const, "API_EPISODE_HEADERS = {", "}", True)
+
+    # extractors/extractor.py: route the current third-party embeds (ok.ru,
+    # uns.bio, ...) to the tracked embed_extractors module before the legacy
+    # "ignore OTHER_SOURCES" branch. Anchor from the unique "Decrypting url"
+    # debug line (so the replacement owns all whitespace up to the ignore
+    # branch) through the OTHER_SOURCES ignore-return.
+    extr_start = "        logger.debug(f\"Decrypting url for source: {source['sourceName']}\")"
+    extr_end = 'but ignoring")\n        return'
+    extr_anchor = slice_between(w_extr, extr_start, extr_end, True)
+    extr_repl = slice_between(l_extr, extr_start, extr_end, True)
 
     # constants.py: seed line + following blank -> deprecation note + keygen block
     const_anchor = 'TOBEPARSED_DECRYPTION_SEED = "Xot36i3lK3:v1"\n\n# search constants'
@@ -124,7 +152,10 @@ def build_edits(wheel: dict[str, str], local: dict[str, str]) -> dict[str, list[
     )
 
     return {
-        "constants.py": [(const_anchor, const_repl)],
+        "constants.py": [
+            (epheaders_anchor, epheaders_repl),
+            (const_anchor, const_repl),
+        ],
         "utils.py": [
             (utils_import_anchor, utils_import_repl),
             (utils_body_anchor, utils_body_repl),
@@ -138,6 +169,7 @@ def build_edits(wheel: dict[str, str], local: dict[str, str]) -> dict[str, list[
             ),
             (prov_body_anchor, prov_body_repl),
         ],
+        "extractors/extractor.py": [(extr_anchor, extr_repl)],
     }
 
 
@@ -172,7 +204,7 @@ def main() -> int:
     fp = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(fp)
     ok = True
-    for name in ("constants.py", "utils.py", "provider.py"):
+    for name in PATCHED_FILES:
         patched, status = fp.apply_handshake_patch(name, wheel[name])
         if name == "provider.py":
             patched, _ = fp.apply_ranking_patch(patched)
