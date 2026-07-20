@@ -26,17 +26,23 @@ Once it's installed, you don't need any technical knowledge: **arrow keys** to m
 ### Windows
 
 1. Click **Start**, type **PowerShell**, and open it.
-2. Copy the line below. **Right-click** inside the PowerShell window to paste it, then press **Enter**:
+2. Update **Windows Terminal** first — cover images need version 1.22 or newer, and a stock install is often older. Paste this and press **Enter** (safe to run even if it's already up to date):
+
+   ```powershell
+   winget upgrade Microsoft.WindowsTerminal
+   ```
+
+3. Copy the line below. **Right-click** inside the PowerShell window to paste it, then press **Enter**:
 
    ```powershell
    irm https://raw.githubusercontent.com/JouichatH/AniBrowse/master/install.ps1 | iex
    ```
 
-3. Wait a few minutes while it installs everything — you'll see progress messages. (It's safe to run again if anything gets interrupted.)
-4. When it finishes, **close PowerShell and open a new one**.
-5. Type **`ani-browse`** and press **Enter**. You're in! 🎉
+4. Wait a few minutes while it installs everything — you'll see progress messages. (It's safe to run again if anything gets interrupted.)
+5. When it finishes, **close PowerShell and open a new one — use Windows Terminal** (Start → type "Terminal") so you get the cover images.
+6. Type **`ani-browse`** and press **Enter**. You're in! 🎉
 
-> **Tip:** For the best experience (including cover images), use **Windows Terminal** — it's free from the Microsoft Store.
+> **Tip:** Cover images only show inside **Windows Terminal** (not the classic PowerShell window). It's preinstalled on Windows 11; on Windows 10 get it free from the Microsoft Store. If something looks off later, run **`ani-browse doctor`** — it checks your terminal, tools, and install and tells you how to fix what's wrong.
 
 ### macOS / Linux
 
