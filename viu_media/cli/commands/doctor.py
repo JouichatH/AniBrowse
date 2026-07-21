@@ -203,8 +203,8 @@ def doctor(config: "AppConfig") -> None:
         else:
             print(
                 f"  {field:<15} = {current}  [yellow](live detection would pick "
-                f"'{live}' - a frozen or pinned value; delete/comment the line in "
-                f"config.toml to re-detect each launch)[/]"
+                f"'{live}' - a frozen or pinned value; run[/] "
+                f"ani-browse config --refresh [yellow]to re-detect each launch)[/]"
             )
     icons_effective = config.general.icons and not legacy
     print(

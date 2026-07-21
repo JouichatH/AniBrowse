@@ -91,7 +91,7 @@ ROFI_THEME_CONFIRM = _ROFI_THEMES_DIR / "confirm.rasi"
 ROFI_THEME_PREVIEW = _ROFI_THEMES_DIR / "preview.rasi"
 
 # MpvConfig
-MPV_ARGS = ""
+MPV_ARGS = "--fullscreen"
 MPV_PRE_ARGS = ""
 
 # VlcConfig

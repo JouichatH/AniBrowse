@@ -30,6 +30,9 @@ from ...core.config import AppConfig
 \b 
   # view the current contents of your config
   ani-browse config --view
+\b
+  # keep your settings but re-enable terminal auto-detection + new defaults
+  ani-browse config --refresh
 """,
 )
 @click.option("--path", "-p", help="Print the config location and exit", is_flag=True)
@@ -60,6 +63,16 @@ from ...core.config import AppConfig
     is_flag=True,
     help="Start the interactive configuration wizard.",
 )
+@click.option(
+    "--refresh",
+    "-r",
+    is_flag=True,
+    help=(
+        "Rewrite the config keeping your settings, but unpin terminal-detected "
+        "fields (preview/selector/image_renderer) so they re-detect each launch, "
+        "and adopt new defaults for values you never customized."
+    ),
+)
 @click.pass_obj
 def config(
     user_config: AppConfig,
@@ -69,12 +82,25 @@ def config(
     generate_desktop_entry,
     update,
     interactive,
+    refresh,
 ):
     from ...core.constants import USER_CONFIG
     from ..config.editor import InteractiveConfigEditor
     from ..config.generate import generate_config_toml_from_app_model
 
-    if path:
+    if refresh:
+        from ..config.loader import ConfigLoader
+
+        result = ConfigLoader().refresh()
+        if result is None:
+            click.echo("No config file yet - defaults already apply; nothing to do.")
+        else:
+            click.echo(
+                "Config refreshed: terminal-detected settings (preview/selector/"
+                "image_renderer) now re-detect at every launch; new defaults "
+                f"adopted for values you never customized.\n{USER_CONFIG}"
+            )
+    elif path:
         print(USER_CONFIG)
     elif view:
         from rich.console import Console

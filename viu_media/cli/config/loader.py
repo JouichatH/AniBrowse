@@ -12,6 +12,13 @@ from ...core.exceptions import ConfigError
 
 logger = logging.getLogger(__name__)
 
+# Old defaults that newer builds replaced. A config still carrying the OLD
+# default was never a deliberate user choice - refresh() drops the key so the
+# new default applies (e.g. mpv now opens fullscreen out of the box).
+LEGACY_DEFAULTS: dict[tuple[str, str], object] = {
+    ("mpv", "args"): "",
+}
+
 
 class ConfigLoader:
     """
@@ -71,6 +78,63 @@ class ConfigLoader:
 
         return app_config
 
+    def _parse_or_recover(self) -> Dict:
+        """Parse config.toml; if the TOML is unparseable, back it up and reset.
+
+        utf-8-sig tolerates a UTF-8 BOM (Windows editors and PowerShell's
+        `Set-Content -Encoding utf8` prepend one, which strict TOML rejects).
+        A file that still fails to parse is copied to config.toml.bak and
+        replaced with generated defaults - a typo in the config must never
+        brick the app.
+        """
+        text = self.config_path.read_text(encoding="utf-8-sig")
+        try:
+            return tomllib.loads(text)
+        except tomllib.TOMLDecodeError as e:
+            from .generate import generate_config_toml_from_app_model
+
+            backup = self.config_path.with_suffix(".toml.bak")
+            backup.write_text(text, encoding="utf-8")
+            self.config_path.write_text(
+                generate_config_toml_from_app_model(AppConfig()), encoding="utf-8"
+            )
+            click.echo(
+                f"Your config file had an error and was reset to defaults ({e}).\n"
+                f"The old file was saved to: {backup}",
+                err=True,
+            )
+            logger.warning(f"Recovered from unparseable config: {e}")
+            return {}
+
+    def refresh(self) -> "AppConfig | None":
+        """Rewrite config.toml keeping user choices while unpinning stale values.
+
+        Older builds froze terminal-detected fields (preview / selector /
+        image_renderer) into the file at first run, pinning whatever terminal
+        the installer happened to run in (e.g. preview = "none" from conhost).
+        This drops those keys plus any value still equal to an old default
+        (LEGACY_DEFAULTS), then regenerates the file, so live detection and
+        new defaults apply again. Returns None when there is no config file.
+        """
+        if not self.config_path.exists():
+            return None
+        from .generate import ENV_DETECTED_FIELDS, generate_config_toml_from_app_model
+
+        config_dict = self._parse_or_recover()
+        for section, field in ENV_DETECTED_FIELDS:
+            config_dict.get(section, {}).pop(field, None)
+        for (section, field), stale in LEGACY_DEFAULTS.items():
+            if config_dict.get(section, {}).get(field) == stale:
+                config_dict[section].pop(field)
+        try:
+            app_config = AppConfig.model_validate(config_dict)
+        except ValidationError as e:
+            raise ConfigError(f"Cannot refresh '{self.config_path}':\n{e}")
+        self.config_path.write_text(
+            generate_config_toml_from_app_model(app_config), encoding="utf-8"
+        )
+        return app_config
+
     def load(self, update: Dict = {}, allow_setup=True) -> AppConfig:
         """
         Loads the configuration and returns a populated, validated AppConfig object.
@@ -87,13 +151,7 @@ class ConfigLoader:
         if not self.config_path.exists() and allow_setup:
             return self._handle_first_run()
 
-        try:
-            with self.config_path.open("rb") as f:
-                config_dict = tomllib.load(f)
-        except tomllib.TOMLDecodeError as e:
-            raise ConfigError(
-                f"Error parsing configuration file '{self.config_path}':\n{e}"
-            )
+        config_dict = self._parse_or_recover()
 
         # Apply CLI overrides on top of the loaded configuration
         if update:

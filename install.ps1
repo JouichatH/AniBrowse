@@ -105,6 +105,23 @@ if (Test-Path $appPy) {
     Write-Host "      python $repo\scripts\fetch_providers.py" -ForegroundColor Yellow
 }
 
+# 4c. Migrate an existing config: older builds froze terminal-detected UI
+#     settings (preview/selector/image_renderer) into config.toml at first
+#     run - often from this installer's plain-conhost window, pinning
+#     preview = "none" so cover images never appear. --refresh unpins them
+#     and adopts new defaults (mpv fullscreen) while keeping user choices;
+#     it also resets an unparseable config (backed up to config.toml.bak).
+#     No-op on a fresh install: no config yet, first launch generates it.
+$cfgFile = Join-Path $env:LOCALAPPDATA 'ani-browse\config.toml'
+if ((Test-Path $cfgFile) -and (Get-Command ani-browse -ErrorAction SilentlyContinue)) {
+    Say "Refreshing existing config (re-enable UI auto-detection + new defaults)..."
+    # cmd /c so native stderr can't become fatal under Stop (see uv note above).
+    cmd /c "ani-browse config --refresh 2>&1" | ForEach-Object { Write-Host "  $_" }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [!] Config refresh failed; run later:  ani-browse config --refresh" -ForegroundColor Yellow
+    }
+}
+
 # 5. webtorrent-cli (for torrent/nyaa streaming) ----------------------------
 & (Join-Path $repo 'scripts\install-webtorrent.ps1')
 

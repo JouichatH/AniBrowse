@@ -46,6 +46,20 @@ else
     warn "couldn't locate app python; after install run: python $REPO_DIR/scripts/fetch_providers.py"
 fi
 
+# 2b. Migrate an existing config: older builds froze terminal-detected UI
+#     settings (preview/selector/image_renderer) into config.toml at first
+#     run. --refresh unpins them and adopts new defaults (mpv fullscreen)
+#     while keeping user choices. No-op on a fresh install (no config yet).
+for CFG in "${XDG_CONFIG_HOME:-$HOME/.config}/ani-browse/config.toml" \
+           "$HOME/Library/Application Support/ani-browse/config.toml"; do
+    if [ -f "$CFG" ] && command -v ani-browse >/dev/null 2>&1; then
+        info "Refreshing existing config (re-enable UI auto-detection + new defaults)..."
+        ani-browse config --refresh \
+            || warn "config refresh failed - run later: ani-browse config --refresh"
+        break
+    fi
+done
+
 # 3. webtorrent-cli (same workaround as Windows: a dep's preinstall forces
 #    pnpm and native binaries need a rebuild after --ignore-scripts) ---------
 if command -v webtorrent >/dev/null 2>&1; then

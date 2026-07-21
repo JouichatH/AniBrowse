@@ -43,6 +43,8 @@ Once it's installed, you don't need any technical knowledge: **arrow keys** to m
 6. Type **`ani-browse`** and press **Enter**. You're in! 🎉
 
 > **Tip:** Cover images only show inside **Windows Terminal** (not the classic PowerShell window). It's preinstalled on Windows 11; on Windows 10 get it free from the Microsoft Store. If something looks off later, run **`ani-browse doctor`** — it checks your terminal, tools, and install and tells you how to fix what's wrong.
+>
+> **Updating from an older install?** Just re-run the installer command above — it also refreshes your settings so cover images and fullscreen playback work without any manual editing. (Or run `ani-browse config --refresh` yourself; your customizations are kept.)
 
 ### macOS / Linux
 

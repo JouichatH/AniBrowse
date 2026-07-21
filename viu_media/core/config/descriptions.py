@@ -103,7 +103,10 @@ ROFI_THEME_CONFIRM = "Path to the Rofi theme file for confirmation prompts."
 ROFI_THEME_INPUT = "Path to the Rofi theme file for user input prompts."
 
 # MpvConfig
-MPV_ARGS = "Comma-separated arguments to pass to the MPV player."
+MPV_ARGS = (
+    "Comma-separated arguments to pass to the MPV player. "
+    'Remove "--fullscreen" to open the player windowed.'
+)
 MPV_PRE_ARGS = "Comma-separated arguments to prepend before the MPV command."
 
 # VlcConfig
