@@ -1,11 +1,45 @@
 import logging
 import os
+import sys
 import time
 import uuid
 from pathlib import Path
-from typing import IO, Any, Union
+from typing import IO, Any, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
+
+
+def _pid_alive(pid: int) -> bool:
+    """Whether a process with this PID exists on THIS machine (lock files are local)."""
+    if pid <= 0:
+        return False
+    if sys.platform == "win32":
+        # os.kill(pid, 0) is NOT a liveness probe on Windows (it terminates the
+        # target), so query the process handle instead.
+        import ctypes
+
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        ERROR_ACCESS_DENIED = 5
+        STILL_ACTIVE = 259
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid)
+        if not handle:
+            # Access denied means the process exists but is not ours.
+            return ctypes.get_last_error() == ERROR_ACCESS_DENIED
+        try:
+            exit_code = ctypes.c_ulong()
+            if kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                return exit_code.value == STILL_ACTIVE
+            return True
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 class NO_DEFAULT:
@@ -295,33 +329,60 @@ class FileLock:
             logger.error(f"Error creating lock file {self.lock_file_path}: {e}")
             return False
 
+    def _read_lock_info(self) -> Optional[Tuple[int, float]]:
+        """Read (pid, timestamp) from the lock file; None if unreadable/corrupt/gone."""
+        try:
+            with self.lock_file_path.open("r") as f:
+                lines = f.readlines()
+            return int(lines[0].strip()), float(lines[1].strip())
+        except (ValueError, IndexError, FileNotFoundError, OSError):
+            return None
+
     def _is_stale(self) -> bool:
         """
-        Checks if the existing lock file is stale based on its modification time
-        or the PID inside it.
+        A lock is stale when its owning process is dead, when it is too old,
+        or when its content is unreadable/corrupt.
         """
         if not self.lock_file_path.exists():
             return False  # Not stale if it doesn't exist
 
-        try:
-            # Read PID and timestamp from the lock file
-            with self.lock_file_path.open("r") as f:
-                lines = f.readlines()
-                if len(lines) >= 2:
-                    locked_timestamp = float(lines[1].strip())
-                    current_time = time.time()
-                    if current_time - locked_timestamp > self.stale_timeout:
-                        logger.warning(
-                            f"Lock file {self.lock_file_path} is older than {self.stale_timeout} seconds. Considering it stale."
-                        )
-                        return True
-            return False
-
-        except (ValueError, IndexError, FileNotFoundError, OSError) as e:
+        info = self._read_lock_info()
+        if info is None:
             logger.warning(
-                f"Could not read or parse lock file {self.lock_file_path}. Assuming it's stale due to potential corruption: {e}"
+                f"Could not read or parse lock file {self.lock_file_path}. Assuming it's stale due to potential corruption."
             )
             return True
+
+        pid, locked_timestamp = info
+        # A lock whose owner is gone can never be released; break it right away
+        # instead of stalling every registry write for stale_timeout seconds.
+        # (This is exactly what happens when the app window is closed mid-write.)
+        if not _pid_alive(pid):
+            logger.warning(
+                f"Lock file {self.lock_file_path} is held by dead PID {pid}. Considering it stale."
+            )
+            return True
+        if time.time() - locked_timestamp > self.stale_timeout:
+            logger.warning(
+                f"Lock file {self.lock_file_path} is older than {self.stale_timeout} seconds. Considering it stale."
+            )
+            return True
+        return False
+
+    def _unlink_with_retry(self, attempts: int = 20, delay: float = 0.05) -> bool:
+        """
+        Delete the lock file, retrying briefly. On Windows the unlink fails with
+        WinError 32 while ANOTHER process momentarily has the file open in its
+        own _is_stale() read poll; those reads last well under `delay`, so a few
+        retries ride out the collision instead of leaving the lock behind.
+        """
+        for _ in range(attempts):
+            try:
+                self.lock_file_path.unlink(missing_ok=True)
+                return True
+            except OSError:
+                time.sleep(delay)
+        return False
 
     def acquire(self):
         """
@@ -338,18 +399,23 @@ class FileLock:
                 logger.debug(
                     f"Existing lock file {self.lock_file_path} is stale. Attempting to break it."
                 )
-                try:
-                    self.lock_file_path.unlink()
-                    if self._acquire_atomic():
+                # Re-read before deleting: if the content changed since the
+                # staleness check, another waiter already broke this lock and
+                # acquired a FRESH one - deleting now would steal its lock and
+                # let two processes write concurrently.
+                stale_info = self._read_lock_info()
+                still_stale = (
+                    stale_info is None
+                    or not _pid_alive(stale_info[0])
+                    or time.time() - stale_info[1] > self.stale_timeout
+                )
+                if still_stale:
+                    if self._unlink_with_retry() and self._acquire_atomic():
                         self._acquired = True
                         logger.debug(
                             f"Stale lock broken and new lock acquired by PID {self._pid}."
                         )
                         return
-                except OSError as e:
-                    logger.error(
-                        f"Could not remove stale lock file {self.lock_file_path}: {e}"
-                    )
 
             if self.timeout >= 0 and time.time() - start_time > self.timeout:
                 raise TimeoutError(
@@ -382,12 +448,15 @@ class FileLock:
         Releases the lock by deleting the lock file.
         """
         if self._acquired:
-            try:
-                self.lock_file_path.unlink(missing_ok=True)
-                self._acquired = False
+            # Releasing must not leave the file behind: a leftover lock with our
+            # fresh timestamp stalls every other writer for stale_timeout.
+            if self._unlink_with_retry():
                 logger.debug(f"Lock released by PID {self._pid}.")
-            except OSError as e:
-                logger.error(f"Error releasing lock file {self.lock_file_path}: {e}")
+            else:
+                logger.error(
+                    f"Error releasing lock file {self.lock_file_path}: still in use after retries"
+                )
+            self._acquired = False
         else:
             logger.warning(
                 "Attempted to release a lock that was not acquired by PID {self._pid}."
