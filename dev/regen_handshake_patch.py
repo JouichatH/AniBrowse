@@ -138,6 +138,17 @@ def build_edits(wheel: dict[str, str], local: dict[str, str]) -> dict[str, list[
     )
 
     # provider.py
+    # Top import block (threading/time for request pacing).
+    prov_top_anchor = slice_between(w_prov, "import logging", "from .....core", False)
+    prov_top_repl = slice_between(l_prov, "import logging", "from .....core", False)
+    # Module scope between the logger and the class: the episode-request
+    # pacing globals + helper live here.
+    prov_scope_anchor = slice_between(
+        w_prov, "logger = logging.getLogger(__name__)", "class AllAnime(BaseAnimeProvider):", False
+    )
+    prov_scope_repl = slice_between(
+        l_prov, "logger = logging.getLogger(__name__)", "class AllAnime(BaseAnimeProvider):", False
+    )
     prov_import_anchor = slice_between(w_prov, "from .constants import (", ")\n", True)
     prov_import_repl = slice_between(l_prov, "from .constants import (", ")\n", True)
     # One wide slice from the first patched method through the last covers every
@@ -162,6 +173,8 @@ def build_edits(wheel: dict[str, str], local: dict[str, str]) -> dict[str, list[
             (decode_anchor, decode_repl),
         ],
         "provider.py": [
+            (prov_top_anchor, prov_top_repl),
+            (prov_scope_anchor, prov_scope_repl),
             (prov_import_anchor, prov_import_repl),
             (
                 "from .utils import decode_tobeparsed\n",
