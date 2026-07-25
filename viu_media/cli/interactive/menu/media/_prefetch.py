@@ -29,8 +29,8 @@ from .....libs.provider.anime.types import Server
 
 logger = logging.getLogger(__name__)
 
-# key -> (monotonic timestamp, servers). Timestamped so entries can expire.
-_CACHE: Dict[Tuple, Tuple[float, List[Server]]] = {}
+# key -> (monotonic timestamp, ttl, servers). Timestamped so entries can expire.
+_CACHE: Dict[Tuple, Tuple[float, float, List[Server]]] = {}
 _INFLIGHT: set = set()
 _LOCK = threading.Lock()
 _MAX_CACHE = 8
@@ -38,10 +38,27 @@ _MAX_CACHE = 8
 # (so play-start neighbour prefetches survive until you advance), but bounded so
 # an expired stream URL is eventually refetched rather than replayed dead.
 _TTL = 1800.0  # 30 minutes
+# A list that came only from the nyaa FALLBACK (the primary yielded nothing) is
+# cached briefly instead: primary outages are usually transient (crypto
+# rotation, brief block), and a 30-min fallback entry kept a whole binge on
+# torrents long after the primary had recovered (seen live 2026-07-24). 5 min
+# still covers Replay / Change-Server re-entries within the same episode.
+_FALLBACK_TTL = 300.0  # 5 minutes
 
 
 def _key(anime_id: str, episode: str, translation_type: str) -> Tuple:
     return (anime_id, episode, translation_type)
+
+
+def _entry_ttl(provider, servers: List[Server]) -> float:
+    """Cache lifetime for a resolved list: short when it is a nyaa FALLBACK
+    (primary provider is not Nyaa but every server is a nyaa torrent)."""
+    is_fallback = (
+        type(provider).__name__ != "Nyaa"
+        and bool(servers)
+        and all(s.name.startswith("nyaa:") for s in servers)
+    )
+    return _FALLBACK_TTL if is_fallback else _TTL
 
 
 def _cache_get(key: Tuple) -> Optional[List[Server]]:
@@ -51,21 +68,21 @@ def _cache_get(key: Tuple) -> Optional[List[Server]]:
         entry = _CACHE.get(key)
         if entry is None:
             return None
-        ts, servers = entry
-        if time.monotonic() - ts > _TTL:
+        ts, ttl, servers = entry
+        if time.monotonic() - ts > ttl:
             del _CACHE[key]
             return None
         return servers
 
 
-def _cache_put(key: Tuple, servers: List[Server]) -> None:
+def _cache_put(key: Tuple, servers: List[Server], ttl: float = _TTL) -> None:
     """Store ``servers`` for ``key`` with the current timestamp, evicting the
     oldest entry when the cache is full."""
     with _LOCK:
         if key not in _CACHE and len(_CACHE) >= _MAX_CACHE:
             oldest = min(_CACHE, key=lambda k: _CACHE[k][0])
             del _CACHE[oldest]
-        _CACHE[key] = (time.monotonic(), servers)
+        _CACHE[key] = (time.monotonic(), ttl, servers)
 
 
 def _numeric_next(episode: str) -> Optional[str]:
@@ -240,7 +257,7 @@ def resolve_first(
         )
         pending = PendingServers(servers[0] if servers else None, servers=servers)
         if servers:
-            _cache_put(key, list(servers))
+            _cache_put(key, list(servers), _entry_ttl(provider, servers))
         pending._done.set()
         return pending
 
@@ -285,7 +302,7 @@ def get_servers(
         return cached
     servers = resolve_servers(provider, config, anime_id, title, episode)
     if servers:
-        _cache_put(key, servers)
+        _cache_put(key, servers, _entry_ttl(provider, servers))
     return servers
 
 
@@ -329,7 +346,7 @@ def _prefetch_one(
         try:
             servers = resolve_servers(provider, config, anime_id, title, episode)
             if servers:
-                _cache_put(key, servers)
+                _cache_put(key, servers, _entry_ttl(provider, servers))
                 logger.debug("prefetched %d server(s) for ep %s", len(servers), episode)
                 _warm_if_torrent(servers)
         except Exception as e:  # noqa: BLE001 - prefetch must never raise

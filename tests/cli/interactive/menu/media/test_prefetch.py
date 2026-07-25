@@ -65,10 +65,36 @@ def test_cache_get_expires_after_ttl():
     assert pf._cache_get(key) == servers  # fresh
 
     # Backdate the entry beyond the TTL -> treated as absent and pruned.
-    _ts, srv = pf._CACHE[key]
-    pf._CACHE[key] = (_ts - pf._TTL - 1.0, srv)
+    _ts, _ttl, srv = pf._CACHE[key]
+    pf._CACHE[key] = (_ts - pf._TTL - 1.0, _ttl, srv)
     assert pf._cache_get(key) is None
     assert key not in pf._CACHE  # pruned on expiry
+
+
+def test_fallback_lists_get_the_short_ttl():
+    """A nyaa FALLBACK list (non-Nyaa primary, all-nyaa servers) must expire
+    quickly so the primary is retried when you advance to the next episode -
+    a 30-min fallback entry kept a whole binge on torrents long after the
+    primary had recovered (seen live 2026-07-24)."""
+    provider = FakeAnimeProvider(servers={})
+    nyaa_list = [make_server(name="nyaa:SubsPlease (5 seeders)", link="magnet:x")]
+    assert pf._entry_ttl(provider, nyaa_list) == pf._FALLBACK_TTL
+    # A primary-provider list keeps the long TTL...
+    assert pf._entry_ttl(provider, [make_server(name="Luf-mp4", link="u")]) == pf._TTL
+
+    class Nyaa:  # matched by class NAME, like the real provider
+        pass
+
+    # ...and so does a nyaa list when nyaa IS the chosen primary.
+    assert pf._entry_ttl(Nyaa(), nyaa_list) == pf._TTL
+
+    # A fallback entry is really gone after its short TTL.
+    cfg = _config()
+    key = pf._key("anime-fallback", "2", cfg.stream.translation_type)
+    pf._cache_put(key, nyaa_list, pf._FALLBACK_TTL)
+    _ts, _ttl, srv = pf._CACHE[key]
+    pf._CACHE[key] = (_ts - pf._FALLBACK_TTL - 1.0, _ttl, srv)
+    assert pf._cache_get(key) is None
 
 
 def test_get_servers_caches_its_own_resolve():
