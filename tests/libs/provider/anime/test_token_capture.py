@@ -19,6 +19,8 @@ def _isolated_cache(tmp_path, monkeypatch):
     """Point the token cache at a temp file so tests never touch real state."""
     cache = tmp_path / "allanime_token.json"
     monkeypatch.setattr(tc, "_cache_file", lambda: cache)
+    # Reset the silent-refresh backoff so tests stay order-independent.
+    monkeypatch.setattr(tc, "_silent_refresh_failed_at", 0.0)
     return cache
 
 
@@ -104,6 +106,29 @@ def test_get_active_token_refreshes_for_opted_in_user(_isolated_cache, monkeypat
     monkeypatch.setattr(tc, "capture_token", lambda **k: fresh)
     monkeypatch.setattr(tc, "playwright_available", lambda: True)
     assert tc.get_active_token() == fresh
+
+
+def test_silent_refresh_is_short_and_backs_off_after_failure(_isolated_cache, monkeypatch):
+    """A doomed headless capture must not cost 90s per EPISODE: the silent
+    refresh runs with the short timeout, and after one failure the session
+    backs off so later episodes skip the browser and fall straight to nyaa."""
+    _isolated_cache.write_text(
+        json.dumps({"token": "old", "captured_at": 0}), encoding="utf-8"
+    )
+    monkeypatch.setattr(tc, "playwright_available", lambda: True)
+    timeouts = []
+
+    def failing_capture(headless=True, timeout=90.0, **k):
+        timeouts.append(timeout)
+        return None
+
+    monkeypatch.setattr(tc, "capture_token", failing_capture)
+
+    assert tc.get_active_token() is None
+    assert timeouts == [tc.SILENT_REFRESH_TIMEOUT]
+    # Next episode in the same session: no second browser launch.
+    assert tc.get_active_token() is None
+    assert len(timeouts) == 1
 
 
 def test_get_active_token_returns_fresh_cache_without_capture(_isolated_cache, monkeypatch):

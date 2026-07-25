@@ -46,9 +46,28 @@ BROWSER_UA = (
 OUT_FILE = Path(__file__).resolve().parents[1] / "keygen" / "allanime.json"
 
 
+def _ssl_context():
+    """certifi-backed context when available, else the interpreter default.
+
+    The OS trust store can hold an expired copy of a chain certificate (seen
+    2026-07-24: Windows rejected mkissa's new Let's Encrypt chain as
+    "certificate has expired" while certifi verified it fine)."""
+    try:
+        import ssl
+
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:  # noqa: BLE001 - no certifi -> default verification
+        return None
+
+
+_SSL_CONTEXT = _ssl_context()
+
+
 def _get(url: str) -> str:
     req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
-    with urllib.request.urlopen(req, timeout=15) as r:
+    with urllib.request.urlopen(req, timeout=15, context=_SSL_CONTEXT) as r:
         return r.read().decode("utf-8", errors="replace")
 
 

@@ -375,6 +375,54 @@ def test_fetch_caches_rss_per_query(monkeypatch):
     assert client.calls == 2
 
 
+# ---- targeted episode search (first-page miss rescue) ---------------------
+
+
+def test_episode_candidates_prefers_singles_then_batches():
+    single = _item("SubsPlease", "1080", 5, ep="3", hash="s")
+    pack = _batch("SubsPlease", "1080", 99, 1, 12, hash="p")
+    cands, is_batch = Nyaa._episode_candidates([pack, single], 3.0)
+    assert [i["hash"] for i in cands] == ["s"] and not is_batch
+    cands2, is_batch2 = Nyaa._episode_candidates([pack], 3.0)
+    assert [i["hash"] for i in cands2] == ["p"] and is_batch2
+    assert Nyaa._episode_candidates([pack], 20.0) == ([], False)
+
+
+def test_episode_streams_targeted_query_rescues_first_page_miss(nyaa, monkeypatch):
+    """A back-catalog episode absent from the newest-75 generic RSS page must
+    be found via the zero-padded '<title> 03' query (real miss observed
+    2026-07-24: Mushoku Tensei S2 ep 3 - the generic page only carried later
+    episodes and no covering batch, so the nyaa fallback came up empty)."""
+    queries = []
+
+    def fake_fetch(query):
+        queries.append(query)
+        if query.endswith(" 03"):
+            it = _item("SubsPlease", "1080", 78, ep="3", hash="rescued")
+            it["title"] = "[SubsPlease] Mushoku Tensei S2 - 03 (1080p).mkv"
+            return [it]
+        it = _item("SubsPlease", "1080", 5, ep="25", hash="recent")
+        it["title"] = "[SubsPlease] Mushoku Tensei S2 - 25 (1080p).mkv"
+        return [it]
+
+    monkeypatch.setattr(nyaa, "_fetch", fake_fetch)
+    params = EpisodeStreamsParams(
+        anime_id="Mushoku Tensei S2", query="Mushoku Tensei S2", episode="3",
+        translation_type="sub", quality="1080",
+    )
+    servers = list(nyaa.episode_streams(params) or [])
+    assert servers and "urn:btih:rescued" in servers[0].links[0].link
+    assert any(q.endswith(" 03") for q in queries)
+
+
+def test_targeted_items_keeps_the_season_filter(nyaa, monkeypatch):
+    """The targeted query must not let another season's '- 03' sneak in."""
+    wrong = _item("SubsPlease", "1080", 50, ep="3", hash="s3ep")
+    wrong["title"] = "[SubsPlease] Mushoku Tensei S3 - 03 (1080p).mkv"
+    monkeypatch.setattr(nyaa, "_fetch", lambda q: [wrong])
+    assert nyaa._targeted_items("Mushoku Tensei S2", 3.0) == []
+
+
 # ---- magnet construction (O1) --------------------------------------------
 
 

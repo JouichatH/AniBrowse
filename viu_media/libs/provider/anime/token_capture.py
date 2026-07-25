@@ -29,6 +29,8 @@ import hashlib
 import json
 import logging
 import re
+import ssl
+import threading
 import time
 import urllib.request
 from typing import Any, Optional
@@ -50,9 +52,32 @@ _BROWSER_UA = (
 )
 
 
+_ssl_ctx: Optional[ssl.SSLContext] = None
+_ssl_ctx_built = False
+
+
+def _ssl_context() -> Optional[ssl.SSLContext]:
+    """A certifi-backed SSL context, or None for the interpreter default.
+
+    Python's default context trusts the OS store, which can hold an expired
+    copy of a chain certificate (seen live 2026-07-24: Windows rejected
+    mkissa's new Let's Encrypt chain as "certificate has expired" while
+    certifi - the bundle httpx uses - verified it fine)."""
+    global _ssl_ctx, _ssl_ctx_built
+    if not _ssl_ctx_built:
+        _ssl_ctx_built = True
+        try:
+            import certifi
+
+            _ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+        except Exception:  # noqa: BLE001 - no certifi -> default verification
+            _ssl_ctx = None
+    return _ssl_ctx
+
+
 def _http_get(url: str) -> str:
     req = urllib.request.Request(url, headers={"User-Agent": _BROWSER_UA})
-    with urllib.request.urlopen(req, timeout=15) as r:
+    with urllib.request.urlopen(req, timeout=15, context=_ssl_context()) as r:
         return r.read().decode("utf-8", errors="replace")
 
 
@@ -196,6 +221,18 @@ def _user_opted_in() -> bool:
     return _cache_file().exists()
 
 
+# A doomed headless capture burns its whole timeout, and the interactive flow
+# reaches here once per episode (plus the prefetch threads) - so the silent
+# refresh is kept SHORT, only one runs at a time, and a failure backs off for
+# the rest of the session: a Cloudflare wall costs one short wait, not 90s per
+# episode. An interactive capture (ani-browse allanime-token) keeps the long
+# timeout via capture_token's own default.
+SILENT_REFRESH_TIMEOUT = 20.0
+_SILENT_REFRESH_BACKOFF = 10 * 60  # seconds
+_silent_refresh_lock = threading.Lock()
+_silent_refresh_failed_at = 0.0
+
+
 def get_active_token(headless: bool = True) -> Optional[dict[str, Any]]:
     """Best token for the provider: fresh cache, else a silent refresh.
 
@@ -205,13 +242,32 @@ def get_active_token(headless: bool = True) -> Optional[dict[str, Any]]:
     refresh, which succeeds while the persistent profile's Cloudflare clearance
     cookie is still valid and fails quietly otherwise (provider -> nyaa).
     """
+    global _silent_refresh_failed_at
     cached = load_cached_token()
     if cached:
         return cached
-    if _user_opted_in() and playwright_available():
+    if not (_user_opted_in() and playwright_available()):
+        return None
+    if time.time() - _silent_refresh_failed_at < _SILENT_REFRESH_BACKOFF:
+        logger.debug("skipping silent token refresh (recent failure, backing off)")
+        return None
+    if not _silent_refresh_lock.acquire(blocking=False):
+        # Another thread is already refreshing; don't stack browser launches -
+        # this caller just moves on to its next fallback (nyaa).
+        return None
+    try:
+        if cached := load_cached_token():  # refreshed while we raced for the lock
+            return cached
         logger.info("allanime token expired; attempting silent browser refresh")
-        return capture_token(headless=headless)
-    return None
+        token = capture_token(
+            headless=headless,
+            timeout=SILENT_REFRESH_TIMEOUT if headless else 90.0,
+        )
+        if token is None:
+            _silent_refresh_failed_at = time.time()
+        return token
+    finally:
+        _silent_refresh_lock.release()
 
 
 def capture_token(

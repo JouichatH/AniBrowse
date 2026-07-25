@@ -243,6 +243,44 @@ class Nyaa(BaseAnimeProvider):
         _rss_cache[query.lower()] = (time.monotonic(), items)
         return items
 
+    @staticmethod
+    def _episode_candidates(items: List[dict], want: float) -> "tuple[List[dict], bool]":
+        """(candidates, is_batch) for one episode: single-episode torrents
+        first; only if none exist, season batches that cover the number."""
+        singles = [i for i in items if i["ep"] and float(i["ep"]) == want]
+        if singles:
+            return singles, False
+        if want.is_integer():
+            batches = [
+                i
+                for i in items
+                if i.get("batch_start") and i["batch_start"] <= want <= i["batch_end"]
+            ]
+            if batches:
+                return batches, True
+        return [], False
+
+    def _targeted_items(self, query: str, want: float) -> List[dict]:
+        """Episode-targeted queries for an episode missing from the generic search.
+
+        The title search only sees nyaa's newest ~75 results, so a back-catalog
+        episode of a long or completed show (whose single-episode uploads are
+        months old) falls off the first page even though nyaa still has it.
+        Appending the zero-padded episode number ("<title> 03") surfaces those
+        releases directly.
+        """
+        wanted = self._season_of(query) or 1
+        term = f"{int(want):02d}" if want.is_integer() else _fmt_ep(want)
+        for v in self._search_variants(query):
+            items = [
+                i
+                for i in self._fetch(f"{v} {term}")
+                if (self._season_of(i["title"]) or 1) == wanted
+            ]
+            if self._episode_candidates(items, want)[0]:
+                return items
+        return []
+
     def _items_for(self, query: str) -> List[dict]:
         """First query variant that yields usable torrents of the RIGHT season.
 
@@ -347,16 +385,13 @@ class Nyaa(BaseAnimeProvider):
         # for this episode do we fall back to a season batch that covers it -
         # completed shows are frequently batch-only on nyaa. The batch magnet is
         # tagged so the player streams just this episode's file out of the pack.
-        cands = [i for i in items if i["ep"] and float(i["ep"]) == want]
-        is_batch = False
-        if not cands and want.is_integer():
-            cands = [
-                i
-                for i in items
-                if i.get("batch_start")
-                and i["batch_start"] <= want <= i["batch_end"]
-            ]
-            is_batch = True
+        cands, is_batch = self._episode_candidates(items, want)
+        if not cands:
+            # Not on the first page of the generic search - query the episode
+            # number directly before giving up.
+            cands, is_batch = self._episode_candidates(
+                self._targeted_items(params.query or params.anime_id, want), want
+            )
         if not cands:
             return None
 
