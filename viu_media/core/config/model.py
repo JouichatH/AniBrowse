@@ -152,7 +152,7 @@ class GeneralConfig(BaseModel):
         default=defaults.GENERAL_PREFERRED_SPINNER,
         description=desc.GENERAL_PREFERRED_SPINNER,
     )
-    media_api: Literal["anilist", "jikan"] = Field(
+    media_api: Literal["anidb", "anilist", "jikan"] = Field(
         default=defaults.GENERAL_API_CLIENT,
         description=desc.GENERAL_API_CLIENT,
     )
@@ -160,7 +160,7 @@ class GeneralConfig(BaseModel):
         default=defaults.GENERAL_WELCOME_SCREEN, description=desc.GENERAL_WELCOME_SCREEN
     )
     provider: ProviderName = Field(
-        default=ProviderName.ALLANIME,
+        default=ProviderName(defaults.GENERAL_PROVIDER),
         description=desc.GENERAL_PROVIDER,
     )
     selector: Literal["default", "fzf", "rofi"] = Field(

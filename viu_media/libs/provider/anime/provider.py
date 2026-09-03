@@ -9,6 +9,7 @@ from .types import ProviderName
 logger = logging.getLogger(__name__)
 
 PROVIDERS_AVAILABLE = {
+    "anidb": "provider.AniDB",
     "allanime": "provider.AllAnime",
     "animepahe": "provider.AnimePahe",
     "hianime": "provider.HiAnime",

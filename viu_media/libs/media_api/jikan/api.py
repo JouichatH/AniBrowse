@@ -1,4 +1,6 @@
 import logging
+import random
+import time
 from typing import TYPE_CHECKING, List, Optional
 
 from ..base import BaseApiClient
@@ -16,7 +18,10 @@ from ..types import (
     CharacterSearchResult,
     MediaImage,
     MediaItem,
+    MediaReview,
     MediaSearchResult,
+    MediaSort,
+    MediaStatus,
     MediaTitle,
     Notification,
     UserProfile,
@@ -30,6 +35,24 @@ logger = logging.getLogger(__name__)
 
 JIKAN_ENDPOINT = "https://api.jikan.moe/v4"
 
+# Sorts the menus use that map onto a /top/anime filter. "" = /top/anime's own
+# default ordering (by score/rank), which is what SCORE_DESC wants.
+_TOP_FILTERS = {
+    MediaSort.TRENDING_DESC: "airing",
+    MediaSort.POPULARITY_DESC: "bypopularity",
+    MediaSort.FAVOURITES_DESC: "favorite",
+    MediaSort.SCORE_DESC: "",
+}
+
+# Everything else goes to /anime with an explicit ordering.
+_ORDER_BY = {
+    MediaSort.UPDATED_AT_DESC: ("start_date", "desc"),
+    MediaSort.START_DATE_DESC: ("start_date", "desc"),
+    MediaSort.EPISODES_DESC: ("episodes", "desc"),
+    MediaSort.TITLE_ROMAJI: ("title", "asc"),
+    MediaSort.ID: ("mal_id", "asc"),
+}
+
 
 class JikanApi(BaseApiClient):
     """
@@ -41,50 +64,126 @@ class JikanApi(BaseApiClient):
     def _execute_request(
         self, endpoint: str, params: Optional[dict] = None
     ) -> Optional[dict]:
-        """Executes a GET request to a Jikan endpoint."""
-        try:
-            response = self.http_client.get(
-                f"{JIKAN_ENDPOINT}{endpoint}", params=params, timeout=10
-            )
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            logger.error(f"Jikan API request failed for endpoint '{endpoint}': {e}")
-            return None
+        """GET a Jikan endpoint, honouring its rate limit.
+
+        Jikan allows ~3 requests/second and answers 429 once you exceed that.
+        The app fires several calls per screen (results plus preview workers),
+        so a burst is routine and must be waited out rather than surfaced as a
+        failure.
+        """
+        clean = {k: v for k, v in (params or {}).items() if v is not None}
+        delay = 1.0
+        for attempt in range(3):
+            try:
+                response = self.http_client.get(
+                    f"{JIKAN_ENDPOINT}{endpoint}", params=clean, timeout=15
+                )
+                if response.status_code == 429 and attempt < 2:
+                    logger.debug("Jikan rate-limited %s; retrying in %ss", endpoint, delay)
+                    time.sleep(delay)
+                    delay *= 2
+                    continue
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                if attempt == 2:
+                    logger.error(f"Jikan API request failed for '{endpoint}': {e}")
+                    return None
+                time.sleep(delay)
+                delay *= 2
+        return None
 
     # --- Read-Only Method Implementations ---
 
     def search_media(self, params: MediaSearchParams) -> Optional[MediaSearchResult]:
-        """Searches for anime on MyAnimeList via Jikan."""
+        """Every browse screen funnels through here, so translate the sort too.
+
+        The menus express "Trending"/"Popular"/"Upcoming" as a MediaSort (plus an
+        optional status) on an otherwise empty MediaSearchParams. MAL has no
+        trending metric, but /top/anime's filters cover the same intents, so a
+        sort is routed to the closest endpoint instead of being ignored - which
+        is what made every category return one identical list.
+        """
+        endpoint, extra = self._route(params)
         jikan_params = {
             "q": params.query,
             "page": params.page,
-            "limit": params.per_page,
+            "limit": params.per_page or self.config.per_page,
+            "sfw": "true",
+            **extra,
         }
-        raw_data = self._execute_request("/anime", params=jikan_params)
+        raw_data = self._execute_request(endpoint, params=jikan_params)
         return mapper.to_generic_search_result(raw_data) if raw_data else None
+
+    def _route(self, params: MediaSearchParams) -> "tuple[str, dict]":
+        """(endpoint, extra query params) for a search request."""
+        sort = params.sort
+        if isinstance(sort, list):
+            sort = sort[0] if sort else None
+
+        # A text query always means a plain search; MAL's /top endpoints ignore q.
+        if params.query:
+            return "/anime", {}
+
+        status = params.status
+        if status is MediaStatus.NOT_YET_RELEASED:
+            return "/top/anime", {"filter": "upcoming"}
+
+        if sort is not None:
+            filter_ = _TOP_FILTERS.get(sort)
+            if filter_ is not None:
+                # filter_ == "" means /top/anime's default order (by score/rank).
+                return "/top/anime", ({"filter": filter_} if filter_ else {})
+            order_by, direction = _ORDER_BY.get(sort, ("members", "desc"))
+            return "/anime", {"order_by": order_by, "sort": direction}
+
+        # "Random" asks for 50 arbitrary ids, which MAL cannot express. A random
+        # page of popular anime keeps the menu useful; ids would cost one
+        # request each and blow the rate limit.
+        if params.id_in:
+            pages = max(1, 300)
+            return "/anime", {
+                "order_by": "members",
+                "sort": "desc",
+                "page": random.randint(1, pages),
+            }
+
+        return "/anime", {"order_by": "members", "sort": "desc"}
 
     def fetch_trending_media(
-        self, page: int, per_page: int
+        self, page: int = 1, per_page: int = 25
     ) -> Optional[MediaSearchResult]:
-        """Jikan doesn't have a 'trending' sort, so we'll use 'bypopularity'."""
-        jikan_params = {"order_by": "popularity", "page": page, "limit": per_page}
-        raw_data = self._execute_request("/anime", params=jikan_params)
-        return mapper.to_generic_search_result(raw_data) if raw_data else None
+        """MAL has no trending metric; currently-airing top anime is the analogue."""
+        raw = self._execute_request(
+            "/top/anime", params={"filter": "airing", "page": page, "limit": per_page}
+        )
+        return mapper.to_generic_search_result(raw) if raw else None
 
     def fetch_popular_media(
-        self, page: int, per_page: int
+        self, page: int = 1, per_page: int = 25
     ) -> Optional[MediaSearchResult]:
-        """Alias for trending in Jikan's case."""
-        return self.fetch_trending_media(page, per_page)
+        raw = self._execute_request(
+            "/top/anime",
+            params={"filter": "bypopularity", "page": page, "limit": per_page},
+        )
+        return mapper.to_generic_search_result(raw) if raw else None
 
     def fetch_favourite_media(
-        self, page: int, per_page: int
+        self, page: int = 1, per_page: int = 25
     ) -> Optional[MediaSearchResult]:
-        """Fetches the most favorited media."""
-        jikan_params = {"order_by": "favorites", "page": page, "limit": per_page}
-        raw_data = self._execute_request("/anime", params=jikan_params)
+        raw = self._execute_request(
+            "/top/anime", params={"filter": "favorite", "page": page, "limit": per_page}
+        )
+        return mapper.to_generic_search_result(raw) if raw else None
+
+    def transform_raw_search_data(self, raw_data) -> Optional[MediaSearchResult]:
+        """Map an already-fetched Jikan payload (used by the dynamic search menu)."""
         return mapper.to_generic_search_result(raw_data) if raw_data else None
+
+    def get_reviews_for(self, params) -> Optional[List[MediaReview]]:
+        """MAL reviews are long-form prose without the fields the UI renders."""
+        logger.debug("Jikan reviews are not mapped; skipping.")
+        return None
 
     # --- No-Op Methods (Jikan is Read-Only) ---
 

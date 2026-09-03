@@ -3,7 +3,11 @@
 GENERAL_WELCOME_SCREEN = "Whether to enable the welcome screen, that runs once per day"
 GENERAL_PYGMENT_STYLE = "The pygment style to use"
 GENERAL_PREFERRED_SPINNER = "The spinner to use"
-GENERAL_API_CLIENT = "The media database API to use (e.g., 'anilist', 'jikan')."
+GENERAL_API_CLIENT = (
+    "Where browsing data comes from. 'anidb' uses the same host that serves "
+    "the streams, so browsing cannot break while playback works; 'anilist' "
+    "adds account list sync; 'jikan' reads MyAnimeList."
+)
 GENERAL_PREFERRED_TRACKER = (
     "The preferred watch history tracker (local,remote) in cases of conflicts"
 )

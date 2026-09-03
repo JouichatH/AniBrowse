@@ -111,8 +111,10 @@ jobs:
 
           provider_text = (root / "allanime" / "provider.py").read_text(encoding="utf-8")
           utils_text = (root / "allanime" / "utils.py").read_text(encoding="utf-8")
+          # allanime is legacy (its API is captcha-walled), but these assertions
+          # still prove the patch-on-fetch machinery in fetch_providers.py works.
           if "get_aa_req" not in provider_text or "def get_aa_req" not in utils_text:
-              failures.append("allanime: aaReq handshake patch MISSING -> AA_CRYPTO_MISSING, permanent nyaa fallback")
+              failures.append("allanime: aaReq handshake patch MISSING -> patch-on-fetch is broken")
           if "[ani-browse:ranking-patch]" not in provider_text:
               failures.append("allanime: best-first ranking patch missing")
 
@@ -125,10 +127,16 @@ jobs:
           from viu_media.libs.provider.anime.types import ProviderName
           create_provider(ProviderName.ALLANIME)
 
+          # The primary provider is vendored, so it must import and be the default.
+          create_provider(ProviderName.ANIDB)
+          from viu_media.core.config import AppConfig
+          if AppConfig().general.provider is not ProviderName.ANIDB:
+              failures.append(f"default provider is {AppConfig().general.provider}, expected anidb")
+
           if failures:
               print("\n".join(failures))
               sys.exit(1)
-          print("providers OK: fetched, handshake + ranking patches present, importable")
+          print("providers OK: anidb default + importable, fetched scrapers patched")
           '@ | Set-Content -Path "$env:RUNNER_TEMP\check_providers.py" -Encoding utf8
           & $appPy "$env:RUNNER_TEMP\check_providers.py"
           if ($LASTEXITCODE -ne 0) { exit 1 }
@@ -172,12 +180,13 @@ jobs:
           & $appPy "$env:RUNNER_TEMP\check_config.py"
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
-      # Real network probe against allanime. Best-effort: datacenter IPs may be
-      # blocked upstream, so this must never fail the workflow — but when it
-      # works it proves the full fetch->patch->stream-resolve chain.
-      - name: Live allanime stream resolve (best-effort)
+      # Real network probe against the primary provider. Best-effort: anidb.app
+      # is behind Cloudflare and datacenter IPs can draw a challenge, so this
+      # must never fail the workflow — but when it works it proves the full
+      # install->search->stream-resolve chain on a fresh machine.
+      - name: Live anidb stream resolve (best-effort)
         continue-on-error: true
         shell: powershell
         run: |
           $appPy = "${{ steps.app.outputs.appPy }}"
-          & $appPy scripts\probe_launch_timing.py --provider allanime --query "One Piece" --episode 1
+          & $appPy scripts\probe_launch_timing.py --provider anidb --query "One Piece" --episode 1

@@ -5,13 +5,13 @@
 
 ani-browse is a **free app for watching anime on your computer**. Instead of opening a web browser and clicking through ad-filled sites, you search and play everything from one clean screen you control with your keyboard.
 
-It connects to your (free) **[AniList](https://anilist.co)** account to keep track of what you watch, automatically finds the best available source for each episode, and — when a brand-new episode isn't up yet on the usual sites — quietly falls back to **fast torrent releases** so you can watch it the day it airs.
+It finds the best available source for each episode automatically and — when a brand-new episode isn't up yet on the usual sites — quietly falls back to **fast torrent releases** so you can watch it the day it airs. Everything works straight away with no account; you can optionally connect a free **[AniList](https://anilist.co)** account to sync your watch list.
 
 Once it's installed, you don't need any technical knowledge: **arrow keys** to move, **Enter** to choose.
 
 ## What it can do
 
-- 🔎 **Find any anime** — search the huge AniList catalog by name, genre, year, and more.
+- 🔎 **Find any anime** — browse and search a full catalog by name, genre, year, and more.
 - ▶️ **Stream instantly** — pick an episode and it starts in seconds, automatically choosing the best and fastest source.
 - 🧲 **Never wait for new episodes** — automatic torrent fallback grabs freshly-aired episodes before the usual sites upload them.
 - ⏭️ **Skip openings & endings** — optional automatic skipping of intros and outros.
@@ -19,7 +19,7 @@ Once it's installed, you don't need any technical knowledge: **arrow keys** to m
 - 📋 **Track your list** — mark episodes watched, resume where you left off, and stay in sync with AniList.
 - 🎨 **Cover-image previews** — see the artwork right inside the terminal.
 
-> **You'll need:** a free [AniList account](https://anilist.co/signup) to browse and track anime. The installer sets up everything else for you.
+> **You'll need:** nothing but the installer — browsing, searching and watching all work without an account. A free [AniList account](https://anilist.co/signup) is optional, and only adds watch-list sync.
 
 ## Install — step by step
 
@@ -68,19 +68,19 @@ First make sure **git** is installed (on macOS, running `git` the first time off
 
 ## First time using it
 
-1. **Log in to AniList** (one time only). Type:
+1. **Start browsing** — no login needed:
+
+   ```bash
+   ani-browse
+   ```
+
+2. **Optional:** connect a free AniList account to sync your watch list:
 
    ```bash
    ani-browse anilist auth
    ```
 
    This opens your web browser — approve the app, copy the code it shows you, and paste it back into the terminal.
-
-2. **Start browsing:**
-
-   ```bash
-   ani-browse anilist
-   ```
 
 3. **Get around** with your keyboard:
    - **↑ / ↓** to move, **Enter** to choose, **Esc** to go back.
@@ -190,9 +190,10 @@ python scripts/fetch_providers.py  # fetch the provider scrapers (run with the a
 ani-browse --version
 ```
 
-> The provider scrapers (allanime / animepahe / animeunity) are not vendored in
-> this repo; `scripts/fetch_providers.py` downloads them. The installer runs this
-> step for you.
+> The default provider (anidb) and the nyaa torrent fallback live in this repo.
+> The legacy scrapers (allanime / animepahe / animeunity) are not vendored;
+> `scripts/fetch_providers.py` downloads them, and the installer runs that step
+> for you.
 
 > [!TIP]
 > Enable shell completions for a much better experience by running `ani-browse completions` and following the on-screen instructions for your shell.
@@ -317,7 +318,8 @@ Most settings in the config file can be temporarily overridden with command-line
 ```ini
 # [general] Section: Controls overall application behavior.
 [general]
-provider = allanime          ; The default anime provider (allanime, animepahe).
+media_api = anidb            ; Where browsing data comes from (anidb, anilist, jikan).
+provider = anidb             ; The default anime provider (anidb, nyaa, animepahe).
 selector = fzf               ; The interactive UI tool (fzf, rofi, default).
 preview = full               ; Preview type in selectors (full, text, image, none).
 image_renderer = icat        ; Tool for terminal image previews (icat, chafa).

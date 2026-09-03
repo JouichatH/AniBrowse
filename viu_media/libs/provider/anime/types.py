@@ -10,10 +10,14 @@ from pydantic import BaseModel, ConfigDict
 # ENUMS
 class ProviderName(Enum):
     # Order matters: provider-selection menus list these in definition order.
-    # nyaa sits second as the house fallback (and the automatic one whenever
-    # the primary yields no servers - see _source_fallback/_prefetch).
-    ALLANIME = "allanime"
+    # anidb leads as the primary streaming source; nyaa sits second as the house
+    # fallback (and the automatic one whenever the primary yields no servers -
+    # see _source_fallback/_prefetch). allanime is kept only as a manual choice:
+    # its API went captcha-walled in 2026-08 and answers empty for everyone
+    # (ani-cli dropped it in v5.0.0 for the same reason).
+    ANIDB = "anidb"
     NYAA = "nyaa"
+    ALLANIME = "allanime"
     ANIMEPAHE = "animepahe"
     ANIMEUNITY = "animeunity"
 

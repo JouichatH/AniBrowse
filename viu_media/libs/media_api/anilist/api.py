@@ -5,8 +5,10 @@ from typing import Any, List, Optional
 from httpx import Client
 
 from ....core.config import AnilistConfig
+from ....core.exceptions import AniBrowseError
 from ....core.utils.graphql import (
     execute_graphql,
+    graphql_error_message,
 )
 from ..base import BaseApiClient
 from ..params import (
@@ -76,6 +78,21 @@ search_params_map = {
 }
 
 
+def _payload(response) -> Any:
+    """The response body, or an error naming AniList's own reason for refusing.
+
+    The mappers index straight into ``data["data"]``, so an outage used to
+    surface as ``'NoneType' object is not subscriptable``. Raising here turns
+    that into the server's actual message (e.g. "The AniList API has been
+    temporarily disabled due to severe stability issues").
+    """
+    message = graphql_error_message(response)
+    if message:
+        logger.error("AniList request failed: %s", message)
+        raise AniBrowseError(f"AniList is unavailable: {message}")
+    return response.json()
+
+
 class AniListApi(BaseApiClient):
     """AniList API implementation of the BaseApiClient contract."""
 
@@ -102,7 +119,7 @@ class AniListApi(BaseApiClient):
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_LOGGED_IN_USER, {}
         )
-        return mapper.to_generic_user_profile(response.json())
+        return mapper.to_generic_user_profile(_payload(response))
 
     def search_media(self, params: MediaSearchParams) -> Optional[MediaSearchResult]:
         variables = {
@@ -143,7 +160,7 @@ class AniListApi(BaseApiClient):
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.SEARCH_MEDIA, variables
         )
-        return mapper.to_generic_search_result(response.json())
+        return mapper.to_generic_search_result(_payload(response))
 
     def search_media_list(
         self, params: UserMediaListSearchParams
@@ -167,7 +184,7 @@ class AniListApi(BaseApiClient):
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.SEARCH_USER_MEDIA_LIST, variables
         )
-        return mapper.to_generic_user_list_result(response.json()) if response else None
+        return mapper.to_generic_user_list_result(_payload(response)) if response else None
 
     def update_list_entry(self, params: UpdateUserMediaListEntryParams) -> bool:
         if not self.token:
@@ -229,7 +246,7 @@ class AniListApi(BaseApiClient):
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_RECOMMENDATIONS, variables
         )
-        return mapper.to_generic_recommendations(response.json())
+        return mapper.to_generic_recommendations(_payload(response))
 
     def get_characters_of(
         self, params: MediaCharactersParams
@@ -249,7 +266,7 @@ class AniListApi(BaseApiClient):
         response = execute_graphql(
             ANILIST_ENDPOINT, self.http_client, gql.GET_MEDIA_RELATIONS, variables
         )
-        return mapper.to_generic_relations(response.json())
+        return mapper.to_generic_relations(_payload(response))
 
     def get_airing_schedule_for(
         self, params: MediaAiringScheduleParams

@@ -14,7 +14,7 @@ It also prints the servers in the order the provider yields them, so you can
 confirm the best-first ranking (highest-priority / best-quality first).
 
 Usage (run with the Python that has ani-browse installed):
-    python scripts/probe_launch_timing.py --provider allanime --query "frieren" --episode 1
+    python scripts/probe_launch_timing.py --provider anidb --query "frieren" --episode 1
     python scripts/probe_launch_timing.py --provider animepahe --query "one piece" --episode 1 --index 0
 
 Notes:
@@ -37,6 +37,7 @@ except Exception:  # noqa: BLE001
     pass
 
 PROVIDERS = {
+    "anidb": ("viu_media.libs.provider.anime.anidb.provider", "AniDB"),
     "allanime": ("viu_media.libs.provider.anime.allanime.provider", "AllAnime"),
     "animepahe": ("viu_media.libs.provider.anime.animepahe.provider", "AnimePahe"),
     "animeunity": ("viu_media.libs.provider.anime.animeunity.provider", "AnimeUnity"),
@@ -50,13 +51,21 @@ def _make_provider(name: str):
 
     module_name, cls_name = PROVIDERS[name]
     module = __import__(module_name, fromlist=[cls_name])
-    client = httpx.Client(verify=False, timeout=25, follow_redirects=True)
-    return getattr(module, cls_name)(client)
+    provider_class = getattr(module, cls_name)
+    # Carry the provider's own HEADERS the way the app's factory does - anidb
+    # pins a desktop UA to get past Cloudflare, and httpx's default UA does not.
+    client = httpx.Client(
+        verify=False,
+        timeout=25,
+        follow_redirects=True,
+        headers=dict(getattr(provider_class, "HEADERS", {})),
+    )
+    return provider_class(client)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--provider", choices=list(PROVIDERS), default="allanime")
+    ap.add_argument("--provider", choices=list(PROVIDERS), default="anidb")
     ap.add_argument("--query", required=True, help="title to search for")
     ap.add_argument("--episode", default="1", help="episode number (default 1)")
     ap.add_argument("--translation", choices=["sub", "dub"], default="sub")
