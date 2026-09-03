@@ -31,9 +31,24 @@ class BaseApiClient(abc.ABC):
     Abstract Base Class defining a generic contract for media database APIs.
     """
 
+    #: Why the most recent call came back empty, in words a user can act on.
+    #: Backends here answer an outage with ``None`` rather than an exception,
+    #: which the menus used to render as a silent bounce back to the main menu
+    #: - the app looked frozen when it was merely unable to reach a host. Any
+    #: backend that gives up should say so here; the menus read it and show it.
+    last_error: Optional[str] = None
+
     def __init__(self, config: AnilistConfig | Any, client: "Client"):
         self.config = config
         self.http_client = client
+        self.last_error = None
+
+    def note_failure(self, message: str) -> None:
+        """Record why a call failed so the UI can explain itself."""
+        self.last_error = message
+
+    def clear_failure(self) -> None:
+        self.last_error = None
 
     @abc.abstractmethod
     def authenticate(self, token: str) -> Optional[UserProfile]:

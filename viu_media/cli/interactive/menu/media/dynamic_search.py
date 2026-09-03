@@ -153,7 +153,16 @@ def dynamic_search(ctx: Context, state: State) -> State | InternalDirective:
 
     # Read the cached search results
     if not SEARCH_RESULTS_FILE.exists():
+        # The live-search subprocess writes this file; a missing file means it
+        # never got an answer from the metadata backend. Say so rather than
+        # dropping the user back on the main menu with no explanation.
         logger.error("Search results file not found")
+        reason = getattr(ctx.media_api, "last_error", None)
+        feedback.error(
+            "Search returned nothing",
+            reason or "Could not reach the metadata service - check your connection.",
+        )
+        feedback.pause_for_user()
         return InternalDirective.MAIN
 
     with open(SEARCH_RESULTS_FILE, "r", encoding="utf-8") as f:
@@ -163,7 +172,12 @@ def dynamic_search(ctx: Context, state: State) -> State | InternalDirective:
     search_result = ctx.media_api.transform_raw_search_data(raw_data)
 
     if not search_result or not search_result.media:
-        feedback.info("No results found")
+        reason = getattr(ctx.media_api, "last_error", None)
+        if reason:
+            feedback.error("Search returned nothing", reason)
+        else:
+            feedback.info("No results found")
+        feedback.pause_for_user()
         return InternalDirective.MAIN
 
     # Find the selected media item by matching the choice with the displayed format

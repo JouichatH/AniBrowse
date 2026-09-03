@@ -93,6 +93,24 @@ def main(ctx: Context, state: State) -> State | InternalDirective:
     return next_step
 
 
+def _report_empty(ctx: Context, what: str) -> InternalDirective:
+    """Explain an empty screen instead of silently redrawing the main menu.
+
+    A dead backend and a genuinely empty result set used to be indistinguishable
+    from the user's seat: both bounced straight back to the main menu with no
+    message, so an outage looked like the app ignoring the keypress. When a
+    backend has told us why it gave up, that reason goes on screen.
+    """
+    feedback = ctx.feedback
+    reason = getattr(ctx.media_api, "last_error", None)
+    if reason:
+        feedback.error(f"Could not load {what}", reason)
+    else:
+        feedback.info(f"No {what} found")
+    feedback.pause_for_user()
+    return InternalDirective.MAIN
+
+
 def _create_media_list_action(
     ctx: Context, state: State, sort: MediaSort, status: MediaStatus | None = None
 ) -> MenuAction:
@@ -117,7 +135,7 @@ def _create_media_list_action(
                 ),
             )
         else:
-            return InternalDirective.MAIN
+            return _report_empty(ctx, "that list")
 
     return action
 
@@ -144,7 +162,7 @@ def _create_random_media_list(ctx: Context, state: State) -> MenuAction:
                 ),
             )
         else:
-            return InternalDirective.MAIN
+            return _report_empty(ctx, "a random selection")
 
     return action
 
@@ -176,7 +194,7 @@ def _create_search_media_list(ctx: Context, state: State) -> MenuAction:
                 ),
             )
         else:
-            return InternalDirective.MAIN
+            return _report_empty(ctx, f"results for '{query}'")
 
     return action
 
@@ -234,7 +252,7 @@ def _create_user_list_action(
                 ),
             )
         else:
-            return InternalDirective.MAIN
+            return _report_empty(ctx, f"your {status.value} list")
 
     return action
 
@@ -262,6 +280,7 @@ def _create_recent_media_action(ctx: Context, state: State) -> MenuAction:
             "Nothing to continue yet",
             "Shows you watch land here automatically, newest first.",
         )
+        ctx.feedback.pause_for_user()
         return InternalDirective.MAIN
 
     return action
@@ -286,6 +305,7 @@ def _create_favorites_action(ctx: Context, state: State) -> MenuAction:
             "No favorites yet",
             "Open a show and pick 'Add to Favorites' - no login needed.",
         )
+        ctx.feedback.pause_for_user()
         return InternalDirective.MAIN
 
     return action

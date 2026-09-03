@@ -68,7 +68,7 @@ def test_auth_with_token_argument(
     result = runner.invoke(auth, ["test_token"], obj=mock_config)
 
     assert result.exit_code == 0
-    mock_api_client.assert_called_with("anilist", mock_config)
+    mock_api_client.assert_called_with("anilist", mock_config, failover=False)
     api_client_instance.authenticate.assert_called_with("test_token")
     auth_service_instance.save_user_profile.assert_called_with(
         profile_mock, "test_token"
@@ -101,7 +101,7 @@ def test_auth_with_token_file(
     result = runner.invoke(auth, [str(token_file)], obj=mock_config)
 
     assert result.exit_code == 0
-    mock_api_client.assert_called_with("anilist", mock_config)
+    mock_api_client.assert_called_with("anilist", mock_config, failover=False)
     api_client_instance.authenticate.assert_called_with("file_token")
     auth_service_instance.save_user_profile.assert_called_with(
         profile_mock, "file_token"

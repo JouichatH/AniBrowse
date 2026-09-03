@@ -99,7 +99,7 @@ def auth(config: AppConfig, status: bool, logout: bool, token_input: str | None)
             feedback.error("Login cancelled.")
         return
 
-    api_client = create_api_client("anilist", config)
+    api_client = create_api_client("anilist", config, failover=False)
     # Use the API client to validate the token and get profile info
     profile = api_client.authenticate(token.strip())
 

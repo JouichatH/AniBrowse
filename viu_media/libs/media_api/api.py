@@ -16,19 +16,50 @@ logger = logging.getLogger(__name__)
 
 # Map the client name to its import path AND the config section it needs.
 API_CLIENTS = {
+    # anidb browses the same host that serves the streams, so browsing cannot
+    # break while playback still works - see anidb/api.py for why that matters.
+    "anidb": ("viu_media.libs.media_api.anidb.api.AniDBApi", "anilist"),
     "anilist": ("viu_media.libs.media_api.anilist.api.AniListApi", "anilist"),
-    "jikan": ("viu_media.libs.media_api.jikan.api.JikanApi", "jikan"),  # For the future
+    "jikan": ("viu_media.libs.media_api.jikan.api.JikanApi", "jikan"),
 }
 
 
-def create_api_client(client_name: str, config: AppConfig) -> BaseApiClient:
+# Order the standbys are tried in when the configured backend goes dark.
+# AniList first: it is the only one with accounts and the richest metadata.
+FAILOVER_ORDER = ["anilist", "anidb", "jikan"]
+
+
+def create_api_client(
+    client_name: str, config: AppConfig, failover: bool = True
+) -> BaseApiClient:
     """
     Factory to create an instance of a specific API client, injecting only
     the relevant section of the application configuration.
+
+    By default the client is wrapped so that a backend outage falls through
+    to the next one instead of leaving every browse screen empty. Pass
+    ``failover=False`` when the caller needs that exact backend and nothing
+    else (authentication, which only AniList offers).
     """
     if client_name not in API_CLIENTS:
         raise ValueError(f"Unsupported API client: '{client_name}'")
 
+    if failover:
+        from .failover import FailoverApiClient
+
+        standbys = [name for name in FAILOVER_ORDER if name != client_name]
+        return FailoverApiClient(
+            client_name,
+            _build_api_client(client_name, config),
+            standbys,
+            lambda name: _build_api_client(name, config),
+        )
+
+    return _build_api_client(client_name, config)
+
+
+def _build_api_client(client_name: str, config: AppConfig) -> BaseApiClient:
+    """Construct one concrete backend, with no failover wrapper."""
     import_path, config_section_name = API_CLIENTS[client_name]
     module_name, class_name = import_path.rsplit(".", 1)
 
