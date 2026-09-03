@@ -22,7 +22,9 @@ def test_stream_host():
 def test_source_summary_provider_and_nyaa():
     ctx = SimpleNamespace(config=AppConfig())
     prov = _source_summary(ctx, make_server(name="Luf-mp4"), "https://cdn.example/x.m3u8")
-    assert "allanime" in prov and "Luf-mp4" in prov and "cdn.example" in prov
+    # The summary names the configured provider. anidb.app went down site-wide
+    # in 2026-09, so the default moved to nyaa - the provider verified working.
+    assert "nyaa" in prov and "Luf-mp4" in prov and "cdn.example" in prov
     assert "1080p" in prov and "sub" in prov
 
     nyaa = _source_summary(

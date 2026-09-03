@@ -5,10 +5,17 @@ from ..utils import detect
 GENERAL_WELCOME_SCREEN = True
 GENERAL_PYGMENT_STYLE = "github-dark"
 GENERAL_PREFERRED_SPINNER = "smiley"
+# anilist is back online (2026-09) and carries accounts, list sync and the
+# richest metadata; anidb.app - which used to be the default because it
+# browsed the same host that streams - is down site-wide. Whichever one is
+# configured, create_api_client wraps it in FailoverApiClient, so a browse
+# that comes back empty rolls over to the next backend automatically.
 GENERAL_API_CLIENT = "anilist"
 GENERAL_PREFERRED_TRACKER = "local"
 GENERAL_DESKTOP_NOTIFICATION_DURATION = 5 * 60
-GENERAL_PROVIDER = "allanime"
+# allanime is captcha-walled and anidb.app is under maintenance; nyaa is the
+# provider verified working end-to-end.
+GENERAL_PROVIDER = "nyaa"
 
 
 def GENERAL_SELECTOR():

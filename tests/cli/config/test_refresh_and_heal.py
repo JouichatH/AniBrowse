@@ -92,3 +92,34 @@ def test_corrupt_config_self_heals_on_load(tmp_path):
     assert "args --fullscreen" in backup.read_text(encoding="utf-8")
     # ...and the regenerated file parses cleanly.
     _parsed(path)
+
+
+def test_refresh_drops_every_generation_of_a_dead_default(tmp_path):
+    """A config pinned to ANY previously-default provider is migrated.
+
+    allanime -> anidb -> nyaa in two months; a machine that sat out one round
+    must not be stranded on a provider that no longer exists.
+    """
+    from viu_media.cli.config.loader import ConfigLoader
+
+    for stale in ("allanime", "anidb"):
+        path = tmp_path / f"{stale}.toml"
+        path.write_text(
+            f'[general]\nprovider = "{stale}"\nmedia_api = "anidb"\n',
+            encoding="utf-8",
+        )
+        config = ConfigLoader(config_path=path).refresh()
+        assert config is not None
+        assert config.general.provider.value == "nyaa"
+        assert config.general.media_api == "anilist"
+
+
+def test_refresh_keeps_a_deliberate_choice(tmp_path):
+    """Only stale DEFAULTS are dropped - a real preference survives."""
+    from viu_media.cli.config.loader import ConfigLoader
+
+    path = tmp_path / "chosen.toml"
+    path.write_text('[general]\nprovider = "animeunity"\n', encoding="utf-8")
+    config = ConfigLoader(config_path=path).refresh()
+    assert config is not None
+    assert config.general.provider.value == "animeunity"

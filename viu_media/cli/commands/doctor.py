@@ -47,6 +47,61 @@ def _yes(ok: bool) -> str:
     return "[green]yes[/]" if ok else "[red]NO[/]"
 
 
+def _report_provider(name: str) -> None:
+    """Probe the CONFIGURED provider end to end: search -> episodes -> stream.
+
+    This is the check that actually predicts whether playback works, so it has
+    to follow the config rather than name one provider - this app has outlived
+    three of them. A miss here is usually the source being down for everyone,
+    not a local problem, so it does not accuse the user's network first.
+    """
+    from ...libs.provider.anime.params import (
+        AnimeParams,
+        EpisodeStreamsParams,
+        SearchParams,
+    )
+    from ...libs.provider.anime.provider import AnimeProviderFactory
+    from ...libs.provider.anime.types import ProviderName
+
+    try:
+        provider = AnimeProviderFactory.create(ProviderName(name))
+        results = provider.search(SearchParams(query="one piece"))
+    except Exception as e:  # noqa: BLE001 - diagnostic, report anything
+        print(f"  {name} search:  {_yes(False)} ({e})")
+        return
+
+    if not results or not results.results:
+        print(f"  {name} search:  {_yes(False)}")
+        print(
+            f"    [yellow]No results from {name}. Check whether that source is "
+            "up - a site-wide outage looks exactly like this. If it is up and "
+            "the log shows a Cloudflare challenge, try another network. "
+            "'ani-browse config --refresh' moves you to the current default.[/]"
+        )
+        return
+    print(f"  {name} search:  {_yes(True)} ({len(results.results)} results)")
+
+    top = results.results[0]
+    # The search term, not the result title: providers decorate titles for
+    # display ("one piece  [nyaa - SubsPlease]") and cannot search their own
+    # decoration back.
+    query = "one piece"
+    anime = provider.get(AnimeParams(id=top.id, query=query))
+    count = len(anime.episodes.sub) if anime else 0
+    print(f"  episode list:      {_yes(bool(count))} ({top.title}: {count} episodes)")
+    if not anime or not count:
+        return
+
+    servers = provider.episode_streams(
+        EpisodeStreamsParams(
+            query=query, anime_id=top.id, episode=anime.episodes.sub[0]
+        )
+    )
+    servers = list(servers) if servers else []
+    qualities = [link.quality for s in servers for link in s.links]
+    print(f"  stream resolve:    {_yes(bool(qualities))} ({', '.join(qualities) or 'none'})")
+
+
 def _windows_terminal_version() -> str:
     """Installed Windows Terminal package version, or '' if undetermined."""
     import subprocess
@@ -147,6 +202,19 @@ def doctor(config: "AppConfig") -> None:
             print(f"  [red]MISSING[/]  {tool:<11} (not on PATH)")
 
     # --- Providers ---------------------------------------------------------
+    print("\n[bold]Streaming provider[/] [dim](the configured one, probed live)[/]")
+    provider_name = "nyaa"
+    try:
+        from ...cli.config.loader import ConfigLoader
+
+        general = ConfigLoader().load(allow_setup=False).general
+        provider_name = general.provider.value
+        print(f"  browse backend:      {general.media_api}")
+        print(f"  configured provider: {provider_name}")
+    except Exception:  # noqa: BLE001 - diagnostic only
+        pass
+    _report_provider(provider_name)
+
     print("\n[bold]Provider scrapers[/] [dim](fetched from the viu-media wheel at install)[/]")
     import viu_media.libs.provider.anime as anime_pkg
 
@@ -173,12 +241,9 @@ def doctor(config: "AppConfig") -> None:
             print(f"  allanime {label}: {_yes(ok)}")
             if not ok and "handshake" in label:
                 print(
-                    "    [red]Without this, allanime returns AA_CRYPTO_MISSING -> "
-                    "0 servers -> every play silently falls back to nyaa.[/]"
-                )
-                print(
-                    "    [yellow]Fix: re-run the installer or[/] "
-                    "python scripts/fetch_providers.py"
+                    "    [dim]allanime is legacy: its API went captcha-walled and "
+                    "answers empty even with the patch. anidb is the primary "
+                    "source now, so this no longer affects playback.[/]"
                 )
         try:
             importlib.import_module("viu_media.libs.provider.anime.allanime.provider")

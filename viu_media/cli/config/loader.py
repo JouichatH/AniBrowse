@@ -15,8 +15,18 @@ logger = logging.getLogger(__name__)
 # Old defaults that newer builds replaced. A config still carrying the OLD
 # default was never a deliberate user choice - refresh() drops the key so the
 # new default applies (e.g. mpv now opens fullscreen out of the box).
-LEGACY_DEFAULTS: dict[tuple[str, str], object] = {
-    ("mpv", "args"): "",
+#: Values that USED to be a default. A config still carrying one is not
+#: expressing a preference - it is carrying a stale default - so ``refresh()``
+#: drops it and lets the current default apply. Each entry may list several
+#: generations: this app has now outlived three dead providers in a row.
+LEGACY_DEFAULTS: dict[tuple[str, str], tuple[object, ...]] = {
+    ("mpv", "args"): ("",),
+    # The provider graveyard, oldest first: allanime went captcha-walled
+    # (2026-08), then anidb.app went to a site-wide maintenance page (2026-09).
+    ("general", "provider"): ("allanime", "anidb"),
+    # Browsing: anilist was the default until it disabled its API, which made
+    # anidb the default; anidb then died and anilist came back.
+    ("general", "media_api"): ("anidb",),
 }
 
 
@@ -123,8 +133,8 @@ class ConfigLoader:
         config_dict = self._parse_or_recover()
         for section, field in ENV_DETECTED_FIELDS:
             config_dict.get(section, {}).pop(field, None)
-        for (section, field), stale in LEGACY_DEFAULTS.items():
-            if config_dict.get(section, {}).get(field) == stale:
+        for (section, field), stale_values in LEGACY_DEFAULTS.items():
+            if config_dict.get(section, {}).get(field) in stale_values:
                 config_dict[section].pop(field)
         try:
             app_config = AppConfig.model_validate(config_dict)
