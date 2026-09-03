@@ -19,9 +19,15 @@ USER_NAME = os.environ.get("USERNAME", os.environ.get("USER", "User"))
 __version__ = metadata.version("viu_media")
 
 AUTHOR = "JouichatH"
+# The GitHub repository name, which is NOT the CLI name: the repo is
+# `JouichatH/AniBrowse`, the command is `ani-browse`. Building these URLs from
+# CLI_NAME_LOWER pointed the updater and every support link at
+# `JouichatH/ani-browse` - the deprecated public fork, since deleted - so
+# `ani-browse update` 404ed for everyone.
+REPO_NAME = "AniBrowse"
 GIT_REPO = "github.com"
 GIT_PROTOCOL = "https://"
-REPO_HOME = f"https://{GIT_REPO}/{AUTHOR}/{CLI_NAME_LOWER}"
+REPO_HOME = f"https://{GIT_REPO}/{AUTHOR}/{REPO_NAME}"
 
 ANILIST_AUTH = (
     "https://anilist.co/api/v2/oauth/authorize?client_id=20148&response_type=token"
@@ -88,4 +94,4 @@ USER_VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 USER_CONFIG = APP_DATA_DIR / "config.toml"
 
 LOG_FILE = LOG_FOLDER / "app.log"
-SUPPORT_PROJECT_URL = f"https://github.com/{AUTHOR}/{CLI_NAME_LOWER}"
+SUPPORT_PROJECT_URL = f"https://github.com/{AUTHOR}/{REPO_NAME}"

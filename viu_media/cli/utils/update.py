@@ -14,12 +14,13 @@ from rich.markdown import Markdown
 from ...core.constants import (
     AUTHOR,
     CLI_NAME_LOWER,
+    REPO_NAME,
     GIT_REPO,
     PROJECT_NAME,
     __version__,
 )
 
-API_URL = f"https://api.{GIT_REPO}/repos/{AUTHOR}/{CLI_NAME_LOWER}/releases/latest"
+API_URL = f"https://api.{GIT_REPO}/repos/{AUTHOR}/{REPO_NAME}/releases/latest"
 
 
 def print_release_json(release_json):
@@ -125,7 +126,7 @@ def update_app(force=False):
         process = subprocess.run(
             [NIX, "profile", "upgrade", CLI_NAME_LOWER], check=False
         )
-    elif is_git_repo(AUTHOR, CLI_NAME_LOWER):
+    elif is_git_repo(AUTHOR, REPO_NAME):
         GIT_EXECUTABLE = shutil.which("git")
         args = [
             GIT_EXECUTABLE,
