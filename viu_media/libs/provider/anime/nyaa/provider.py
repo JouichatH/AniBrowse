@@ -40,6 +40,8 @@ if TYPE_CHECKING:
 
     from ..params import AnimeParams, EpisodeStreamsParams, SearchParams
 
+from .torrent import torrent_episodes
+
 logger = logging.getLogger(__name__)
 
 NYAA_URL = "https://nyaa.si/"
@@ -81,6 +83,39 @@ _ROMAN = {"ii": 2, "iii": 3, "iv": 4, "v": 5, "vi": 6}
 # claiming more episodes than this is parsed garbage.
 _MAX_BATCH_SPAN = 400
 _YEAR_FLOOR = 1900
+
+# A pack that declares itself complete but never spells the range out:
+# "[EMBER] ... (Batch)", "... Complete Series", "[PHTMini] ... - S01 (BD ...)".
+# These are the normal shape for a finished show, and the episode list lives in
+# the torrent's file table rather than the title - see ``torrent.py``.
+_PACK_HINT_RE = re.compile(
+    r"\b(?:batch|complete(?:\s+series)?|(?:the\s+)?complete|seasons?\s*\d"
+    r"|ultimate\s+collection|S0*\d{1,2}(?:\s*[-+~]\s*S0*\d{1,2})?)\b",
+    re.IGNORECASE,
+)
+# Releases dubbed/subbed into a language this app cannot help the user with.
+# They are not dropped (they may be the only source) but they rank last.
+_FOREIGN_RE = re.compile(
+    r"\b(?:GERMAN|DEUTSCH|ITA(?:LIAN)?|SPA(?:NISH)?|CASTELLANO|LATINO|FRENCH"
+    r"|VOSTFR|TRUEFRENCH|RUS(?:SIAN)?|POLISH|PT-?BR|PORTUGUES[E]?|TURKISH"
+    r"|ARABIC|HINDI|THAI|VIETNAMESE)\b",
+    re.IGNORECASE,
+)
+
+#: Appended to a title when the plain search returns only recent episodes.
+#: nyaa's RSS shows the newest ~75 torrents, so a long-running show's back
+#: catalogue is invisible until you ask for the packs by name.
+_PACK_QUERY_SUFFIXES = ("Batch", "Complete")
+
+#: How many season packs one lookup may open. Each is a ~100KB HTTPS GET, and
+#: mirrored packs of the same show are common, so a few is plenty.
+_MAX_PACK_PROBES = 3
+
+#: Season packs whose file list we have already fetched, keyed by info hash.
+#: A probe costs one ~100KB HTTPS GET, so never repeat one in a session.
+_pack_cache: Dict[str, List[str]] = {}
+#: Packs whose probe failed - remembered so a dead link is not retried per menu.
+_pack_failed: set = set()
 
 # RSS response cache. One launch calls the provider several times over
 # (search / get / episode_streams / neighbour prefetch), each of which
@@ -236,12 +271,72 @@ class Nyaa(BaseAnimeProvider):
                     "batch_start": batch_start,
                     "batch_end": batch_end,
                     "torrent_url": torrent_url,
+                    # A complete-season pack whose title hides the range. Its
+                    # episode list is read from the .torrent, but only if the
+                    # cheap paths above find nothing - see _pack_episodes.
+                    "pack": bool(
+                        ep is None
+                        and batch_start is None
+                        and torrent_url
+                        and _PACK_HINT_RE.search(title)
+                    ),
+                    "foreign": bool(_FOREIGN_RE.search(title)),
                 }
             )
         if len(_rss_cache) >= _RSS_CACHE_MAX:
             _rss_cache.pop(min(_rss_cache, key=lambda k: _rss_cache[k][0]))
         _rss_cache[query.lower()] = (time.monotonic(), items)
         return items
+
+    def _probe_pack(self, item: dict) -> List[str]:
+        """Episode numbers inside one season pack, by reading its .torrent."""
+        key = item["hash"]
+        if key in _pack_cache:
+            return _pack_cache[key]
+        if key in _pack_failed or not item.get("torrent_url"):
+            return []
+        try:
+            r = self.client.get(item["torrent_url"], timeout=20)
+            r.raise_for_status()
+            episodes = torrent_episodes(r.content)
+        except Exception as e:  # noqa: BLE001 - a dead link must not break the menu
+            logger.debug("nyaa pack probe failed for %r: %s", item["title"][:60], e)
+            _pack_failed.add(key)
+            return []
+        if not episodes:
+            _pack_failed.add(key)
+            return []
+        logger.debug(
+            "nyaa pack %r -> %d episodes", item["title"][:60], len(episodes)
+        )
+        _pack_cache[key] = episodes
+        return episodes
+
+    @staticmethod
+    def _pack_rank(item: dict) -> tuple:
+        """Best pack first: our language, known group, most seeders."""
+        return (
+            1 if item.get("foreign") else 0,
+            Nyaa._group_rank(item.get("group") or ""),
+            -item.get("seeders", 0),
+        )
+
+    def _packs_with_episodes(self, items: List[dict]) -> List[dict]:
+        """Probe the most promising packs, annotating them with their episodes.
+
+        Bounded to a handful of fetches: a show with twenty mirrored packs must
+        not turn one menu open into twenty HTTPS round trips.
+        """
+        packs = sorted(
+            (i for i in items if i.get("pack")), key=self._pack_rank
+        )[:_MAX_PACK_PROBES]
+        probed = []
+        for pack in packs:
+            episodes = self._probe_pack(pack)
+            if episodes:
+                pack = {**pack, "pack_episodes": episodes}
+                probed.append(pack)
+        return probed
 
     @staticmethod
     def _episode_candidates(items: List[dict], want: float) -> "tuple[List[dict], bool]":
@@ -258,6 +353,14 @@ class Nyaa(BaseAnimeProvider):
             ]
             if batches:
                 return batches, True
+        # Packs probed from their .torrent carry an explicit episode list.
+        probed = [
+            i
+            for i in items
+            if any(float(e) == want for e in i.get("pack_episodes") or ())
+        ]
+        if probed:
+            return probed, True
         return [], False
 
     def _targeted_items(self, query: str, want: float) -> List[dict]:
@@ -296,15 +399,65 @@ class Nyaa(BaseAnimeProvider):
         so a variant that yields only batch packs is accepted too.
         """
         wanted = self._season_of(query) or 1
+        fallback: List[dict] = []
         for v in self._search_variants(query):
             items = [
                 i
                 for i in self._fetch(v)
                 if (self._season_of(i["title"]) or 1) == wanted
             ]
-            if any(i["ep"] is not None or i.get("batch_start") for i in items):
+            cheap = self._episodes(items)
+            if cheap and self._looks_complete(cheap):
+                # A clean run from episode 1: the simulcast releases cover the
+                # show, so charge nothing for opening season packs.
                 return items
+            if items and (cheap or any(i.get("pack") for i in items)):
+                # Either nothing names an episode (a finished show, pack-only)
+                # or the run is partial - nyaa's first page only holds ~75 of
+                # the newest torrents, so a long-running show shows up as
+                # "1100-1176". Season packs hold the rest; read them.
+                fallback = fallback or items
+        # Still nothing usable: ask nyaa for the packs explicitly.
+        if not any(i.get("pack") for i in fallback):
+            for v in self._search_variants(query):
+                found = False
+                for suffix in _PACK_QUERY_SUFFIXES:
+                    extra = [
+                        i
+                        for i in self._fetch(f"{v} {suffix}")
+                        if (self._season_of(i["title"]) or 1) == wanted
+                        and (i.get("pack") or i.get("batch_start"))
+                    ]
+                    if extra:
+                        fallback = fallback + extra
+                        found = True
+                        break
+                if found:
+                    break
+
+        if fallback:
+            probed = self._packs_with_episodes(fallback)
+            if probed:
+                return [i for i in fallback if not i.get("pack")] + probed
+            return fallback
         return []
+
+    @staticmethod
+    def _looks_complete(episodes: List[str]) -> bool:
+        """Whether an episode list is a gapless run starting at episode 1.
+
+        Anything else - starting at 1100, or 5 then 46 - means nyaa's first
+        page showed only part of the show and the rest is inside a season pack.
+        """
+        if not episodes:
+            return False
+        numbers = sorted(float(e) for e in episodes)
+        if numbers[0] > 1:
+            return False
+        whole = [n for n in numbers if float(n).is_integer()]
+        if len(whole) < 2:
+            return len(numbers) >= 2
+        return whole[-1] - whole[0] + 1 == len(whole)
 
     # ---- helpers -------------------------------------------------------
     @staticmethod
@@ -341,6 +494,8 @@ class Nyaa(BaseAnimeProvider):
             start, end = i.get("batch_start"), i.get("batch_end")
             if start and end:
                 eps.update(str(n) for n in range(start, end + 1))
+        for i in items:
+            eps.update(i.get("pack_episodes") or ())
         return sorted(eps, key=lambda x: float(x))
 
     # ---- provider interface -------------------------------------------

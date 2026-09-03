@@ -25,6 +25,7 @@ from ....core.constants import APP_CACHE_DIR, SCRIPTS_DIR
 from ....core.exceptions import AniBrowseError
 from ....core.patterns import TORRENT_REGEX, YOUTUBE_REGEX
 from ....core.utils import detect
+from ....core.utils.episodes import episode_from_filename, is_extra_file
 from ..base import BasePlayer
 from ..params import PlayerParams
 from ..types import PlayerResult
@@ -53,7 +54,6 @@ _XS_RE = re.compile(r"[?&]xs=([^&\s]+)")
 _INFOHASH_RE = re.compile(r"btih:([A-Za-z0-9]{32,40})", re.IGNORECASE)
 #: Episode number inside a fansub file name, e.g.
 #: "[SubsPlease] Sousou no Frieren - 07v2 (1080p) [ABCD].mkv".
-_FILE_EP_RE = re.compile(r"\s-\s0*(\d+(?:\.\d+)?)(?:v\d+)?(?=\s|$|\(|\[|\.)")
 
 #: Seconds to allow the P2P downloadmeta fallback (DHT can be slow).
 _META_TIMEOUT = 90
@@ -284,8 +284,10 @@ def warm_torrent_stream(magnet: str) -> None:
 
 
 def _file_episode(name: str) -> "str | None":
-    m = _FILE_EP_RE.search(name or "")
-    return m.group(1) if m else None
+    # Shared with the nyaa provider: the menu and the file picker must agree on
+    # what "episode 3" is called, or a pack offers episodes it cannot play.
+    # Scene packs use "S04E03", fansubs use " - 03 ".
+    return episode_from_filename(name or "")
 
 
 def _pick_batch_file_index(files: list, target_ep: str) -> "int | None":
@@ -299,11 +301,22 @@ def _pick_batch_file_index(files: list, target_ep: str) -> "int | None":
         want = float(target_ep)
     except (TypeError, ValueError):
         return None
+
+    matches = []
     for i, f in enumerate(files):
-        ep = _file_episode(f.get("name") or f.get("path") or "")
+        name = f.get("name") or f.get("path") or ""
+        ep = _file_episode(name)
         if ep is not None and float(ep) == want:
-            return i
-    return None
+            matches.append((i, name, f.get("length") or 0))
+    if not matches:
+        return None
+
+    # A "Complete Collection" bundles spin-offs, OVAs and movies that reuse the
+    # same episode numbers, so several files can claim episode 1. Prefer the
+    # main show, then the largest file - a 7-minute parody short never
+    # outweighs the real episode.
+    matches.sort(key=lambda m: (is_extra_file(m[1]), -m[2]))
+    return matches[0][0]
 
 
 def _torrent_files(webtorrent_cli: str, torrent_path: str) -> list:
