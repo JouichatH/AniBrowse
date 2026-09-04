@@ -93,6 +93,20 @@ _PACK_HINT_RE = re.compile(
     r"|ultimate\s+collection|S0*\d{1,2}(?:\s*[-+~]\s*S0*\d{1,2})?)\b",
     re.IGNORECASE,
 )
+# A release that carries an English audio track as well as (or instead of) the
+# Japanese one. Torrent releases are frequently dual-audio, so the SAME file
+# serves sub and dub - the difference is only which audio track the player
+# selects, which is why dub support here is about labelling and track choice
+# rather than finding different torrents.
+_DUAL_AUDIO_RE = re.compile(
+    r"\b(?:dual[\s._-]*audio|multi[\s._-]*audio|multi|dual)\b", re.IGNORECASE
+)
+# An explicitly English-dubbed release (often no Japanese track at all).
+_ENGLISH_DUB_RE = re.compile(
+    r"\b(?:english[\s._-]*dub(?:bed)?|eng[\s._-]*dub(?:bed)?|dub(?:bed)?)\b",
+    re.IGNORECASE,
+)
+
 # Releases dubbed/subbed into a language this app cannot help the user with.
 # They are not dropped (they may be the only source) but they rank last.
 _FOREIGN_RE = re.compile(
@@ -113,8 +127,9 @@ _MAX_PACK_PROBES = 3
 
 #: Season packs whose file list we have already fetched, keyed by info hash.
 #: A probe costs one ~100KB HTTPS GET, so never repeat one in a session.
-_pack_cache: Dict[str, List[str]] = {}
+_pack_cache: Dict["tuple[str, int]", List[str]] = {}
 #: Packs whose probe failed - remembered so a dead link is not retried per menu.
+#: Keyed like the cache, by (info hash, season).
 _pack_failed: set = set()
 
 # RSS response cache. One launch calls the provider several times over
@@ -130,6 +145,10 @@ _rss_cache: Dict[str, "tuple[float, List[dict]]"] = {}
 #: to stream just the requested episode's file out of the pack (webtorrent
 #: ignores unknown magnet params). See mpv/player.py's batch handling.
 BATCH_EP_PARAM = "x.aniep"
+#: Season marker (``&x.anisn=1``). A pack can hold several seasons whose
+#: episodes share numbers, so the episode alone is not enough to identify a
+#: file - without this, "Season 1 + 2" packs played S02E02 for episode 2.
+BATCH_SEASON_PARAM = "x.anisn"
 
 
 def _fmt_ep(value: float) -> str:
@@ -281,6 +300,16 @@ class Nyaa(BaseAnimeProvider):
                         and _PACK_HINT_RE.search(title)
                     ),
                     "foreign": bool(_FOREIGN_RE.search(title)),
+                    # Whether this release can serve an English dub at all.
+                    # MULTi/Dual releases keep both tracks, so they serve sub
+                    # AND dub; an "[English Dub]" release usually serves dub
+                    # only. Both are recorded so the menu can offer dub and the
+                    # ranking can prefer the right file.
+                    "dual_audio": bool(_DUAL_AUDIO_RE.search(title)),
+                    "dub_only": bool(
+                        _ENGLISH_DUB_RE.search(title)
+                        and not _DUAL_AUDIO_RE.search(title)
+                    ),
                 }
             )
         if len(_rss_cache) >= _RSS_CACHE_MAX:
@@ -288,9 +317,9 @@ class Nyaa(BaseAnimeProvider):
         _rss_cache[query.lower()] = (time.monotonic(), items)
         return items
 
-    def _probe_pack(self, item: dict) -> List[str]:
+    def _probe_pack(self, item: dict, wanted_season: int = 1) -> List[str]:
         """Episode numbers inside one season pack, by reading its .torrent."""
-        key = item["hash"]
+        key = (item["hash"], wanted_season)
         if key in _pack_cache:
             return _pack_cache[key]
         if key in _pack_failed or not item.get("torrent_url"):
@@ -298,7 +327,7 @@ class Nyaa(BaseAnimeProvider):
         try:
             r = self.client.get(item["torrent_url"], timeout=20)
             r.raise_for_status()
-            episodes = torrent_episodes(r.content)
+            episodes = torrent_episodes(r.content, wanted_season)
         except Exception as e:  # noqa: BLE001 - a dead link must not break the menu
             logger.debug("nyaa pack probe failed for %r: %s", item["title"][:60], e)
             _pack_failed.add(key)
@@ -321,7 +350,9 @@ class Nyaa(BaseAnimeProvider):
             -item.get("seeders", 0),
         )
 
-    def _packs_with_episodes(self, items: List[dict]) -> List[dict]:
+    def _packs_with_episodes(
+        self, items: List[dict], wanted_season: int = 1
+    ) -> List[dict]:
         """Probe the most promising packs, annotating them with their episodes.
 
         Bounded to a handful of fetches: a show with twenty mirrored packs must
@@ -332,9 +363,9 @@ class Nyaa(BaseAnimeProvider):
         )[:_MAX_PACK_PROBES]
         probed = []
         for pack in packs:
-            episodes = self._probe_pack(pack)
+            episodes = self._probe_pack(pack, wanted_season)
             if episodes:
-                pack = {**pack, "pack_episodes": episodes}
+                pack = {**pack, "pack_episodes": episodes, "season": wanted_season}
                 probed.append(pack)
         return probed
 
@@ -436,7 +467,7 @@ class Nyaa(BaseAnimeProvider):
                     break
 
         if fallback:
-            probed = self._packs_with_episodes(fallback)
+            probed = self._packs_with_episodes(fallback, wanted)
             if probed:
                 return [i for i in fallback if not i.get("pack")] + probed
             return fallback
@@ -466,12 +497,15 @@ class Nyaa(BaseAnimeProvider):
         name: str,
         select_ep: "str | None" = None,
         torrent_url: "str | None" = None,
+        select_season: "int | None" = None,
     ) -> str:
         trackers = "".join(f"&tr={quote(t)}" for t in TRACKERS)
         # xs (standard magnet param) = exact source of the .torrent file; both
         # our player and webtorrent use it to skip the slow DHT metadata fetch.
         xs = f"&xs={quote(torrent_url, safe='')}" if torrent_url else ""
         marker = f"&{BATCH_EP_PARAM}={select_ep}" if select_ep is not None else ""
+        if select_ep is not None and select_season is not None:
+            marker += f"&{BATCH_SEASON_PARAM}={select_season}"
         return f"magnet:?xt=urn:btih:{info_hash}&dn={quote(name)}{trackers}{xs}{marker}"
 
     @staticmethod
@@ -480,6 +514,11 @@ class Nyaa(BaseAnimeProvider):
             if g.lower() == group.lower():
                 return i
         return len(PREFERRED_GROUPS)
+
+    @staticmethod
+    def _dub_items(items: List[dict]) -> List[dict]:
+        """Releases that can play with an English audio track."""
+        return [i for i in items if i.get("dual_audio") or i.get("dub_only")]
 
     @staticmethod
     def _episodes(items: List[dict]) -> List[str]:
@@ -512,7 +551,9 @@ class Nyaa(BaseAnimeProvider):
                 SearchResult(
                     id=params.query,
                     title=f"{params.query}  [nyaa · {label}]",
-                    episodes=AnimeEpisodes(sub=eps),
+                    episodes=AnimeEpisodes(
+                        sub=eps, dub=self._episodes(self._dub_items(items))
+                    ),
                 )
             ],
         )
@@ -520,10 +561,13 @@ class Nyaa(BaseAnimeProvider):
     def get(self, params: "AnimeParams") -> "Anime | None":
         items = self._items_for(params.query or params.id)
         eps = self._episodes(items)
+        # Dual-audio releases serve both, so an episode can appear in both
+        # lists; the menu asks for whichever the config wants.
+        dub_eps = self._episodes(self._dub_items(items))
         return Anime(
             id=params.id,
             title=params.query or params.id,
-            episodes=AnimeEpisodes(sub=eps),
+            episodes=AnimeEpisodes(sub=eps, dub=dub_eps),
             episodes_info=[AnimeEpisodeInfo(id=e, episode=e) for e in eps],
         )
 
@@ -540,6 +584,17 @@ class Nyaa(BaseAnimeProvider):
         # for this episode do we fall back to a season batch that covers it -
         # completed shows are frequently batch-only on nyaa. The batch magnet is
         # tagged so the player streams just this episode's file out of the pack.
+        want_dub = str(getattr(params, "translation_type", "sub")).lower().endswith(
+            "dub"
+        )
+        if want_dub:
+            # Only releases that actually carry an English track can serve a
+            # dub. If none do, fall through to everything rather than failing:
+            # the menu already told the user which episodes have a dub.
+            dub_items = self._dub_items(items)
+            if dub_items:
+                items = dub_items
+
         cands, is_batch = self._episode_candidates(items, want)
         if not cands:
             # Not on the first page of the generic search - query the episode
@@ -553,6 +608,12 @@ class Nyaa(BaseAnimeProvider):
         # rank: preferred group, then requested quality, then most seeders
         cands.sort(
             key=lambda i: (
+                # When dub is wanted, a release carrying an English track wins
+                # over a better-ranked group that cannot serve one at all.
+                0 if (not want_dub or i.get("dual_audio") or i.get("dub_only")) else 1,
+                # For sub, a dub-only release is the last resort - it may have
+                # no Japanese audio to switch back to.
+                1 if (not want_dub and i.get("dub_only")) else 0,
                 self._group_rank(i["group"]),
                 0 if i["res"] == params.quality else 1,
                 -i["seeders"],
@@ -560,21 +621,37 @@ class Nyaa(BaseAnimeProvider):
         )
 
         select_ep = _fmt_ep(want) if is_batch else None
+        # The season the query asked for, so the player can tell S01E02 from
+        # S02E02 inside a multi-season pack.
+        select_season = (
+            self._season_of(params.query or params.anime_id) or 1
+        ) if is_batch else None
         tag = " batch" if is_batch else ""
 
         def _iter() -> "Iterator[Server]":
             for i in cands[:5]:
                 quality = i["res"] if i["res"] in ("360", "480", "720", "1080") else "720"
                 yield Server(
-                    name=f"nyaa:{i['group'] or 'unknown'}{tag} ({i['seeders']} seeders)",
+                    name=(
+                        f"nyaa:{i['group'] or 'unknown'}{tag}"
+                        f"{' dub' if want_dub else ''} ({i['seeders']} seeders)"
+                    ),
                     links=[
                         EpisodeStream(
                             link=self._magnet(
-                                i["hash"], i["title"], select_ep, i.get("torrent_url")
+                                i["hash"],
+                                i["title"],
+                                select_ep,
+                                i.get("torrent_url"),
+                                select_season,
                             ),
                             title=i["title"],
                             quality=quality,  # type: ignore[arg-type]
-                            translation_type=MediaTranslationType.SUB,
+                            translation_type=(
+                                MediaTranslationType.DUB
+                                if want_dub
+                                else MediaTranslationType.SUB
+                            ),
                         )
                     ],
                     episode_title=i["title"],

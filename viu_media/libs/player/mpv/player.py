@@ -25,7 +25,11 @@ from ....core.constants import APP_CACHE_DIR, SCRIPTS_DIR
 from ....core.exceptions import AniBrowseError
 from ....core.patterns import TORRENT_REGEX, YOUTUBE_REGEX
 from ....core.utils import detect
-from ....core.utils.episodes import episode_from_filename, is_extra_file
+from ....core.utils.episodes import (
+    episode_from_filename,
+    is_extra_file,
+    main_series_files,
+)
 from ..base import BasePlayer
 from ..params import PlayerParams
 from ..types import PlayerResult
@@ -47,6 +51,7 @@ TORRENT_STREAM_DIR = TORRENT_CACHE_DIR / "stream"
 #: stream only that episode's file out of a season pack. Mirrors
 #: ``nyaa/provider.py::BATCH_EP_PARAM``.
 _BATCH_EP_RE = re.compile(r"[?&]x\.aniep=(\d+(?:\.\d+)?)")
+_BATCH_SEASON_RE = re.compile(r"[?&]x\.anisn=(\d{1,2})")
 #: Standard magnet "exact source" param: HTTPS URL of the .torrent file (nyaa
 #: serves these), which beats a DHT metadata fetch by an order of magnitude.
 _XS_RE = re.compile(r"[?&]xs=([^&\s]+)")
@@ -65,6 +70,16 @@ def _batch_target_episode(url: str) -> "str | None":
     """The episode number a batch magnet asks us to stream, else None."""
     m = _BATCH_EP_RE.search(url or "")
     return m.group(1) if m else None
+
+
+def _batch_target_season(url: str) -> int:
+    """The season a batch magnet asks for; 1 when it does not say.
+
+    Packs routinely hold more than one season, and their episode numbers
+    collide (S01E02 and S02E02 are both "episode 2").
+    """
+    m = _BATCH_SEASON_RE.search(url or "")
+    return int(m.group(1)) if m else 1
 
 
 def _xs_url(magnet: str) -> "str | None":
@@ -244,7 +259,9 @@ def _torrent_file_index(files: list, magnet: str) -> "int | None":
     """Which file of the torrent a magnet refers to (marker/single/largest)."""
     target_ep = _batch_target_episode(magnet)
     if target_ep is not None:
-        return _pick_batch_file_index(files, target_ep)
+        return _pick_batch_file_index(
+            files, target_ep, _batch_target_season(magnet)
+        )
     if len(files) == 1:
         return 0
     if not files:
@@ -290,7 +307,9 @@ def _file_episode(name: str) -> "str | None":
     return episode_from_filename(name or "")
 
 
-def _pick_batch_file_index(files: list, target_ep: str) -> "int | None":
+def _pick_batch_file_index(
+    files: list, target_ep: str, target_season: int = 1
+) -> "int | None":
     """Index of the file whose name is the requested episode, else None.
 
     ``files`` is webtorrent's ``info`` JSON file list (array order == the index
@@ -302,19 +321,33 @@ def _pick_batch_file_index(files: list, target_ep: str) -> "int | None":
     except (TypeError, ValueError):
         return None
 
-    matches = []
-    for i, f in enumerate(files):
-        name = f.get("name") or f.get("path") or ""
-        ep = _file_episode(name)
-        if ep is not None and float(ep) == want:
-            matches.append((i, name, f.get("length") or 0))
+    names = [f.get("name") or f.get("path") or "" for f in files]
+    # Narrow to the season/series asked for BEFORE matching the number: a pack
+    # holding "Season 1 + 2", or a collection bundling a side arc, has several
+    # files that all parse as episode 2. This is the same selection the nyaa
+    # provider used to build the menu, so the two cannot disagree.
+    wanted = set(main_series_files(names, target_season))
+
+    matches = [
+        (i, names[i], files[i].get("length") or 0)
+        for i in range(len(files))
+        if names[i] in wanted and (_file_episode(names[i]) or None) is not None
+        and float(_file_episode(names[i])) == want  # type: ignore[arg-type]
+    ]
+    if not matches:
+        # Nothing survived the season filter - fall back to a plain number
+        # match so an oddly-named pack still plays something sensible.
+        matches = [
+            (i, names[i], files[i].get("length") or 0)
+            for i in range(len(files))
+            if _file_episode(names[i]) is not None
+            and float(_file_episode(names[i])) == want  # type: ignore[arg-type]
+        ]
     if not matches:
         return None
 
-    # A "Complete Collection" bundles spin-offs, OVAs and movies that reuse the
-    # same episode numbers, so several files can claim episode 1. Prefer the
-    # main show, then the largest file - a 7-minute parody short never
-    # outweighs the real episode.
+    # Among what is left, prefer the main show over bundled extras and then the
+    # largest file - a 7-minute parody short never outweighs a real episode.
     matches.sort(key=lambda m: (is_extra_file(m[1]), -m[2]))
     return matches[0][0]
 
@@ -882,6 +915,21 @@ class MpvPlayer(BasePlayer):
 
         if params.title:
             mpv_args.append(f"--title={params.title}")
+
+        # Dual-audio releases carry both tracks and mpv would otherwise start
+        # on whichever the file marks default - usually Japanese - so a user
+        # who configured "dub" had to switch by hand every single episode.
+        # These are PREFERENCES: mpv falls back to what exists, and every track
+        # stays selectable in the player.
+        if params.translation_type:
+            if params.translation_type.lower().endswith("dub"):
+                mpv_args.append("--alang=eng,en,english")
+            else:
+                mpv_args.append("--alang=jpn,ja,japanese")
+                # Japanese audio with no subtitles is useless, so ask for the
+                # English subtitle track and make sure subs are on.
+                mpv_args.append("--slang=eng,en,english")
+                mpv_args.append("--sid=auto")
 
         if self.config.args:
             mpv_args.extend(self.config.args.split(","))

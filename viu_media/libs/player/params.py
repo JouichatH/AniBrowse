@@ -23,6 +23,7 @@ class PlayerParams:
         subtitles: List of subtitle file paths or URLs.
         headers: HTTP headers to include in the request.
         start_time: The time offset to start playback from.
+        translation_type: "sub" or "dub" - which audio track to start on.
     """
 
     url: str
@@ -33,6 +34,11 @@ class PlayerParams:
     subtitles: list[str] | None = None
     headers: dict[str, str] | None = None
     start_time: str | None = None
+    #: "dub" or "sub". Torrent releases are frequently dual-audio - the same
+    #: file carries Japanese and English tracks - so honouring the user's
+    #: choice is a matter of telling the player which audio track to start on.
+    #: Both tracks stay in the file, so switching in the player still works.
+    translation_type: str | None = None
     # AniSkip opening/ending intervals in seconds, (start, end), for the clean
     # (non-IPC) path to bake into mpv at launch via the ani_skip Lua script.
     skip_op: tuple[float, float] | None = None

@@ -152,6 +152,7 @@ def servers(ctx: Context, state: State) -> State | InternalDirective:
             subtitles=[sub.url for sub in selected_server.subtitles],
             headers=selected_server.headers,
             start_time=state.provider.start_time,
+            translation_type=config.stream.translation_type,
         ),
         state.provider.anime,
         state.media_api.media_item,

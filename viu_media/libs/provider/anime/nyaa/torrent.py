@@ -17,7 +17,11 @@ from __future__ import annotations
 import logging
 from typing import Any, List, Tuple
 
-from .....core.utils.episodes import episode_from_filename, is_extra_file
+from .....core.utils.episodes import (
+    episode_from_filename,
+    is_extra_file,
+    main_series_files,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -84,22 +88,25 @@ def torrent_file_names(content: bytes) -> List[str]:
     return names
 
 
-def torrent_episodes(content: bytes) -> List[str]:
-    """Sorted episode numbers a pack contains, read from its video files.
+def torrent_episodes(content: bytes, wanted_season: int = 1) -> List[str]:
+    """Sorted episode numbers a pack holds FOR ONE SEASON.
 
-    Only video files count: a pack's NCOP/NCED extras and its ``.nfo`` would
-    otherwise contribute phantom episodes to the menu.
+    Season matters: a "Season 1 + 2" pack carries S01E02 and S02E02, and a
+    "Complete Collection" carries whole side arcs. Counting them together
+    advertises episodes the chosen season does not have, and lets playback
+    resolve episode 2 to the wrong season entirely.
     """
-    main: set = set()
-    extras: set = set()
-    for name in torrent_file_names(content):
-        if not name.lower().endswith(_VIDEO_SUFFIXES):
-            continue
-        episode = episode_from_filename(name)
-        if episode is None:
-            continue
-        (extras if is_extra_file(name) else main).add(episode)
-    # Bundled spin-offs and OVAs reuse episode numbers; counting them would
-    # claim episodes the main show does not have. They still stand in when a
-    # pack holds nothing else.
-    return sorted(main or extras, key=float)
+    videos = [
+        n for n in torrent_file_names(content) if n.lower().endswith(_VIDEO_SUFFIXES)
+    ]
+    chosen = main_series_files(videos, wanted_season)
+    if not chosen:
+        # Nothing for that season - fall back to bundled extras only if the
+        # pack holds literally nothing else, so an OVA-only torrent still works.
+        chosen = [n for n in videos if is_extra_file(n)]
+    episodes = {
+        episode
+        for episode in (episode_from_filename(n) for n in chosen)
+        if episode is not None
+    }
+    return sorted(episodes, key=float)

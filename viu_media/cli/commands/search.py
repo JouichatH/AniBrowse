@@ -213,6 +213,7 @@ def stream_anime(
             episode=episode,
             subtitles=[sub.url for sub in server.subtitles],
             headers=server.headers,
+            translation_type=config.stream.translation_type,
         ),
         anime,
     )
